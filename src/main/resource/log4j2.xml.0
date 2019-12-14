@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+    <Properties>
+        <Property name="basepath">logs\Example</Property>
+        <Property name="logFileName">Example</Property>
+    </Properties>
+
+    <Appenders>
+
+        <RollingFile name="LogFile" fileName="${basepath}/${logFileName}.log" filePattern="${basepath}/${logFileName}.%d{yyyy-MM-dd-HH-mm-ss}.log">
+            <PatternLayout>
+                <Pattern>%d %-5p [%t][%c{5}] %F:%L - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${basepath}">
+                    <IfFileName glob="${logFileName}.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout>
+                <Pattern>%d %-5p [%t][%c{5}] %F:%L - %m%n</Pattern>
+            </PatternLayout>
+        </Console>
+
+    </Appenders>
+
+    <Loggers>
+        <Root level="debug">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LogFile"/>
+        </Root>
+<!--
+        <Logger name="ru" level="info" additivity="false">
+            <AppenderRef ref="LogFile"/>
+        </Logger>
+-->
+    </Loggers>
+</Configuration>

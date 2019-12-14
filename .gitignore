@@ -1,0 +1,27 @@
+# Created by .ignore support plugin (hsz.mobi)
+/target/
+/.idea/
+*.iml
+*.bin
+*.xls
+*.xlsx
+/logs/
+/myhsqldb/
+/h2db.mv.db
+/jsonExample2.json
+/propertiesExample.properties
+/ClassAList.json
+/XML_Test.xml
+/myhsqldbTest/
+/hsqlUsers/
+/h2db_2.mv.db
+/h2db_2.trace.db
+/test.csv
+/test_key.pri
+/test_key.pub
+/FileData.txt
+/FileCipher.txt
+/test_key.prv
+/arhive_example.zip
+/STORE/
+/arhive_extract/

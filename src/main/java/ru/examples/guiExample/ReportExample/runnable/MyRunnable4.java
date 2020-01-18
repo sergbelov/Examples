@@ -17,16 +17,14 @@ public class MyRunnable4 implements Runnable {
     int num, max;
     FormReport formReport;
     FormProgressBar formProgressBar;
-    static List<String> list;
+    List<String> list;
     CountDownLatch cdl;
-    CountDownLatch cdl2;
 
     public MyRunnable4(
             int num,
             int max,
             List<String> list,
             CountDownLatch cdl,
-            CountDownLatch cdl2,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
@@ -34,7 +32,6 @@ public class MyRunnable4 implements Runnable {
         this.max = max;
         this.list = list;
         this.cdl = cdl;
-        this.cdl2 = cdl2;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
     }
@@ -64,19 +61,16 @@ public class MyRunnable4 implements Runnable {
             }
         }
         cdl.countDown();
-        cdl2.countDown();
 
-        if (cdl2.getCount() == 0) { // последний поток закончил свою работу
+        if (cdl.getCount() == 0) { // последний поток закончил свою работу
             formProgressBar.getJLabelsDur(1).setText(formProgressBar.getDurationTimeString());
             formProgressBar.getJLabelsStage(1).setText("Количество 1 этап: " + list.size());
             formProgressBar.getJProgressBars(2).setMaximum(list.size());
 
-            CountDownLatch cdl = new CountDownLatch(1);
             ExecutorService es = Executors.newFixedThreadPool(1);
             // 5
             es.submit(
                     new MyRunnable5(
-                            cdl,
                             formReport,
                             formProgressBar
                     ));
@@ -97,10 +91,6 @@ public class MyRunnable4 implements Runnable {
             }
             formProgressBar.getJLabelsDur(2).setText(formProgressBar.getDurationTimeString());
             formProgressBar.getJLabelsStage(2).setText("Количество 2 этап: " + list.size());
-
-            formReport.getBCreateReport().setEnabled(true); // ToDo перенести в 5
-//            formProgressBar.getBReport().setVisible(true);
-//            formProgressBar.getBClose().setVisible(true);
         }
     }
 }

@@ -14,15 +14,12 @@ public class MyRunnable5 implements Runnable {
     private String name = "MyRunnable5";
     FormReport formReport;
     FormProgressBar formProgressBar;
-    CountDownLatch cdl;
     int threadInfo;
 
     public MyRunnable5(
-            CountDownLatch cdl,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
-        this.cdl = cdl;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
         this.threadInfo = formProgressBar.getJLabelsInfoFree();
@@ -39,14 +36,6 @@ public class MyRunnable5 implements Runnable {
             data = name + "_" + i;
             LOG.info(data);
 
-/*
-            synchronized (formProgressBar.getJProgressBars(1)){
-                formProgressBar.getJProgressBars(1).setValue(formProgressBar.getJProgressBars(1).getValue() + 1);
-                formProgressBar.getJProgressBars(1).repaint();
-            }
-*/
-
-
             try {
                 delay = (int) (Math.random() * 10);
                 Thread.sleep(delay);
@@ -54,7 +43,9 @@ public class MyRunnable5 implements Runnable {
                 LOG.error(e);
             }
         }
-        cdl.countDown();
         formProgressBar.getJLabelsInfo(threadInfo).setText("");
+        formReport.getBCreateReport().setEnabled(true);
+//            formProgressBar.getBReport().setVisible(true);
+//            formProgressBar.getBClose().setVisible(true);
     }
 }

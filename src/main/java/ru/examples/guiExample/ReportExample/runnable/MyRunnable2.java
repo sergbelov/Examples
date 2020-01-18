@@ -11,18 +11,15 @@ public class MyRunnable2 implements Runnable {
 
     static final Logger LOG = LogManager.getLogger();
 
-    private String name = "MyRunnable3";
+    private String name = "MyRunnable2";
     FormReport formReport;
     FormProgressBar formProgressBar;
-    CountDownLatch cdl;
     int threadInfo;
 
     public MyRunnable2(
-            CountDownLatch cdl,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
-        this.cdl = cdl;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
         this.threadInfo = formProgressBar.getJLabelsInfoFree();
@@ -54,7 +51,6 @@ public class MyRunnable2 implements Runnable {
                 LOG.error(e);
             }
         }
-        cdl.countDown();
         formProgressBar.getJLabelsInfo(threadInfo).setText("");
     }
 }

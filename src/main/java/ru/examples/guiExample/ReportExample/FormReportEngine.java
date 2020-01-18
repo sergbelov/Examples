@@ -57,28 +57,6 @@ public class FormReportEngine implements ActionListener {
             int countThread = formReport.getCountThread();
             int max = 10;
 
-/*
-            FormProgressBar2 formProgressBar = new FormProgressBar2(list, countThread);
-            formProgressBar.run();
-
-            formProgressBar.getJProgressBar().setMaximum(countThread * max);
-
-            CountDownLatch cdl = new CountDownLatch(countThread);
-
-            ExecutorService es = Executors.newFixedThreadPool(countThread);
-            for (int t = 0; t < countThread; t++) {
-                es.submit(
-                        new MyRunnable(
-                                t,
-                                max,
-                                list,
-                                cdl,
-                                formReport,
-                                formProgressBar
-                        ));
-            }
-*/
-
             int c = 5;
             String[] stages = new String[c];
             for (int i = 0; i < c; i++) {
@@ -88,11 +66,43 @@ public class FormReportEngine implements ActionListener {
             formProgressBar.run(
                     formReport.getStartPeriodStr() + " - " + formReport.getStopPeriodStr(),
                     stages,
-                    4);
+                    3);
             formProgressBar.getJProgressBars(1).setMaximum(countThread * max);
             formProgressBar.getJProgressBars(1).repaint();
 
+            list.clear();
+            formProgressBar.setStartTime();
 
+            ExecutorService es = Executors.newFixedThreadPool(3);
+
+            // 1
+            es.submit(
+                    new MyRunnable1(
+                            countThread,
+                            list,
+                            max,
+                            formReport,
+                            formProgressBar
+                    ));
+
+            // 2
+            es.submit(
+                    new MyRunnable2(
+                            formReport,
+                            formProgressBar
+                    ));
+
+            // 3
+            es.submit(
+                    new MyRunnable3(
+                            formReport,
+                            formProgressBar
+                    ));
+
+            es.shutdown();
+
+
+/*
             // все процессы обработки запускаем в фоновом потоке
             EventQueue.invokeLater(new Runnable() {
                 @Override
@@ -125,7 +135,7 @@ public class FormReportEngine implements ActionListener {
                                             formProgressBar
                                     ));
 
-                            // 2
+                            // 3
                             es.submit(
                                     new MyRunnable3(
                                             cdl,
@@ -138,6 +148,7 @@ public class FormReportEngine implements ActionListener {
                     });
                 }
             });
+*/
 
 //            } else {
 //                JOptionPane.showMessageDialog(formAuthorization.authorizationFrame,

@@ -18,21 +18,18 @@ public class MyRunnable1 implements Runnable {
     private int countThread;
     private FormReport formReport;
     private FormProgressBar formProgressBar;
-    private CountDownLatch cdl;
     List<String> list;
     int max;
     private int threadInfo;
 
     public MyRunnable1(
             int countThread,
-            CountDownLatch cdl,
             List<String> list,
             int max,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
         this.countThread = countThread;
-        this.cdl = cdl;
         this.list = list;
         this.max = max;
         this.formReport = formReport;
@@ -44,6 +41,7 @@ public class MyRunnable1 implements Runnable {
 
     @Override
     public void run() {
+        formProgressBar.pictLabelSetVisible(true);
         int c = 0;
         for (int i = 0; i < 1000; i++) {
             formProgressBar.getJLabelsInfo(threadInfo).setText("Процесс " + name + " " + i);
@@ -57,17 +55,16 @@ public class MyRunnable1 implements Runnable {
             }
             c++;
         }
-        formProgressBar.pictLabelHide();
+        formProgressBar.pictLabelSetVisible(false);
         formProgressBar.getJLabelsDur(0).setText(formProgressBar.getDurationTimeString());
         formProgressBar.getJLabelsStage(0).setText("Количество записей: " + c);
 
-        cdl.countDown();
         formProgressBar.getJLabelsInfo(threadInfo).setText("");
 
-        CountDownLatch cdl2 = new CountDownLatch(countThread);
+        CountDownLatch cdl = new CountDownLatch(countThread);
         ExecutorService es = Executors.newFixedThreadPool(countThread);
 
-        // 2
+        // 4
         for (int t = 0; t < countThread; t++) {
             es.submit(
                     new MyRunnable4(
@@ -75,7 +72,6 @@ public class MyRunnable1 implements Runnable {
                             max,
                             list,
                             cdl,
-                            cdl2,
                             formReport,
                             formProgressBar
                     ));

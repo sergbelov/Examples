@@ -3,7 +3,6 @@ package ru.examples.guiExample.ReportExample;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -28,7 +27,7 @@ public class FormProgressBarEngine implements MouseListener {
                 formProgressBar.getJLabels(1));
 */
 
-        if (e.getComponent().equals(formProgressBar.getJLabels(2))) {
+        if (e.getComponent().equals(formProgressBar.getJLabelsStage(2))) {
             openFile("sample_excel.xlsx");
         }
     }

@@ -2,6 +2,10 @@ package ru.examples.guiExample.ReportExample;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable4;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable1;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable2;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable3;
 
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -83,7 +87,8 @@ public class FormReportEngine implements ActionListener {
             FormProgressBar formProgressBar = new FormProgressBar();
             formProgressBar.run(
                     formReport.getStartPeriodStr() + " - " + formReport.getStopPeriodStr(),
-                    stages);
+                    stages,
+                    4);
             formProgressBar.getJProgressBars(1).setMaximum(countThread * max);
             formProgressBar.getJProgressBars(1).repaint();
 
@@ -98,35 +103,36 @@ public class FormReportEngine implements ActionListener {
                     EventQueue.invokeLater(new Runnable() {
                         @Override
                         public void run() {
-                            int c = 0;
-                            for (int i = 0; i < 1000; i++) {
-                                try {
-                                    LOG.info("Запрос через UI: {}", i);
-                                    formProgressBar.getJLabelsDur(0).setText("Запрос: " + i);
-                                    formProgressBar.getJLabelsDur(0).repaint();
-                                    Thread.sleep(2);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                c++;
-                            }
-                            formProgressBar.pictLabelHide();
-                            formProgressBar.getJLabelsDur(0).setText(formProgressBar.getDurationTimeString());
-                            formProgressBar.getJLabels(0).setText("Количество записей: " + c);
+                            CountDownLatch cdl = new CountDownLatch(3);
+                            ExecutorService es = Executors.newFixedThreadPool(3);
 
-                            CountDownLatch cdl = new CountDownLatch(countThread);
-                            ExecutorService es = Executors.newFixedThreadPool(countThread);
-                            for (int t = 0; t < countThread; t++) {
-                                es.submit(
-                                        new MyRunnable(
-                                                t,
-                                                max,
-                                                list,
-                                                cdl,
-                                                formReport,
-                                                formProgressBar
-                                        ));
-                            }
+                            // 1
+                            es.submit(
+                                    new MyRunnable1(
+                                            countThread,
+                                            cdl,
+                                            list,
+                                            max,
+                                            formReport,
+                                            formProgressBar
+                                    ));
+
+                            // 2
+                            es.submit(
+                                    new MyRunnable2(
+                                            cdl,
+                                            formReport,
+                                            formProgressBar
+                                    ));
+
+                            // 2
+                            es.submit(
+                                    new MyRunnable3(
+                                            cdl,
+                                            formReport,
+                                            formProgressBar
+                                    ));
+
                             es.shutdown();
                         }
                     });

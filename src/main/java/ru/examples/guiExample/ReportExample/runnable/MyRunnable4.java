@@ -1,13 +1,16 @@
-package ru.examples.guiExample.ReportExample;
+package ru.examples.guiExample.ReportExample.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.examples.guiExample.ReportExample.FormProgressBar;
+import ru.examples.guiExample.ReportExample.FormReport;
 
-import javax.swing.*;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class MyRunnable implements Runnable {
+public class MyRunnable4 implements Runnable {
 
     static final Logger LOG = LogManager.getLogger();
 
@@ -16,12 +19,14 @@ public class MyRunnable implements Runnable {
     FormProgressBar formProgressBar;
     static List<String> list;
     CountDownLatch cdl;
+    CountDownLatch cdl2;
 
-    public MyRunnable(
+    public MyRunnable4(
             int num,
             int max,
             List<String> list,
             CountDownLatch cdl,
+            CountDownLatch cdl2,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
@@ -29,6 +34,7 @@ public class MyRunnable implements Runnable {
         this.max = max;
         this.list = list;
         this.cdl = cdl;
+        this.cdl2 = cdl2;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
     }
@@ -58,11 +64,22 @@ public class MyRunnable implements Runnable {
             }
         }
         cdl.countDown();
+        cdl2.countDown();
 
-        if (cdl.getCount() == 0) { // последний поток закончил свою работу
+        if (cdl2.getCount() == 0) { // последний поток закончил свою работу
             formProgressBar.getJLabelsDur(1).setText(formProgressBar.getDurationTimeString());
-            formProgressBar.getJLabels(1).setText("Количество 1 этап: " + list.size());
+            formProgressBar.getJLabelsStage(1).setText("Количество 1 этап: " + list.size());
             formProgressBar.getJProgressBars(2).setMaximum(list.size());
+
+            CountDownLatch cdl = new CountDownLatch(1);
+            ExecutorService es = Executors.newFixedThreadPool(1);
+            // 5
+            es.submit(
+                    new MyRunnable5(
+                            cdl,
+                            formReport,
+                            formProgressBar
+                    ));
 
             LOG.info("\n======================================\n" +
                     "========== Вывод результата ==========\n" +
@@ -79,9 +96,9 @@ public class MyRunnable implements Runnable {
                 }
             }
             formProgressBar.getJLabelsDur(2).setText(formProgressBar.getDurationTimeString());
-            formProgressBar.getJLabels(2).setText("Количество 2 этап: " + list.size());
+            formProgressBar.getJLabelsStage(2).setText("Количество 2 этап: " + list.size());
 
-            formReport.getBCreateReport().setEnabled(true);
+            formReport.getBCreateReport().setEnabled(true); // ToDo перенести в 5
 //            formProgressBar.getBReport().setVisible(true);
 //            formProgressBar.getBClose().setVisible(true);
         }

@@ -54,7 +54,7 @@ public class MyRunnable4 implements Runnable {
         for (int i = min; i < max; i++) {
             data = name + " " + listSource.get(i);
             LOG.info(data);
-            synchronized (listSource) {
+            synchronized (listTarget) {
                 listTarget.add(data);
             }
 

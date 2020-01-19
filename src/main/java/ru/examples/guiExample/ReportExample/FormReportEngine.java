@@ -73,6 +73,7 @@ public class FormReportEngine implements ActionListener {
             formProgressBar.getJProgressBars(1).repaint();
 
             listSource.clear();
+            listTarget.clear();
             formProgressBar.setStartTime();
 
             ExecutorService es = Executors.newFixedThreadPool(3);

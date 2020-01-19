@@ -155,12 +155,12 @@ public class FormProgressBar {
     public int getJLabelsInfoFree(){
         int r = 0;
         for (int i = 0; i < countLabelInfo; i++){
-            if (jLabelsInfo[i].getText().isEmpty()){
-                synchronized (jLabelsInfo[i]){
+            synchronized (jLabelsInfo) {
+                if (jLabelsInfo[i].getText().isEmpty()) {
                     jLabelsInfo[i].setText("*");
+                    r = i;
+                    break;
                 }
-                r = i;
-                break;
             }
         }
         return r;

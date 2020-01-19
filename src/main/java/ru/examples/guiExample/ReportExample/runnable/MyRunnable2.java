@@ -5,8 +5,6 @@ import org.apache.logging.log4j.Logger;
 import ru.examples.guiExample.ReportExample.FormProgressBar;
 import ru.examples.guiExample.ReportExample.FormReport;
 
-import java.util.concurrent.CountDownLatch;
-
 public class MyRunnable2 implements Runnable {
 
     static final Logger LOG = LogManager.getLogger();
@@ -22,16 +20,16 @@ public class MyRunnable2 implements Runnable {
 
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
-        this.threadInfo = formProgressBar.getJLabelsInfoFree();
-        formProgressBar.getJLabelsInfo(threadInfo).setText("Старт " + name);
+        LOG.info("Инициализация " + name);
     }
 
 
     @Override
     public void run() {
-        int delay;
+        threadInfo = formProgressBar.getJLabelsInfoFree();
+        formProgressBar.getJLabelsInfo(threadInfo).setText("Старт " + name);
         String data;
-        for (int i = 1; i <= 1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             formProgressBar.getJLabelsInfo(threadInfo).setText("Процесс " + name + " " + i);
             data = name + "_" + i;
             LOG.info(data);
@@ -42,11 +40,8 @@ public class MyRunnable2 implements Runnable {
                 formProgressBar.getJProgressBars(1).repaint();
             }
 */
-
-
             try {
-                delay = (int) (Math.random() * 10);
-                Thread.sleep(delay);
+                Thread.sleep((int) (Math.random() * 10));
             } catch (InterruptedException e) {
                 LOG.error(e);
             }

@@ -14,39 +14,49 @@ public class MyRunnable4 implements Runnable {
 
     static final Logger LOG = LogManager.getLogger();
 
-    int num, max;
+    private String name;
+    int min, max;
     FormReport formReport;
     FormProgressBar formProgressBar;
-    List<String> list;
+    List<String> listSource;
+    List<String> listTarget;
     CountDownLatch cdl;
+    ExecutorService es;
 
     public MyRunnable4(
             int num,
+            List<String> listSource,
+            List<String> listTarget,
+            int min,
             int max,
-            List<String> list,
             CountDownLatch cdl,
+            ExecutorService es,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
-        this.num = num;
+        this.name = "MyRunnable4 " + num;
+        this.listSource = listSource;
+        this.listTarget = listTarget;
+        this.min = min;
         this.max = max;
-        this.list = list;
         this.cdl = cdl;
+        this.es = es;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
+        LOG.info("Инициализация {}, ({}-{})", name, min, max);
     }
-
 
     @Override
     public void run() {
-        int delay;
+        LOG.info("Старт {}, ({}-{})", name, min, max);
+
         String data;
-        for (int i = 1; i <= max; i++) {
-            data = "Thread" + num + "_" + i;
-            synchronized (list) {
-                list.add(data);
-            }
+        for (int i = min; i < max; i++) {
+            data = name + " " + listSource.get(i);
             LOG.info(data);
+            synchronized (listSource) {
+                listTarget.add(data);
+            }
 
             synchronized (formProgressBar.getJProgressBars(1)){
                 formProgressBar.getJProgressBars(1).setValue(formProgressBar.getJProgressBars(1).getValue() + 1);
@@ -54,43 +64,40 @@ public class MyRunnable4 implements Runnable {
             }
 
             try {
-                delay = (int) (Math.random() * 1000);
-                Thread.sleep(delay);
+                Thread.sleep((int) (Math.random() * 100));
             } catch (InterruptedException e) {
                 LOG.error(e);
             }
         }
         cdl.countDown();
+        LOG.info("Стоп {}, ({}-{}) {}", name, min, max, cdl.getCount());
 
         if (cdl.getCount() == 0) { // последний поток закончил свою работу
             formProgressBar.getJLabelsDur(1).setText(formProgressBar.getDurationTimeString());
-            formProgressBar.getJLabelsStage(1).setText("Количество 1 этап: " + list.size());
-            formProgressBar.getJProgressBars(2).setMaximum(list.size());
+            formProgressBar.getJLabelsStage(1).setText("Количество 1 этап: " + listTarget.size());
+            formProgressBar.getJProgressBars(2).setMaximum(listTarget.size());
 
-            ExecutorService es = Executors.newFixedThreadPool(1);
+            CountDownLatch cdl = new CountDownLatch(2);
+//            ExecutorService es = Executors.newFixedThreadPool(2);
+
             // 5
             es.submit(
                     new MyRunnable5(
+                            listTarget,
+                            cdl,
+                            formReport,
+                            formProgressBar
+                    ));
+            // 6
+            es.submit(
+                    new MyRunnable6(
+                            listTarget,
+                            cdl,
                             formReport,
                             formProgressBar
                     ));
 
-            LOG.info("\n======================================\n" +
-                    "========== Вывод результата ==========\n" +
-                    "size: {}", list.size());
-
-            for (String string : list) {
-                LOG.info("Результат: {}", string);
-                formProgressBar.getJProgressBars(2).setValue(formProgressBar.getJProgressBars(2).getValue()+1);
-                formProgressBar.getJProgressBars(2).repaint();
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            formProgressBar.getJLabelsDur(2).setText(formProgressBar.getDurationTimeString());
-            formProgressBar.getJLabelsStage(2).setText("Количество 2 этап: " + list.size());
+            es.shutdown();
         }
     }
 }

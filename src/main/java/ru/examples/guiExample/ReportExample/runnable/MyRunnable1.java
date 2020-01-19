@@ -15,66 +15,86 @@ public class MyRunnable1 implements Runnable {
     static final Logger LOG = LogManager.getLogger();
 
     private String name = "MyRunnable1";
-    private int countThread;
+    private int countThreadMax;
+    private ExecutorService es;
     private FormReport formReport;
     private FormProgressBar formProgressBar;
-    List<String> list;
-    int max;
+    List<String> listSource;
+    List<String> listTarget;
     private int threadInfo;
 
     public MyRunnable1(
             int countThread,
-            List<String> list,
-            int max,
+            ExecutorService es,
+            List<String> listSource,
+            List<String> listTarget,
             FormReport formReport,
             FormProgressBar formProgressBar) {
 
-        this.countThread = countThread;
-        this.list = list;
-        this.max = max;
+        this.countThreadMax = countThread;
+        this.es = es;
+        this.listSource = listSource;
+        this.listTarget = listTarget;
         this.formReport = formReport;
         this.formProgressBar = formProgressBar;
-        this.threadInfo = formProgressBar.getJLabelsInfoFree();
-        formProgressBar.getJLabelsInfo(threadInfo).setText("Старт " + name);
+        LOG.info("Инициализация " + name);
     }
 
 
     @Override
     public void run() {
+        this.threadInfo = formProgressBar.getJLabelsInfoFree();
+        formProgressBar.getJLabelsInfo(threadInfo).setText("Старт " + name);
         formProgressBar.pictLabelSetVisible(true);
-        int c = 0;
+        int count = 0;
         for (int i = 0; i < 1000; i++) {
             formProgressBar.getJLabelsInfo(threadInfo).setText("Процесс " + name + " " + i);
             try {
-                LOG.info("Запрос через UI: {}", i);
+                synchronized (listSource) {
+                    listSource.add("запись " + i);
+                }
+                LOG.info("Запрос: {}", i);
                 formProgressBar.getJLabelsDur(0).setText("Запрос: " + i);
-                formProgressBar.getJLabelsDur(0).repaint();
+//                formProgressBar.getJLabelsDur(0).repaint();
                 Thread.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            c++;
+            count++;
         }
         formProgressBar.pictLabelSetVisible(false);
         formProgressBar.getJLabelsDur(0).setText(formProgressBar.getDurationTimeString());
-        formProgressBar.getJLabelsStage(0).setText("Количество записей: " + c);
+        formProgressBar.getJLabelsStage(0).setText("Количество записей: " + count);
 
         formProgressBar.getJLabelsInfo(threadInfo).setText("");
 
-        CountDownLatch cdl = new CountDownLatch(countThread);
-        ExecutorService es = Executors.newFixedThreadPool(countThread);
+        int t = 0;
+        int c = 0;
+        int countThread = Math.min(countThreadMax, count);
+        int step = (int) Math.ceil(count * 1.00 / countThread);
+        countThread = (int) Math.ceil(count * 1.00 / step); // корректировка из-за округления
 
-        // 4
-        for (int t = 0; t < countThread; t++) {
-            es.submit(
+        LOG.info("countThread: {}", countThread);
+        CountDownLatch cdl = new CountDownLatch(countThread);
+        ExecutorService es4 = Executors.newFixedThreadPool(countThread);
+
+        // 4 обработка полученных данных в несколько потоков
+        while (c < count) {
+            t++;
+            es4.submit(
                     new MyRunnable4(
                             t,
-                            max,
-                            list,
+                            listSource,
+                            listTarget,
+                            c,
+                            Math.min(c + step, count),
                             cdl,
+                            es,
                             formReport,
                             formProgressBar
                     ));
+            c = Math.min(c + step, count);
         }
+        es4.shutdown();
     }
 }

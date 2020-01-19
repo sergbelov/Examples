@@ -17,8 +17,8 @@ public class FormProgressBar {
     private JFrame progressBarFrame = new JFrame("Процесс обработки данных");
     private JPanel progressBarPanelMain = new JPanel(new GridLayout(2, 1, 1, 1));
     private JPanel progressBarPanelProgress = new JPanel(new GridBagLayout());
-    private JPanel progressBarPanelInfo = new JPanel();
-    private GridBagConstraints gbc = new GridBagConstraints();
+    private JPanel progressBarPanelInfo;
+    private GridBagConstraints gbcProgress = new GridBagConstraints();
 
     private JProgressBar[] jProgressBars;
     private JLabel[] jLabelsStage;
@@ -46,13 +46,9 @@ public class FormProgressBar {
         jLabelsStage = new JLabel[countStage];
         jLabelsInfo = new JLabel[countLabelInfo];
 
-        progressBarPanelProgress.setBorder(BorderFactory.createEmptyBorder(0, 3, 5, 5));
-        progressBarPanelInfo.setLayout(new GridLayout(countLabelInfo, 1, 1, 1));
-
-        for (int i = 0; i < countLabelInfo; i++){
-            jLabelsInfo[i] = new JLabel();
-            progressBarPanelInfo.add(jLabelsInfo[i]);
-        }
+        progressBarPanelProgress.setBorder(BorderFactory.createEmptyBorder(2, 2, 5, 2));
+        progressBarPanelInfo = new JPanel(new GridLayout(countLabelInfo, 1, 1, 1));
+        progressBarPanelInfo.setBackground( new Color(192, 210, 192));
 
         for (int i = 0; i < countStage; i++) {
             jProgressBars[i] = new JProgressBar();
@@ -67,37 +63,37 @@ public class FormProgressBar {
             jLabelsStage[i] = new JLabel();
             jLabelsStage[i].addMouseListener(etEngine);
 
-            gbc.insets = new Insets(2, 2, 0, 0);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.gridx = 0;
-            gbc.gridy = i;
-            gbc.weightx = 0.0; // размер не изменяется
-            progressBarPanelProgress.add(new JLabel(stages[i]), gbc);
+            gbcProgress.insets = new Insets(2, 2, 0, 0);
+            gbcProgress.fill = GridBagConstraints.HORIZONTAL;
+            gbcProgress.gridx = 0;
+            gbcProgress.gridy = i;
+            gbcProgress.weightx = 0.0; // размер не изменяется
+            progressBarPanelProgress.add(new JLabel(stages[i]), gbcProgress);
 
-            gbc.insets = new Insets(2, 5, 0, 0);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.gridx = 1;
-            gbc.gridy = i;
-            gbc.weightx = 1.0;
+            gbcProgress.insets = new Insets(2, 5, 0, 0);
+            gbcProgress.fill = GridBagConstraints.HORIZONTAL;
+            gbcProgress.gridx = 1;
+            gbcProgress.gridy = i;
+            gbcProgress.weightx = 1.0;
             if (i == 0) {
-                progressBarPanelProgress.add(new Label(period), gbc);
+                progressBarPanelProgress.add(new Label(period), gbcProgress);
             } else {
-                progressBarPanelProgress.add(jProgressBars[i], gbc);
+                progressBarPanelProgress.add(jProgressBars[i], gbcProgress);
             }
 
-            gbc.insets = new Insets(2, 5, 0, 0);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.gridx = 2;
-            gbc.gridy = i;
-            gbc.weightx = 0.0;
-            progressBarPanelProgress.add(jLabelsDur[i], gbc);
+            gbcProgress.insets = new Insets(2, 5, 0, 0);
+            gbcProgress.fill = GridBagConstraints.HORIZONTAL;
+            gbcProgress.gridx = 2;
+            gbcProgress.gridy = i;
+            gbcProgress.weightx = 0.0;
+            progressBarPanelProgress.add(jLabelsDur[i], gbcProgress);
 
-            gbc.insets = new Insets(2, 5, 0, 0);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.gridx = 3;
-            gbc.gridy = i;
-            gbc.weightx = 0.0;
-            progressBarPanelProgress.add(jLabelsStage[i], gbc);
+            gbcProgress.insets = new Insets(2, 5, 0, 0);
+            gbcProgress.fill = GridBagConstraints.HORIZONTAL;
+            gbcProgress.gridx = 3;
+            gbcProgress.gridy = i;
+            gbcProgress.weightx = 0.0;
+            progressBarPanelProgress.add(jLabelsStage[i], gbcProgress);
         }
 
 
@@ -105,18 +101,22 @@ public class FormProgressBar {
         ImageIcon icon = new ImageIcon(icon0.getImage().getScaledInstance(24, 24, Image.SCALE_DEFAULT));
         pictLabel = new JLabel(icon);
 //        pictLabel.setOpaque(false); // прозрачный
-        gbc.gridx = 4;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 0.0;
-        gbc.weighty = 0.0;
+        gbcProgress.gridx = 4;
+        gbcProgress.gridy = 0;
+        gbcProgress.fill = GridBagConstraints.HORIZONTAL;
+        gbcProgress.weightx = 0.0;
+        gbcProgress.weighty = 0.0;
 //        gbc.gridwidth = 1;
-        progressBarPanelProgress.add(pictLabel, gbc);
+        progressBarPanelProgress.add(pictLabel, gbcProgress);
+
+        for (int i = 0; i < countLabelInfo; i++){
+            jLabelsInfo[i] = new JLabel();
+            progressBarPanelInfo.add(jLabelsInfo[i]);
+        }
 
         // размещаем две панели на основной
-        progressBarPanelMain.add(BorderLayout.NORTH, progressBarPanelProgress);
+        progressBarPanelMain.add(BorderLayout.CENTER, progressBarPanelProgress);
         progressBarPanelMain.add(BorderLayout.SOUTH, progressBarPanelInfo);
-
 
         //Создаём фрейм и задаём его основную панель
         progressBarFrame.setContentPane(progressBarPanelMain);
@@ -156,6 +156,9 @@ public class FormProgressBar {
         int r = 0;
         for (int i = 0; i < countLabelInfo; i++){
             if (jLabelsInfo[i].getText().isEmpty()){
+                synchronized (jLabelsInfo[i]){
+                    jLabelsInfo[i].setText("*");
+                }
                 r = i;
                 break;
             }

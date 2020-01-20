@@ -6,6 +6,7 @@ import ru.examples.guiExample.ReportExample.runnable.MyRunnable1;
 import ru.examples.guiExample.ReportExample.runnable.MyRunnable2;
 import ru.examples.guiExample.ReportExample.runnable.MyRunnable3;
 
+import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.List;
@@ -65,64 +66,55 @@ public class FormReportEngine implements ActionListener {
                     stages,
                     countStage);
 
-            if (1==1){
+            if (1 == 1) {
 //                return;
             }
 
-            formProgressBar.getJProgressBars(1).setMaximum(1000);
-            formProgressBar.getJProgressBars(1).repaint();
+            // все процессы обработки запускаем в фоновом потоке ???
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
 
-            listSource.clear();
-            listTarget.clear();
-            formProgressBar.setStartTime();
+                    formProgressBar.getJProgressBars(1).setMaximum(1000);
+                    formProgressBar.getJProgressBars(1).repaint();
 
-            ExecutorService es = Executors.newFixedThreadPool(3);
+                    listSource.clear();
+                    listTarget.clear();
+                    formProgressBar.setStartTime();
 
-            // 1
-            es.submit(
-                    new MyRunnable1(
-                            countThread,
-                            es,
-                            listSource,
-                            listTarget,
-                            formReport,
-                            formProgressBar
-                    ));
+                    ExecutorService es = Executors.newFixedThreadPool(3);
 
-            // 2
-            es.submit(
-                    new MyRunnable2(
-                            formReport,
-                            formProgressBar
-                    ));
+                    // 1
+                    es.submit(
+                            new MyRunnable1(
+                                    countThread,
+                                    es,
+                                    listSource,
+                                    listTarget,
+                                    formReport,
+                                    formProgressBar
+                            ));
 
-            // 3
-            es.submit(
-                    new MyRunnable3(
-                            formReport,
-                            formProgressBar
-                    ));
+                    // 2
+                    es.submit(
+                            new MyRunnable2(
+                                    formReport,
+                                    formProgressBar
+                            ));
+
+                    // 3
+                    es.submit(
+                            new MyRunnable3(
+                                    formReport,
+                                    formProgressBar
+                            ));
 
 //            es.shutdown();
 
 
-/*
-            // все процессы обработки запускаем в фоновом потоке
-            EventQueue.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    list.clear();
-                    formProgressBar.setStartTime();
-
-                    EventQueue.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-
-                        }
-                    });
                 }
             });
-*/
+
 
 //            } else {
 //                JOptionPane.showMessageDialog(formAuthorization.authorizationFrame,

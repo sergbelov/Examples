@@ -2,6 +2,9 @@ package ru.examples.guiExample.ReportExample;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable1;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable2;
+import ru.examples.guiExample.ReportExample.runnable.MyRunnable3;
 
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -14,7 +17,8 @@ public class FormReportEngine implements ActionListener {
 
     static final Logger LOG = LogManager.getLogger();
 
-    static List<String> list = new CopyOnWriteArrayList<>();
+    static List<String> listSource = new CopyOnWriteArrayList<>();
+    static List<String> listTarget = new CopyOnWriteArrayList<>();
 
     private Object[] options = {"Да", "Нет"};
     private FormReport formReport;
@@ -45,93 +49,72 @@ public class FormReportEngine implements ActionListener {
 
             formReport.getBCreateReport().setEnabled(false);
 
-
             LOG.info("startPeriodStr: {); startPeriodStr:{);",
                     formReport.getStartPeriodStr(),
                     formReport.getStopPeriodStr());
 
             int countThread = formReport.getCountThread();
-            int max = 10;
 
-/*
-            FormProgressBar2 formProgressBar = new FormProgressBar2(list, countThread);
-            formProgressBar.run();
-
-            formProgressBar.getJProgressBar().setMaximum(countThread * max);
-
-            CountDownLatch cdl = new CountDownLatch(countThread);
-
-            ExecutorService es = Executors.newFixedThreadPool(countThread);
-            for (int t = 0; t < countThread; t++) {
-                es.submit(
-                        new MyRunnable(
-                                t,
-                                max,
-                                list,
-                                cdl,
-                                formReport,
-                                formProgressBar
-                        ));
-            }
-*/
-
-            int c = 5;
-            String[] stages = new String[c];
-            for (int i = 0; i < c; i++) {
+            int countStage = 3;
+            String[] stages = new String[countStage];
+            for (int i = 0; i < countStage; i++) {
                 stages[i] = "Этап " + i;
             }
             FormProgressBar formProgressBar = new FormProgressBar();
             formProgressBar.run(
                     formReport.getStartPeriodStr() + " - " + formReport.getStopPeriodStr(),
-                    stages);
-            formProgressBar.getJProgressBars(1).setMaximum(countThread * max);
-            formProgressBar.getJProgressBars(1).repaint();
+                    stages,
+                    countStage);
 
+            if (1 == 1) {
+//                return;
+            }
 
-            // все процессы обработки запускаем в фоновом потоке
+            // все процессы обработки запускаем в фоновом потоке ???
             EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    list.clear();
+
+                    formProgressBar.getJProgressBars(1).setMaximum(1000);
+                    formProgressBar.getJProgressBars(1).repaint();
+
+                    listSource.clear();
+                    listTarget.clear();
                     formProgressBar.setStartTime();
 
-                    EventQueue.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            int c = 0;
-                            for (int i = 0; i < 1000; i++) {
-                                try {
-                                    LOG.info("Запрос через UI: {}", i);
-                                    formProgressBar.getJLabelsDur(0).setText("Запрос: " + i);
-                                    formProgressBar.getJLabelsDur(0).repaint();
-                                    Thread.sleep(2);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                c++;
-                            }
-                            formProgressBar.pictLabelHide();
-                            formProgressBar.getJLabelsDur(0).setText(formProgressBar.getDurationTimeString());
-                            formProgressBar.getJLabels(0).setText("Количество записей: " + c);
+                    ExecutorService es = Executors.newFixedThreadPool(3);
 
-                            CountDownLatch cdl = new CountDownLatch(countThread);
-                            ExecutorService es = Executors.newFixedThreadPool(countThread);
-                            for (int t = 0; t < countThread; t++) {
-                                es.submit(
-                                        new MyRunnable(
-                                                t,
-                                                max,
-                                                list,
-                                                cdl,
-                                                formReport,
-                                                formProgressBar
-                                        ));
-                            }
-                            es.shutdown();
-                        }
-                    });
+                    // 1
+                    es.submit(
+                            new MyRunnable1(
+                                    countThread,
+                                    es,
+                                    listSource,
+                                    listTarget,
+                                    formReport,
+                                    formProgressBar
+                            ));
+
+                    // 2
+                    es.submit(
+                            new MyRunnable2(
+                                    formReport,
+                                    formProgressBar
+                            ));
+
+                    // 3
+                    es.submit(
+                            new MyRunnable3(
+                                    formReport,
+                                    formProgressBar
+                            ));
+
+//            es.shutdown();
+
+
                 }
             });
+
 
 //            } else {
 //                JOptionPane.showMessageDialog(formAuthorization.authorizationFrame,

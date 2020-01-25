@@ -13,10 +13,16 @@ public class SvgGraphExample {
         DecimalFormat decimalFormat = new DecimalFormat("###.#");
         int x = 1000;
         int y = 500;
-        int xStart = 25;
-        int yStart = 25;
+        int xStart = x / 30;
+        int yStart = xStart;
         int xMax = x + xStart;
         int yMax = y + yStart;
+        int xMarginRight = x / 100;
+        int yMarginBottom = x / 10;
+        int xText = x / 200;
+        int yText = x / 350;
+        int fontSize = x / 100;
+        int lineSize = Math.max(1, x / 1000);
         String background = "#dfdfdf";
         String color = "#009f9f";
 
@@ -26,43 +32,45 @@ public class SvgGraphExample {
         int[] yValues = {10, 30, 50, 1000, 70, 90, 60, 80, 40, 100, 311, 50, 10, 20, 30, 111};
 
         StringBuilder result = new StringBuilder(
-                "\t\t\t<svg viewBox=\"0 0 " + (xMax+10) + " " + (yMax+100) + "\" class=\"chart\">\n" +
-                "\t\t\t\t<text font-size=\"20\" x=\"" + (x/2) +"\" y=\"15\">Отчет</text>\n" +
+                "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
+                "\t\t\t\t<text font-size=\"" + (fontSize * 2) + "\" x=\"" + (x / 2) + "\" y=\"" + (yStart - fontSize + yText) + "\">Отчет</text>\n" +
                 "\t\t\t\t<rect stroke=\"#0f0f0f\" fill=\"" + background + "\" x=\"" + xStart + "\" y=\"" + yStart + "\" width=\"" + x + "\" height=\"" + y + "\"/>\n\n");
 
-        int yValueMax = 0;
+        double yValueMax = 0;
         // ось X
-        int xRatio = x / xValues.length;
-        int xCur = xStart;
+        double xRatio = x / (xValues.length * 1.00);
+        double xCur = xStart;
         for (int i = 0; i < xValues.length; i++) {
             yValueMax = Math.max(yValueMax, yValues[i]);
             xCur = xCur + xRatio;
-            result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"#a0a0a0\" stroke-dasharray=\"5\" stroke-width=\"1\" points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax +"\"/>\n")
-                  .append("\t\t\t\t<text font-size=\"11\" writing-mode=\"tb\" x=\"" + (xCur-2) +"\" y=\"" + (yMax+5) + "\">" + xValues[i] + "</text>\n");
+            result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"#a0a0a0\" stroke-dasharray=\"" + xText + "\" stroke-width=\"" + lineSize + "\" points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n")
+                    .append("\t\t\t\t<text font-size=\"" + fontSize + "\" writing-mode=\"tb\" x=\"" + (xCur - yText) + "\" y=\"" + (yMax + yText) + "\">" + xValues[i] + "</text>\n");
         }
         result.append("\n");
 
         // ось Y
+        double scale = 20.00;
         double yRatio = y / (yValueMax * 1.00);
-        int yStep = y / 20;
-        int yCur = yMax;
-        double yValueRatio = yValueMax / 20.00;
+        double yValueRatio = yValueMax / scale;
+        double yStep = y / scale;
         double yValue = 0.00;
-        while (yCur >= yStart){
-            result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"#a0a0a0\" stroke-dasharray=\"5\" stroke-width=\"1\" points=\"" + xStart + "," + yCur + "  " + xMax + "," + yCur + "\"/>\n")
-                  .append("\t\t\t\t<text font-size=\"10\" x=\"0\" y=\"" + (yCur+4) + "\">" + decimalFormat.format(yValue) + "</text>\n");
-            yValue = yValue + yValueRatio;
+        double yCur = yMax;
+//        LOG.info("y:{}; yValueMax:{}; yRatio:{}; yValueRatio:{}; yStep:{}", y, yValueMax, yRatio, yValueRatio, yStep);
+        while (yCur > yStart) {
             yCur = yCur - yStep;
+            yValue = yValue + yValueRatio;
+            result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"#a0a0a0\" stroke-dasharray=\"" + xText + "\" stroke-width=\"" + lineSize + "\" points=\"" + xStart + "," + yCur + "  " + xMax + "," + yCur + "\"/>\n")
+                    .append("\t\t\t\t<text font-size=\"" + fontSize + "\" x=\"0\" y=\"" + (yCur + yText) + "\">" + decimalFormat.format(yValue) + "</text>\n");
         }
 
         // рисуем график
         xCur = xStart;
         StringBuilder sb = new StringBuilder();
-        result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"" + color + "\" stroke-width=\"3\" points=\"" + xStart + "," + yMax +" \n");
-        for (int i = 0; i < yValues.length; i++){
+        result.append("\t\t\t\t<polyline fill=\"none\" stroke=\"" + color + "\" stroke-width=\"" + (lineSize * 2) + "\" points=\"" + xStart + "," + yMax + " \n");
+        for (int i = 0; i < yValues.length; i++) {
             xCur = xCur + xRatio;
-            result.append(xCur + "," + (yMax - Math.round(yValues[i] * yRatio))  + " \n");
-            sb.append("\t\t\t\t<text font-size=\"11\" font-weight=\"bold\" x=\"" + (xCur-4) + "\" y=\"" + (yMax - Math.round(yValues[i] * yRatio) - 3) + "\">" + yValues[i] + "</text>\n");
+            result.append(xCur + "," + (yMax - Math.round(yValues[i] * yRatio)) + " \n");
+            sb.append("\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + (xCur - xText) + "\" y=\"" + (yMax - Math.round(yValues[i] * yRatio) - yText) + "\">" + yValues[i] + "</text>\n");
         }
         result.append("\"/>\n\n");
         result.append(sb.toString());
@@ -77,7 +85,23 @@ public class SvgGraphExample {
                 "\t\t\t</svg>\n" +
 */
 
+        StringBuilder sbHtml = new StringBuilder(
+                "<html>\n" +
+                "\t<head>\n" +
+                "\t\t<meta charset=\"UTF-8\">\n" +
+                "\t\t<style>\n" +
+                "\t\t\tbody, html{width:100%; height:100%; margin:0; background:#fdfdfd}\n" +
+                "\t\t\t.graph{width:80%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px solid #ccc; background:#fff}\n" +
+                "\t\t</style>\n" +
+                "\t</head>\n" +
+                "\t<body>\n" +
+                "\t\t<div class=\"graph\">\n");
+        sbHtml.append(result.toString())
+                .append("\t\t</div>\n" +
+                        "\t</body>\n" +
+                        "</html>");
+
         FileUtils fileUtils = new FileUtils();
-        fileUtils.writeFile("GraphSVG.html", result.toString());
+        fileUtils.writeFile("GraphSVG.html", sbHtml.toString());
     }
 }

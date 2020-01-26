@@ -16,23 +16,35 @@ public class SvgGraphExample {
     private static final Logger LOG = LogManager.getLogger();
 
     public static void main(String[] args) {
+        DateFormat datetimeFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
         List<DateTimeValue> dateTimeValueList = new ArrayList<>();
 
 // генерим список метрик
-        int countX = 100;
+        int countX = 360;
         long startTime = System.currentTimeMillis();
-        long delay = 10000;
-        for (int i = 0; i < countX; i++){
-            LOG.info("Заполняем список метрик {} из {}", i+1, countX);
+        long curTime = startTime;
+        long delay = 5000;
+        LOG.info("startTime: {}", datetimeFormat.format(startTime));
+        for (int i = 0; i < countX; i++) {
+            curTime = curTime + delay;
+            int value = (int) ((Math.random() * 1000) + 5);
+            LOG.info("Заполняем список метрик {} из {}; {} - {}",
+                    i + 1,
+                    countX,
+                    datetimeFormat.format(curTime),
+                    value);
+
             dateTimeValueList.add(new DateTimeValue(
-                    startTime,
-                    (int) ((Math.random() * 1000) + 5)));
-            startTime = startTime + delay;
+                    curTime,
+                    value));
         }
 
         SvgGraphExample svgGraphExample = new SvgGraphExample();
-        String graphLine = svgGraphExample.getSvgGraphLine(dateTimeValueList);
+        String graphLine = svgGraphExample.getSvgGraphLine(
+                startTime,
+                dateTimeValueList,
+                false);
 
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
@@ -56,11 +68,15 @@ public class SvgGraphExample {
 
     }
 
-    public String getSvgGraphLine(List<DateTimeValue> metricsList) {
+    public String getSvgGraphLine(
+            long startTime,
+            List<DateTimeValue> metricsList,
+            boolean printMetrics) {
+
         DateFormat datetimeFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         DecimalFormat decimalFormat = new DecimalFormat("###.#");
 
-        int xSize = 1000;
+        int xSize = Math.max(1000, metricsList.size());
         int ySize = 500;
         int xStart = xSize / 30;
         int yStart = xStart;
@@ -75,69 +91,45 @@ public class SvgGraphExample {
         int lineSize = Math.max(1, xSize / 1000);
         String background = "#dfdfdf";
         String color = "#009f9f";
-        boolean printValue = false;
 
         // максималное значение Y
+        double yValueMin = 999999999999999999L;
         double yValueMax = 0;
         for (int i = 0; i < metricsList.size(); i++) {
+            yValueMin = Math.min(yValueMin, metricsList.get(i).getValue());
             yValueMax = Math.max(yValueMax, metricsList.get(i).getValue());
         }
 
-        StringBuilder result = new StringBuilder(
+        StringBuilder sbResult = new StringBuilder(
                 "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
-                "\t\t\t\t<text " +
+                        "\t\t\t\t<text " +
                         "font-size=\"" + (fontSize * 2) + "\" " +
                         "x=\"" + (xSize / 2) + "\" " +
                         "y=\"" + (yStart - fontSize + yText) + "\">" +
                         "Отчет</text>\n" +
-                "\t\t\t\t<rect " +
+                        "<!-- Область графика -->\n" +
+                        "\t\t\t\t<rect " +
                         "stroke=\"#0f0f0f\" " +
                         "fill=\"" + background + "\" " +
                         "x=\"" + xStart + "\" " +
                         "y=\"" + yStart + "\" " +
                         "width=\"" + xSize + "\" " +
-                        "height=\"" + ySize + "\"/>\n\n");
-
-        // ось X
-        double scaleX = Math.min(60.00, metricsList.size());
-        double xRatio = xSize / (metricsList.size() * 1.00);
-        double xValueRatio = metricsList.size() / scaleX;
-        double xStep = xSize / scaleX;
-        double xValuesElementNum = 0;
-        double xCur = xStart;
-//        LOG.info("x:{}; xValueMax:{}; xRatio:{}; xValueRatio:{}; xStep:{}", x, xValueMax, xRatio, xValueRatio, xStep);
-        while (xCur < xMax) {
-            xCur = xCur + xStep;
-            xValuesElementNum = xValuesElementNum + xValueRatio;
-            xValuesElementNum = Math.min(xValuesElementNum, metricsList.size() -1);
-            result.append("\t\t\t\t<polyline " +
-                    "fill=\"none\" " +
-                    "stroke=\"#a0a0a0\" " +
-                    "stroke-dasharray=\"" + xText + "\" " +
-                    "stroke-width=\"" + lineSize + "\" " +
-                    "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n")
-                    .append("\t\t\t\t<text " +
-                            "font-size=\"" + fontAxisSize + "\" " +
-                            "letter-spacing=\"0.5\" " +
-                            "writing-mode=\"tb\" " +
-                            "x=\"" + xCur + "\" " +
-                            "y=\"" + (yMax + yText) + "\">" +
-                            datetimeFormat.format(metricsList.get((int) xValuesElementNum).getTime()) + "</text>\n");
-        }
-        result.append("\n");
+                        "height=\"" + ySize + "\"/>\n" +
+                        "\n<!-- Ось Y -->\n");
 
         // ось Y
-        double scaleY = Math.min(20.00, yValueMax);
+        double yScale = Math.min(20.00, yValueMax);
         double yRatio = ySize / (yValueMax * 1.00);
-        double yValueRatio = yValueMax / scaleY;
-        double yStep = ySize / scaleY;
+        double yRatioValue = yValueMax / yScale;
+        double yStep = ySize / yScale;
         double yValue = 0.00;
         double yCur = yMax;
-//        LOG.info("y:{}; yValueMax:{}; yRatio:{}; yValueRatio:{}; yStep:{}", y, yValueMax, yRatio, yValueRatio, yStep);
+//        LOG.info("y:{}; yValueMax:{}; yRatio:{}; yValueRatio:{}; yStep:{}", ySize, yValueMax, yRatio, yRatioValue, yStep);
+
         while (yCur > yStart) {
             yCur = yCur - yStep;
-            yValue = yValue + yValueRatio;
-            result.append("\t\t\t\t<polyline " +
+            yValue = yValue + yRatioValue;
+            sbResult.append("\t\t\t\t<polyline " +
                     "fill=\"none\" " +
                     "stroke=\"#a0a0a0\" " +
                     "stroke-dasharray=\"" + xText + "\" " +
@@ -150,18 +142,64 @@ public class SvgGraphExample {
                             decimalFormat.format(yValue) + "</text>\n");
         }
 
+        // ось X
+        sbResult.append("\n<!-- Ось X -->\n");
+        int countX = metricsList.size();
+        double xScale = Math.min(60.00, countX);
+        double xRatio = xSize / (countX * 1.00);
+        double xRatioValue = countX / (xScale+1);
+        double xStep = xSize / (xScale+1);
+        double elementNum = xRatioValue;
+        double xCur = xStart;
+//        LOG.info("xSize:{}; countX:{}, xScale:{}; xRatio:{}; xRatioValue:{}; xStep:{}", xSize, countX, xScale, xRatio, xRatioValue, xStep);
+
+        sbResult.append("\t\t\t\t<text " +
+                "font-size=\"" + fontAxisSize + "\" " +
+                "letter-spacing=\"0.5\" " +
+                "writing-mode=\"tb\" " +
+                "x=\"" + xCur + "\" " +
+                "y=\"" + (yMax + yText) + "\">" +
+                datetimeFormat.format(startTime) + "</text>\n");
+
+        while (xCur < xMax) {
+            xCur = xCur + xStep;
+            sbResult.append("\t\t\t\t<polyline " +
+                    "fill=\"none\" " +
+                    "stroke=\"#a0a0a0\" " +
+                    "stroke-dasharray=\"" + xText + "\" " +
+                    "stroke-width=\"" + lineSize + "\" " +
+                    "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n")
+                    .append("\t\t\t\t<text " +
+                            "font-size=\"" + fontAxisSize + "\" " +
+                            "letter-spacing=\"0.5\" " +
+                            "writing-mode=\"tb\" " +
+                            "x=\"" + xCur + "\" " +
+                            "y=\"" + (yMax + yText) + "\">" +
+                            datetimeFormat.format(metricsList.get((int) elementNum).getTime()) + "</text>\n");
+
+            elementNum = elementNum + xRatioValue;
+            elementNum = Math.min(elementNum, countX-1);
+        }
+
         // рисуем график
+        StringBuilder sbSignature = new StringBuilder("<!-- Метрики на графике -->\n"); // значения метрик на графике
         xCur = xStart;
-        StringBuilder sbSignature = new StringBuilder();
-        result.append("\n\t\t\t\t<polyline " +
+        sbResult.append("\n\n<!-- График -->\n\t\t\t\t<polyline " +
                 "fill=\"none\" " +
                 "stroke=\"" + color + "\" " +
                 "stroke-width=\"" + (lineSize * 2) + "\" " +
                 "points=\"" + xStart + "," + yMax + " \n");
-        for (int i = 0; i < metricsList.size(); i++) {
+
+        for (int i = 0; i < metricsList.size(); i++){
             xCur = xCur + xRatio;
-            result.append(xCur + "," + (yMax - Math.round(metricsList.get(i).getValue() * yRatio)) + " \n");
-            if (printValue) {
+            sbResult.append(xCur + "," + (yMax - Math.round(metricsList.get(i).getValue() * yRatio)) + " \n");
+
+            // ToDo - отметить минимальные и максимальные значения
+            if (metricsList.get(i).getValue() == yValueMin){
+//                sbResult.append()
+            }
+
+            if (printMetrics) {
                 sbSignature.append("\t\t\t\t<text " +
                         "font-size=\"" + fontSize + "\" " +
                         "fill=\"#000000\" " +
@@ -171,9 +209,10 @@ public class SvgGraphExample {
                         metricsList.get(i).getValue() + "</text>\n");
             }
         }
-        result.append("\"/>\n\n");
-        result.append(sbSignature.toString());
-        result.append("\t\t\t</svg>\n");
+        sbResult.append("\"/>\n\n");
+        sbResult.append(sbSignature.toString());
+
+        sbResult.append("\t\t\t</svg>\n");
 /*
             sbSignature.append("\t\t\t\t<text font-size=\"" + fontSize + "\" fill=\"#000000\" stroke=\"" + color + "\" stroke-width=\"1px\" font-weight=\"bold\" x=\"" + (xCur - xText) + "\" y=\"" + (yMax - Math.round(yValues[i] * yRatio) - yText) + "\">" + yValues[i] + "</text>\n");
 
@@ -184,8 +223,7 @@ public class SvgGraphExample {
                 "\t\t\t\t<polyline fill=\"none\" stroke=\"#ff0000\" stroke-width=\"3\" points=\"0,220 20,160 40,180 60,120\"/>\n" +
                 "\t\t\t</svg>\n" +
 */
-
-        return result.toString();
+        return sbResult.toString();
     }
 
     /**
@@ -195,11 +233,12 @@ public class SvgGraphExample {
         long time;
         int value;
 
-        public  DateTimeValue(int value){
+        public DateTimeValue(int value) {
             this.time = System.currentTimeMillis();
             this.value = value;
         }
-        public DateTimeValue(long time, int value){
+
+        public DateTimeValue(long time, int value) {
             this.time = time;
             this.value = value;
         }

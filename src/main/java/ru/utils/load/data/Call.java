@@ -14,6 +14,12 @@ public class Call {
         this.timeEnd = 0;
     }
 
+    public Call(String rqUid, long timeBegin, long timeEnd) {
+        this.rqUid = rqUid;
+        this.timeBegin = timeBegin;
+        this.timeEnd = timeEnd;
+    }
+
     public String getRqUid() {
         return rqUid;
     }

@@ -127,7 +127,7 @@ public class MultiLoad implements ScriptRun {
     public boolean start() {
 
 // иммитация вызова API
-        long delay = (long) ((Math.random() * 1900) + 100);
+        long delay = (long) ((Math.random() * 900) + 100);
 //        delay = 2000;
         try {
             Thread.sleep(delay);
@@ -137,6 +137,7 @@ public class MultiLoad implements ScriptRun {
 
 // имитация возникновения ошибки
         int rnd = (int) (Math.random() * 20);
+        rnd = 1;
         if (rnd == 11) {
             String text = "No resources to process message with messageId:\n" +
                     "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";

@@ -8,19 +8,15 @@ import ru.utils.load.data.Call;
 import ru.utils.load.data.DateTimeValue;
 import ru.utils.load.data.ErrorGroupComment;
 import ru.utils.load.data.ErrorRs;
+import ru.utils.load.runnable.CallableForMultiLoad;
 import ru.utils.load.runnable.RunnableForMultiLoad;
 import ru.utils.load.runnable.RunnableForMultiLoadAwait;
 import ru.utils.files.PropertiesService;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class MultiRunService {
     private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
@@ -153,7 +149,9 @@ public class MultiRunService {
     public MultiRunService() {
     }
 
-    public String getName() { return name;}
+    public String getName() {
+        return name;
+    }
 
     public long getTestStartTime() {
         return testStartTime;
@@ -198,31 +196,32 @@ public class MultiRunService {
 
     /**
      * Параметры теста
+     *
      * @return
      */
-    public String getParams(){
-       StringBuilder res = new StringBuilder("\n<br><table border=\"1\"><tbody>\n");
-       res.append("<tr><td>Длительность теста (мин):</td><td>")
-               .append(testDuration)
-               .append("</td></tr>\n")
-               .append("<tr><td>Задержка перед выполнением следующей операции (сек):</td><td>")
-               .append(pacing)
-               .append("</td></tr>\n")
-               .append("<tr><td>Режим задержки (сек):<br>0 - задержка от момента старта операции (без ожидания выполнения);<br>1 - задержка от момента старта операции (с учетом ожидания выполения);<br>2 - задержка от момента завершения выполнения операции;</td><td>")
-               .append(pacingType)
-               .append("</td></tr>\n")
-               .append("<tr><td>Периодичность снятия метрик (сек):</td><td>")
-               .append(stepTimeStatistics)
-               .append("</td></tr>\n")
-               .append("<tr><td>Снятие метрик во время подачи нагрузки:</td><td>")
-               .append(statisticsOnLine ? "Да" : "Нет")
-               .append("</td></tr>\n")
-               .append("<tr><td>Прерывать тест при большом количестве ошибок:</td><td>")
-               .append(stopTestOnError ? "Да" : "Нет")
-               .append("</td></tr>\n")
-               .append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
-               .append(countErrorForStopTest)
-               .append("</td></tr>\n</tbody></table>\n");
+    public String getParams() {
+        StringBuilder res = new StringBuilder("\n<br><table border=\"1\"><tbody>\n");
+        res.append("<tr><td>Длительность теста (мин):</td><td>")
+                .append(testDuration)
+                .append("</td></tr>\n")
+                .append("<tr><td>Задержка перед выполнением следующей операции (сек):</td><td>")
+                .append(pacing)
+                .append("</td></tr>\n")
+                .append("<tr><td>Режим задержки (сек):<br>0 - задержка от момента старта операции (без ожидания выполнения);<br>1 - задержка от момента старта операции (с учетом ожидания выполения);<br>2 - задержка от момента завершения выполнения операции;</td><td>")
+                .append(pacingType)
+                .append("</td></tr>\n")
+                .append("<tr><td>Периодичность снятия метрик (сек):</td><td>")
+                .append(stepTimeStatistics)
+                .append("</td></tr>\n")
+                .append("<tr><td>Снятие метрик во время подачи нагрузки:</td><td>")
+                .append(statisticsOnLine ? "Да" : "Нет")
+                .append("</td></tr>\n")
+                .append("<tr><td>Прерывать тест при большом количестве ошибок:</td><td>")
+                .append(stopTestOnError ? "Да" : "Нет")
+                .append("</td></tr>\n")
+                .append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
+                .append(countErrorForStopTest)
+                .append("</td></tr>\n</tbody></table>\n");
         return res.toString();
     }
 
@@ -239,6 +238,7 @@ public class MultiRunService {
 
     /**
      * Добавляем метрику ошибки
+     *
      * @param time
      * @param text
      */
@@ -299,34 +299,44 @@ public class MultiRunService {
 
     /**
      * Прерывать тест при большом количестве ошибок
+     *
      * @return
      */
-    public boolean isStopTestOnError() { return stopTestOnError;}
+    public boolean isStopTestOnError() {
+        return stopTestOnError;
+    }
 
     /**
      * Количество ошибок для прерывания теста
+     *
      * @return
      */
-    public int getCountErrorForStopTest() { return countErrorForStopTest;}
+    public int getCountErrorForStopTest() {
+        return countErrorForStopTest;
+    }
+
     /**
      * Количество ошибок
+     *
      * @return
      */
-    public int getErrorCount(){
+    public int getErrorCount() {
         return errorList.size();
     }
+
     /**
      * Количество ошибок в последней группе
+     *
      * @return
      */
-    public int getErrorCountInLastGroup(){
-        return errorGroupList.get(errorGroupList.size()-1).getIntValue();
+    public int getErrorCountInLastGroup() {
+        return errorGroupList.get(errorGroupList.size() - 1).getIntValue();
     }
 
     /**
      * Перестаем подавать новую нагрузку
      */
-    public void stop(){
+    public void stop() {
         if (running) {
             LOG.warn("Из-за большого количества ошибок прерываем подачу нагрузки...");
         }
@@ -335,9 +345,12 @@ public class MultiRunService {
 
     /**
      * Подача нагрузки разрешена
+     *
      * @return
      */
-    public boolean isRunning() { return running;}
+    public boolean isRunning() {
+        return running;
+    }
 
     /**
      * Проверка корректности параметров
@@ -379,20 +392,22 @@ public class MultiRunService {
         LOG.trace("Старт update {}", rqUid);
         boolean find = false;
         for (int i = 0; i < callList.size(); i++) {
-            synchronized (callList) {
-                if (callList.get(i).getRqUid().equals(rqUid)) {
-                    find = true;
-                    if (callList.get(i).getTimeEnd() == 0) {
+//            synchronized (callList) {
+            if (callList.get(i).getRqUid().equals(rqUid)) {
+                find = true;
+                if (callList.get(i).getTimeEnd() == 0) {
+                    synchronized (callList) {
                         callList.get(i).setTimeEnd(timeEnd);
-                    } else {
-                        LOG.error("Попытка изменить зафиксированную запись {}",
-                                callList.get(i).getRqUid(),
-                                callList.get(i).getTimeBegin(),
-                                callList.get(i).getTimeEnd());
                     }
-                    break;
+                } else {
+                    LOG.error("Попытка изменить зафиксированную запись {}",
+                            callList.get(i).getRqUid(),
+                            callList.get(i).getTimeBegin(),
+                            callList.get(i).getTimeEnd());
                 }
+                break;
             }
+//            }
         }
         if (find) {
             LOG.trace("update Ok {}", rqUid);
@@ -455,17 +470,17 @@ public class MultiRunService {
             }
         }
 
-        if (minDuraton == 999999999999999999L){
+        if (minDuraton == 999999999999999999L) {
             minDuraton = 0L;
         }
 
         durationList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
-                        (int)minDuraton,
-                        (int)avgDuration,
-                        (int)percentileValue,
-                        (int)maxDuration)));
+                        (int) minDuraton,
+                        (int) avgDuration,
+                        (int) percentileValue,
+                        (int) maxDuration)));
 
         // статистика выполнения процессов
         dataFromSQL.getStatisticsFromBpm(
@@ -486,7 +501,7 @@ public class MultiRunService {
         }
         synchronized (errorGroupList) {
 //            if (countError > 0) {
-                errorGroupList.add(new DateTimeValue(stopTime, countError)); // количество ошибок
+            errorGroupList.add(new DateTimeValue(stopTime, countError)); // количество ошибок
 //            }
         }
 
@@ -553,9 +568,14 @@ public class MultiRunService {
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         ExecutorService executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwait = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
-        executorServiceAwait.submit(new RunnableForMultiLoadAwait(countDownLatch, executorService));
+        executorServiceAwait.submit(new RunnableForMultiLoadAwait(
+                countDownLatch,
+                executorService,
+                this));
 
         vuList.add(new DateTimeValue(testStartTime, minCountVU)); // стартовое количество VU
+
+        List<Future<List<Call>>> futureList = new ArrayList<>();
 
         // подаем нагрузку заданное время (возможно прерывание сбросом runnable)
         while (running && System.currentTimeMillis() < testStopTime) {
@@ -573,18 +593,27 @@ public class MultiRunService {
                     int step = (getCountVU() == 0 ? getMinCountVU() : getStepCountVU());
                     for (int u = 0; u < step; u++) {
                         if (startVU()) {
+/*
                             executorService.submit(new RunnableForMultiLoad(
                                     getCountVU(),
                                     baseScript,
-                                    countDownLatch,
                                     executorService,
                                     this));
+*/
+
+                            Future<List<Call>> futureCall = executorService.submit(new CallableForMultiLoad(
+                                    getCountVU(),
+                                    baseScript,
+                                    executorService,
+                                    this));
+                            futureList.add(futureCall);
                         }
                     }
-                    LOG.info("Текущее количество виртуальных пользователей {} из {}",
-                            getCountVU(),
-                            getMaxCountVU());
                 }
+                LOG.info("Текущее количество виртуальных пользователей {} из {}",
+                        getCountVU(),
+                        getMaxCountVU());
+
                 vuList.add(new DateTimeValue(System.currentTimeMillis(), getCountVU())); // фиксация активных VU
             }
         }
@@ -599,7 +628,20 @@ public class MultiRunService {
         LOG.warn("Не прерывайте работы программы, пауза {} сек...", stepTimeStatistics);
         try {
             Thread.sleep(stepTimeStatistics * 1000L);
+        } catch (
+                InterruptedException e) {
+            LOG.error("", e);
+        }
+
+        try {
+            for (int f = 0; f < futureList.size(); f++) {
+//                synchronized (callList) {
+                    callList.addAll(futureList.get(f).get());
+//                }
+            }
         } catch (InterruptedException e) {
+            LOG.error("", e);
+        } catch (ExecutionException e) {
             LOG.error("", e);
         }
 
@@ -614,7 +656,7 @@ public class MultiRunService {
             // сбор статистики после снятия нагрузки
             long timeStart = testStartTime;
             long timeStop = testStopTime + stepTimeStatistics * 1000L;
-            while (timeStart <= timeStop){
+            while (timeStart <= timeStop) {
                 timeStart = timeStart + stepTimeStatistics * 1000L;
                 getStatistics(timeStart);
             }

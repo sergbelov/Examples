@@ -6,6 +6,7 @@ import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,25 +18,45 @@ public class RunnableForMultiLoadNotWait implements Runnable {
 
     private final String name;
     private ScriptRun baseScript;
-    private MultiRunService multiRunService;
+    private List<Call> callList;
+//    private MultiRunService multiRunService;
 
     public RunnableForMultiLoadNotWait(
             String threadName,
             ScriptRun baseScript,
-            MultiRunService multiRunService
+            List<Call> callList
+//            MultiRunService multiRunService
     ) {
         this.name = threadName + "_NotWait";
         this.baseScript = baseScript;
-        this.multiRunService = multiRunService;
+        this.callList = callList;
+//        this.multiRunService = multiRunService;
     }
 
     @Override
     public void run() {
         long start = System.currentTimeMillis();
         String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
+        if (baseScript.start()) {
+            synchronized (callList) {
+                callList.add(new Call(
+                        rqUid,
+                        start,
+                        System.currentTimeMillis())); // фиксируем вызов
+            }
+        } else {
+            synchronized (callList) {
+                callList.add(new Call(
+                        rqUid,
+                        start)); // фиксируем вызов
+            }
+        }
+
+/*
         multiRunService.callListAdd(new Call(rqUid, start)); // фиксируем вызов
         if (baseScript.start()) {
             multiRunService.setTimeEndInCall(rqUid, System.currentTimeMillis()); // сохраняем длительность выполнения
         }
+*/
     }
 }

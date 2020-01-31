@@ -88,19 +88,19 @@ public class DataFromSQL {
             long startTime,
             long stopTime) {
 
-        int sent = 0;
-        int complete = 0;
-        int running = 0;
-
         // запрос к БД для получения статистики
         String sql = "select count(1) as cnt,\n";
 
+        int sent = (int) callList
+                .stream()
+                .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
+                .count();
+
+        int complete = 0;
+        int running = 0;
+
         if (dbService != null && dbService.isConnection()) {
 
-            sent = (int) callList
-                    .stream()
-                    .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
-                    .count();
             try {
                 LOG.trace("Обработка данных SQL...\n{}", sql);
                 ResultSet resultSet = dbService.executeQuery(sql);
@@ -128,7 +128,6 @@ public class DataFromSQL {
 
         } else {
 
-            sent = (int) (Math.random() * 1000) + 100;
             complete = (int) (Math.random() * sent);
             running = sent - complete;
         }

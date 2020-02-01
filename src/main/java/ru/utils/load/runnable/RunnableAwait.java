@@ -15,7 +15,7 @@ public class RunnableAwait implements Runnable {
 
     private static final Logger LOG = LogManager.getLogger(RunnableAwait.class);
 
-    private final String name = "RunnableForMultiLoadAwait";
+    private final String name = "RunnableAwait";
     private CountDownLatch countDownLatch;
     private ExecutorService executorService;
     private MultiRunService multiRunService;

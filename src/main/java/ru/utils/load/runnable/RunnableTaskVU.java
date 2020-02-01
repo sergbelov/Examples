@@ -26,7 +26,7 @@ public class RunnableTaskVU implements Runnable {
             List<Call> callList
 //            MultiRunService multiRunService
     ) {
-        this.name = threadName + "_NotWait";
+        this.name = threadName + "_Task";
         this.baseScript = baseScript;
         this.callList = callList;
 //        this.multiRunService = multiRunService;

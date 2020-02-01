@@ -27,7 +27,7 @@ public class CallableVU implements Callable<List<Call>> {
             ExecutorService executorService,
             MultiRunService multiRunService
     ) {
-        this.name = "CallableForMultiLoad" + threadNum;
+        this.name = "CallableVU" + threadNum;
         LOG.info("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;

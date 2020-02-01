@@ -27,7 +27,7 @@ public class RunnableVU implements Runnable {
             ExecutorService executorService,
             MultiRunService multiRunService
     ) {
-        this.name = "RunnableForMultiLoad" + threadNum;
+        this.name = "RunnableVU" + threadNum;
         LOG.info("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;

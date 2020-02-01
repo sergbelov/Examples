@@ -24,6 +24,9 @@ public class MultiRunService {
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
+    private List<DateTimeValue> vuListWarming = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени (разогрев)
+    private List<Call> callListWarming = new CopyOnWriteArrayList<>(); // список вызовов API (разогрев)
+
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов API
     private List<DateTimeValue> tpcList = new CopyOnWriteArrayList<>(); // TPC
@@ -95,6 +98,7 @@ public class MultiRunService {
      * инициализация параметров
      */
     public void init(String name) {
+        this.name = name;
         propertiesService.readProperties(PROPERTIES_FILE);
 
         testDuration = propertiesService.getInt("TEST_DURATION");
@@ -115,30 +119,11 @@ public class MultiRunService {
             System.exit(1);
         }
 
-        countVU = 0; // текущее количество VU
-        testStartTime = System.currentTimeMillis(); // время старта теста
-        testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
-        prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
-        nextTimeAddVU = testStartTime + stepTimeVU * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
-        nextTimeStatiscitcs = testStartTime + stepTimeStatistics * 1000L; // время следующего снятия статистики
-
-        this.name = name;
-
         dataFromSQL.init(
                 testStartTime,
                 propertiesService.getString("DB_URL"),
                 propertiesService.getString("DB_USER_NAME"),
                 propertiesService.getStringDecode("DB_USER_PASSWORD"));
-
-        LOG.info("#####" +
-                        "\ntestStartTime: {}" +
-                        "\ntestStopTime: {}" +
-                        "\nnextTimeAddVU: {}" +
-                        "\nnextTimeStatiscitcs: {}",
-                sdf1.format(testStartTime),
-                sdf1.format(testStopTime),
-                sdf1.format(nextTimeAddVU),
-                sdf1.format(nextTimeStatiscitcs));
     }
 
     public void end() {
@@ -559,10 +544,20 @@ public class MultiRunService {
     }
 
 
+    public void start(ScriptRun baseScript) {
+        // разогрев
+        LOG.info("Разогрев...");
+        start(baseScript, true);
+        LOG.info("Разогрев завершен...");
+
+        // нагрузка
+        start(baseScript, false);
+    }
+
     /**
      * Нагрузка
      */
-    public void start(ScriptRun baseScript) {
+    public void start(ScriptRun baseScript, boolean isWarming) {
         CountDownLatch countDownLatch = new CountDownLatch(1);
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         ExecutorService executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
@@ -572,6 +567,33 @@ public class MultiRunService {
                 executorService,
                 this));
 
+        int memMinCountVU = minCountVU;
+        int memMaxCountVU = maxCountVU;
+        countVU = 0; // текущее количество VU
+        testStartTime = System.currentTimeMillis(); // время старта теста
+        if (isWarming) {
+            minCountVU = 10;
+            maxCountVU = 10;
+            testStopTime = testStartTime + stepTimeStatistics * 3000L; // время завершения теста (разогрев)
+        } else {
+            testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
+        }
+        prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
+        nextTimeAddVU = testStartTime + stepTimeVU * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
+        nextTimeStatiscitcs = testStartTime + stepTimeStatistics * 1000L; // время следующего снятия статистики
+
+
+        LOG.info("#####" +
+                        "\ntestStartTime: {}" +
+                        "\ntestStopTime: {}" +
+                        "\nnextTimeAddVU: {}" +
+                        "\nnextTimeStatiscitcs: {}",
+                sdf1.format(testStartTime),
+                sdf1.format(testStopTime),
+                sdf1.format(nextTimeAddVU),
+                sdf1.format(nextTimeStatiscitcs));
+
+        vuList.clear();
         vuList.add(new DateTimeValue(testStartTime, minCountVU)); // стартовое количество VU
 
         List<Future<List<Call>>> futureList = new ArrayList<>();
@@ -600,12 +622,19 @@ public class MultiRunService {
                                     this));
 */
 
+/*
                             Future<List<Call>> futureCall = executorService.submit(new CallableVU(
                                     getCountVU(),
                                     baseScript,
                                     executorService,
                                     this));
                             futureList.add(futureCall);
+*/
+                            futureList.add(executorService.submit(new CallableVU(
+                                    getCountVU(),
+                                    baseScript,
+                                    executorService,
+                                    this)));
                         }
                     }
                 }
@@ -624,6 +653,7 @@ public class MultiRunService {
             LOG.error("", e);
         }
 
+/*
         LOG.warn("Не прерывайте работы программы, пауза {} сек...", stepTimeStatistics);
         try {
             Thread.sleep(stepTimeStatistics * 1000L);
@@ -631,13 +661,16 @@ public class MultiRunService {
                 InterruptedException e) {
             LOG.error("", e);
         }
+*/
 
         // объединяем запросы всех VU
         try {
             for (int f = 0; f < futureList.size(); f++) {
-//                synchronized (callList) {
+                if (isWarming) {
+                    callListWarming.addAll(futureList.get(f).get());
+                } else {
                     callList.addAll(futureList.get(f).get());
-//                }
+                }
             }
         } catch (InterruptedException e) {
             LOG.error("", e);
@@ -650,18 +683,22 @@ public class MultiRunService {
         vuList.add(new DateTimeValue(System.currentTimeMillis(), 0)); // фиксация активных VU
 
 
-        if (statisticsOnLine) {
-            // статистика на конец теста
-            getStatistics(executorService, true);
+        if (isWarming) {
+            minCountVU = memMinCountVU;
+            maxCountVU = memMaxCountVU;
         } else {
-            // сбор статистики после снятия нагрузки
-            long timeStart = testStartTime;
-            long timeStop = testStopTime + stepTimeStatistics * 1000L;
-            while (timeStart <= timeStop) {
-                timeStart = timeStart + stepTimeStatistics * 1000L;
-                getStatistics(timeStart);
+            if (statisticsOnLine) {
+                // статистика на конец теста
+                getStatistics(executorService, true);
+            } else {
+                // сбор статистики после снятия нагрузки
+                long timeStart = testStartTime;
+                long timeStop = testStopTime + stepTimeStatistics * 1000L;
+                while (timeStart <= timeStop) {
+                    timeStart = timeStart + stepTimeStatistics * 1000L;
+                    getStatistics(timeStart);
+                }
             }
-        }
 
 /*
         StringBuilder stringBuilder = new StringBuilder();
@@ -718,11 +755,12 @@ public class MultiRunService {
         }
 */
 
-        // сохраняем результаты в HTML - файл
+            // сохраняем результаты в HTML - файл
 //        saveReportHtml(stringBuilder);
 
 //        testStartTime = testStartTime + stepTimeStatistics * 2000; //ToDo:
-        report.saveReportHtml(this);
+            report.saveReportHtml(this);
+        }
     }
 
 

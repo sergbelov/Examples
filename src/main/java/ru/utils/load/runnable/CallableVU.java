@@ -36,15 +36,16 @@ public class CallableVU implements Callable<List<Call>> {
 
     @Override
     public List<Call> call() throws Exception {
-        List<Call> callList = new ArrayList<>();
+        List<Call> callListVU = new ArrayList<>();
         LOG.info("Старт потока {}", name);
+        long pacing = (long) (multiRunService.getPacing() * 1000);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
                 executorService.submit(new RunnableTaskVU(
                         name,
                         baseScript,
-                        callList));
+                        callListVU));
 //                        multiRunService));
             } else {
                 String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
@@ -56,29 +57,28 @@ public class CallableVU implements Callable<List<Call>> {
                         System.currentTimeMillis())); // фиксируем вызов
 */
                 if (baseScript.start()) {
-                    callList.add(new Call(
+                    callListVU.add(new Call(
                             rqUid,
                             start,
                             System.currentTimeMillis())); // фиксируем вызов
                 } else {
-                    callList.add(new Call(
+                    callListVU.add(new Call(
                             rqUid,
                             start)); // фиксируем вызов
                 }
             }
 
-            long dur = (long) (multiRunService.getPacing() * 1000);
             if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {
-                sleep(dur); // задержка перед запуском следующей итерации
+                sleep(pacing); // задержка перед запуском следующей итерации
             } else {
                 long curDur = System.currentTimeMillis() - start;
-                if (dur > curDur) {
-                    sleep(dur - curDur); // задержка перед запуском следующей итерации
+                if (pacing > curDur) {
+                    sleep(pacing - curDur); // задержка перед запуском следующей итерации
                 }
             }
         }
         LOG.info("Остановка потока {}", name);
-        return callList;
+        return callListVU;
     }
 
     /**

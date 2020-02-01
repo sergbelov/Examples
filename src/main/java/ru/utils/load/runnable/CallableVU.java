@@ -2,33 +2,32 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
-import ru.utils.load.ScriptRun;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
-/**
- * Created by SBT-Belov-SeA on 23.01.2020
- */
-public class RunnableForMultiLoad implements Runnable {
+public class CallableVU implements Callable<List<Call>> {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableForMultiLoad.class);
+    private static final Logger LOG = LogManager.getLogger(CallableVU.class);
 
     private final String name;
     private ScriptRun baseScript;
     private ExecutorService executorService;
     private MultiRunService multiRunService;
 
-    public RunnableForMultiLoad(
+    public CallableVU(
             int threadNum,
             ScriptRun baseScript,
             ExecutorService executorService,
             MultiRunService multiRunService
     ) {
-        this.name = "RunnableForMultiLoad" + threadNum;
+        this.name = "CallableForMultiLoad" + threadNum;
         LOG.info("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;
@@ -36,35 +35,40 @@ public class RunnableForMultiLoad implements Runnable {
     }
 
     @Override
-    public void run() {
+    public List<Call> call() throws Exception {
+        List<Call> callList = new ArrayList<>();
         LOG.info("Старт потока {}", name);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
-                executorService.submit(new RunnableForMultiLoadNotWait(
+                executorService.submit(new RunnableTaskVU(
                         name,
                         baseScript,
-                        multiRunService.getCallList()));
+                        callList));
 //                        multiRunService));
             } else {
                 String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
-//                multiRunService.callListAdd(new Call(rqUid, start)); // фиксируем вызов
+/*
+                sleep((int) (Math.random() * 2000));
+                callList.add(new Call(
+                        rqUid,
+                        start,
+                        System.currentTimeMillis())); // фиксируем вызов
+*/
                 if (baseScript.start()) {
-//                    multiRunService.setTimeEndInCall(rqUid, System.currentTimeMillis()); // сохраняем длительность выполнения
-                    multiRunService.callListAdd(new Call(
+                    callList.add(new Call(
                             rqUid,
                             start,
                             System.currentTimeMillis())); // фиксируем вызов
                 } else {
-                    multiRunService.callListAdd(new Call(
+                    callList.add(new Call(
                             rqUid,
                             start)); // фиксируем вызов
-
                 }
             }
 
             long dur = (long) (multiRunService.getPacing() * 1000);
-            if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2){
+            if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {
                 sleep(dur); // задержка перед запуском следующей итерации
             } else {
                 long curDur = System.currentTimeMillis() - start;
@@ -74,8 +78,8 @@ public class RunnableForMultiLoad implements Runnable {
             }
         }
         LOG.info("Остановка потока {}", name);
+        return callList;
     }
-
 
     /**
      * задержка в мс
@@ -88,4 +92,5 @@ public class RunnableForMultiLoad implements Runnable {
             e.printStackTrace();
         }
     }
+
 }

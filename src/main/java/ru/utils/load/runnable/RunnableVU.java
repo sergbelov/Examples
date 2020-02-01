@@ -2,33 +2,32 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
+import ru.utils.load.ScriptRun;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
-public class CallableForMultiLoad implements Callable<List<Call>> {
+/**
+ * Created by SBT-Belov-SeA on 23.01.2020
+ */
+public class RunnableVU implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(CallableForMultiLoad.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
 
     private final String name;
     private ScriptRun baseScript;
     private ExecutorService executorService;
     private MultiRunService multiRunService;
 
-    public CallableForMultiLoad(
+    public RunnableVU(
             int threadNum,
             ScriptRun baseScript,
             ExecutorService executorService,
             MultiRunService multiRunService
     ) {
-        this.name = "CallableForMultiLoad" + threadNum;
+        this.name = "RunnableForMultiLoad" + threadNum;
         LOG.info("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;
@@ -36,33 +35,35 @@ public class CallableForMultiLoad implements Callable<List<Call>> {
     }
 
     @Override
-    public List<Call> call() throws Exception {
-        List<Call> callList = new ArrayList<>();
+    public void run() {
         LOG.info("Старт потока {}", name);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
-                executorService.submit(new RunnableForMultiLoadNotWait(
+                executorService.submit(new RunnableTaskVU(
                         name,
                         baseScript,
-                        callList));
+                        multiRunService.getCallList()));
 //                        multiRunService));
             } else {
                 String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
+//                multiRunService.callListAdd(new Call(rqUid, start)); // фиксируем вызов
                 if (baseScript.start()) {
-                    callList.add(new Call(
+//                    multiRunService.setTimeEndInCall(rqUid, System.currentTimeMillis()); // сохраняем длительность выполнения
+                    multiRunService.callListAdd(new Call(
                             rqUid,
                             start,
                             System.currentTimeMillis())); // фиксируем вызов
                 } else {
-                    callList.add(new Call(
+                    multiRunService.callListAdd(new Call(
                             rqUid,
                             start)); // фиксируем вызов
+
                 }
             }
 
             long dur = (long) (multiRunService.getPacing() * 1000);
-            if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {
+            if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2){
                 sleep(dur); // задержка перед запуском следующей итерации
             } else {
                 long curDur = System.currentTimeMillis() - start;
@@ -72,8 +73,8 @@ public class CallableForMultiLoad implements Callable<List<Call>> {
             }
         }
         LOG.info("Остановка потока {}", name);
-        return callList;
     }
+
 
     /**
      * задержка в мс
@@ -86,5 +87,4 @@ public class CallableForMultiLoad implements Callable<List<Call>> {
             e.printStackTrace();
         }
     }
-
 }

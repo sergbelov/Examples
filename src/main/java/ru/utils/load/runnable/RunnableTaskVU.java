@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
-import ru.utils.load.utils.MultiRunService;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,16 +11,16 @@ import java.util.UUID;
 /**
  * Created by SBT-Belov-SeA on 24.01.2020
  */
-public class RunnableForMultiLoadNotWait implements Runnable {
+public class RunnableTaskVU implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableForMultiLoadNotWait.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableTaskVU.class);
 
     private final String name;
     private ScriptRun baseScript;
     private List<Call> callList;
 //    private MultiRunService multiRunService;
 
-    public RunnableForMultiLoadNotWait(
+    public RunnableTaskVU(
             String threadName,
             ScriptRun baseScript,
             List<Call> callList

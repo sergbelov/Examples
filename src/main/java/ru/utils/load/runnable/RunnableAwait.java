@@ -2,7 +2,6 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.examples.loadExample.MultiLoad;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.CountDownLatch;
@@ -12,16 +11,16 @@ import java.util.concurrent.ExecutorService;
  * Created by SBT-Belov-SeA on 24.01.2020
  * Проверяем наличие не выполненных задач
  */
-public class RunnableForMultiLoadAwait implements Runnable {
+public class RunnableAwait implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableForMultiLoadAwait.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableAwait.class);
 
     private final String name = "RunnableForMultiLoadAwait";
     private CountDownLatch countDownLatch;
     private ExecutorService executorService;
     private MultiRunService multiRunService;
 
-    public RunnableForMultiLoadAwait(
+    public RunnableAwait(
             CountDownLatch countDownLatch,
             ExecutorService executorService,
             MultiRunService multiRunService

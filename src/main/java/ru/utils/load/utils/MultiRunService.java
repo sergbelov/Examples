@@ -8,9 +8,8 @@ import ru.utils.load.data.Call;
 import ru.utils.load.data.DateTimeValue;
 import ru.utils.load.data.ErrorGroupComment;
 import ru.utils.load.data.ErrorRs;
-import ru.utils.load.runnable.CallableForMultiLoad;
-import ru.utils.load.runnable.RunnableForMultiLoad;
-import ru.utils.load.runnable.RunnableForMultiLoadAwait;
+import ru.utils.load.runnable.CallableVU;
+import ru.utils.load.runnable.RunnableAwait;
 import ru.utils.files.PropertiesService;
 
 import java.text.DateFormat;
@@ -568,7 +567,7 @@ public class MultiRunService {
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         ExecutorService executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwait = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
-        executorServiceAwait.submit(new RunnableForMultiLoadAwait(
+        executorServiceAwait.submit(new RunnableAwait(
                 countDownLatch,
                 executorService,
                 this));
@@ -601,7 +600,7 @@ public class MultiRunService {
                                     this));
 */
 
-                            Future<List<Call>> futureCall = executorService.submit(new CallableForMultiLoad(
+                            Future<List<Call>> futureCall = executorService.submit(new CallableVU(
                                     getCountVU(),
                                     baseScript,
                                     executorService,
@@ -624,7 +623,7 @@ public class MultiRunService {
         } catch (InterruptedException e) {
             LOG.error("", e);
         }
-        executorService.shutdown();
+
         LOG.warn("Не прерывайте работы программы, пауза {} сек...", stepTimeStatistics);
         try {
             Thread.sleep(stepTimeStatistics * 1000L);
@@ -633,6 +632,7 @@ public class MultiRunService {
             LOG.error("", e);
         }
 
+        // объединяем запросы всех VU
         try {
             for (int f = 0; f < futureList.size(); f++) {
 //                synchronized (callList) {
@@ -644,6 +644,7 @@ public class MultiRunService {
         } catch (ExecutionException e) {
             LOG.error("", e);
         }
+        executorService.shutdown();
 
         // сбросим VU на конец теста
         vuList.add(new DateTimeValue(System.currentTimeMillis(), 0)); // фиксация активных VU
@@ -719,6 +720,8 @@ public class MultiRunService {
 
         // сохраняем результаты в HTML - файл
 //        saveReportHtml(stringBuilder);
+
+//        testStartTime = testStartTime + stepTimeStatistics * 2000; //ToDo:
         report.saveReportHtml(this);
     }
 

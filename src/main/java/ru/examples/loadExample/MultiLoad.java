@@ -128,7 +128,6 @@ public class MultiLoad implements ScriptRun {
 
 // иммитация вызова API
         long delay = (long) ((Math.random() * 900) + 100);
-//        delay = 2000;
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {

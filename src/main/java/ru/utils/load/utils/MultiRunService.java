@@ -9,13 +9,14 @@ import ru.utils.load.data.DateTimeValue;
 import ru.utils.load.data.ErrorGroupComment;
 import ru.utils.load.data.ErrorRs;
 import ru.utils.load.runnable.CallableVU;
-import ru.utils.load.runnable.RunnableAwait;
+import ru.utils.load.runnable.RunnableAddVUAwait;
 import ru.utils.files.PropertiesService;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultiRunService {
     private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
@@ -37,6 +38,13 @@ public class MultiRunService {
     private List<ErrorGroupComment> errorGroupCommentList = new CopyOnWriteArrayList<>(); // количество ошибок по типам
     private List<String> reportList = new CopyOnWriteArrayList<>(); // текстовый отчет
 
+    private ScriptRun baseScript;
+    private List<Future<List<Call>>> futureList = new ArrayList<>();
+    private ExecutorService executorService;
+
+    private AtomicInteger threadCount; // // счетчик потоков
+    private AtomicInteger countVU; // текущее количество VU
+
     private String name;
     private long testStartTime;
     private long testStopTime;
@@ -53,13 +61,11 @@ public class MultiRunService {
     private int stepTimeVU = 5;    // через какое время в секундах увеличиваем количество VU
     private int stepCountVU = 10;  // на сколько увеличиваем количество VU
 
-    private double pacing = 1;     // задержка перед выполнением следующей итерации (сек)
+    private long pacing = 1000;  // задержка перед выполнением следующей итерации (ms)
     private int pacingType = 1;    // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
 
     private int stepTimeStatistics = 5;    // частота снятия метрик - через данное количество секунд
     private boolean statisticsOnLine = true; // снятие метрик во время подачи нагрузки
-
-    private int countVU = 0; // текущее количество VU
 
     private boolean stopTestOnError = false; // прерывать тест при большом количестве ошибок
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
@@ -76,7 +82,7 @@ public class MultiRunService {
         put("MAX_COUNT_VU", "100");
         put("STEP_TIME_VU", "5");
         put("STEP_COUNT_VU", "10");
-        put("PACING", "1");
+        put("PACING", "1000");
         put("PACING_TYPE", "1");
         put("STEP_TIME_STATISTICS", "5");
         put("STATISTICS_ONLINE", "true");
@@ -106,7 +112,7 @@ public class MultiRunService {
         maxCountVU = propertiesService.getInt("MAX_COUNT_VU");
         stepTimeVU = propertiesService.getInt("STEP_TIME_VU");
         stepCountVU = propertiesService.getInt("STEP_COUNT_VU");
-        pacing = propertiesService.getDouble("PACING");
+        pacing = propertiesService.getLong("PACING");
         pacingType = propertiesService.getInt("PACING_TYPE");
         stepTimeStatistics = propertiesService.getInt("STEP_TIME_STATISTICS");
         statisticsOnLine = propertiesService.getBoolean("STATISTICS_ONLINE");
@@ -165,7 +171,7 @@ public class MultiRunService {
         return stepCountVU;
     }
 
-    public double getPacing() {
+    public long getPacing() {
         return pacing;
     }
 
@@ -174,9 +180,32 @@ public class MultiRunService {
     }
 
     public int getCountVU() {
-        return countVU;
+        return countVU.get();
     }
 
+    /**
+     * Количество активных потоков
+     * @return
+     */
+    public int getThreadCount(){
+        return threadCount.get();
+    }
+
+    /**
+     * Новый поток
+     */
+    public void threadInc(){
+//       synchronized (threadCount){
+           threadCount.incrementAndGet();
+    }
+
+    /**
+     * Завершен поток
+     */
+    public void threadDec(){
+//        synchronized (threadCount){
+            threadCount.decrementAndGet();
+    }
 
     /**
      * Параметры теста
@@ -252,7 +281,7 @@ public class MultiRunService {
      * @return
      */
     public boolean isStartedAllVU() {
-        return countVU < maxCountVU ? false : true;
+        return countVU.get() < maxCountVU ? false : true;
     }
 
     /**
@@ -260,15 +289,22 @@ public class MultiRunService {
      */
     public boolean startVU() {
         boolean r = false;
-        if (countVU < maxCountVU) {
-            countVU++;
+        if (countVU.get() < maxCountVU) {
+            countVU.incrementAndGet();
             r = true;
         }
         return r;
     }
 
     /**
-     * Настало время добавления VU
+     * Остановка VU
+     */
+    public void stopVU(){
+        countVU.decrementAndGet();
+    }
+
+    /**
+     * Настало время добавления группы VU
      *
      * @return
      */
@@ -362,44 +398,6 @@ public class MultiRunService {
 
         return r;
     }
-
-    /**
-     * Сохраняем длительность выполнения для вызова с rqUid из параметра
-     *
-     * @param rqUid
-     * @param timeEnd
-     */
-    public void setTimeEndInCall(
-            String rqUid,
-            long timeEnd) {
-
-        LOG.trace("Старт update {}", rqUid);
-        boolean find = false;
-        for (int i = 0; i < callList.size(); i++) {
-//            synchronized (callList) {
-            if (callList.get(i).getRqUid().equals(rqUid)) {
-                find = true;
-                if (callList.get(i).getTimeEnd() == 0) {
-                    synchronized (callList) {
-                        callList.get(i).setTimeEnd(timeEnd);
-                    }
-                } else {
-                    LOG.error("Попытка изменить зафиксированную запись {}",
-                            callList.get(i).getRqUid(),
-                            callList.get(i).getTimeBegin(),
-                            callList.get(i).getTimeEnd());
-                }
-                break;
-            }
-//            }
-        }
-        if (find) {
-            LOG.trace("update Ok {}", rqUid);
-        } else {
-            LOG.warn("update Error {}", rqUid);
-        }
-    }
-
 
     /**
      * Снятие метрик - сам процесс
@@ -549,23 +547,26 @@ public class MultiRunService {
      * @param baseScript
      */
     public void start(ScriptRun baseScript) {
-        start(baseScript, true);  // разогрев
-        start(baseScript, false); // нагрузка
+        this.baseScript = baseScript;
+        start(true);  // разогрев
+        start(false); // нагрузка
     }
 
     /**
      * Нагрузка
-     * @param baseScript
      * @param isWarming
      */
-    public void start(ScriptRun baseScript, boolean isWarming) {
+    public void start(boolean isWarming) {
+        vuList.clear();
+        futureList.clear();
+        threadCount = new AtomicInteger(0);
+        countVU = new AtomicInteger(0);
         CountDownLatch countDownLatch = new CountDownLatch(1);
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
-        ExecutorService executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
+        executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwait = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
-        executorServiceAwait.submit(new RunnableAwait(
+        executorServiceAwait.submit(new RunnableAddVUAwait(
                 countDownLatch,
-                executorService,
                 this));
 
         int memMinCountVU = minCountVU;
@@ -582,7 +583,6 @@ public class MultiRunService {
         prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
         nextTimeAddVU = testStartTime + stepTimeVU * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
         nextTimeStatiscitcs = testStartTime + stepTimeStatistics * 1000L; // время следующего снятия статистики
-        countVU = 0; // текущее количество VU
 
         LOG.info("#####" +
                         "\ntestStartTime: {}" +
@@ -594,56 +594,15 @@ public class MultiRunService {
                 sdf1.format(nextTimeAddVU),
                 sdf1.format(nextTimeStatiscitcs));
 
-        vuList.clear();
         vuList.add(new DateTimeValue(testStartTime, minCountVU)); // стартовое количество VU
-
-        List<Future<List<Call>>> futureList = new ArrayList<>();
 
         // подаем нагрузку заданное время (возможно прерывание сбросом runnable)
         while (running && System.currentTimeMillis() < testStopTime) {
-
             // настало время снимать статистику
             if (statisticsOnLine && isTimeStatistics()) {
                 if (getCountVU() > 0) {
                     getStatistics(executorService, false);
                 }
-            }
-
-            // настало время увеличения количества VU
-            if (isTimeAddVU() || getCountVU() < getMinCountVU()) { // настало время увеличения пользователей (или первоначальная инициализация)
-                if (!isStartedAllVU()) { // не все VU стартовали
-                    int step = (getCountVU() == 0 ? getMinCountVU() : getStepCountVU());
-                    for (int u = 0; u < step; u++) {
-                        if (startVU()) {
-/*
-                            executorService.submit(new RunnableForMultiLoad(
-                                    getCountVU(),
-                                    baseScript,
-                                    executorService,
-                                    this));
-*/
-
-/*
-                            Future<List<Call>> futureCall = executorService.submit(new CallableVU(
-                                    getCountVU(),
-                                    baseScript,
-                                    executorService,
-                                    this));
-                            futureList.add(futureCall);
-*/
-                            futureList.add(executorService.submit(new CallableVU(
-                                    getCountVU(),
-                                    baseScript,
-                                    executorService,
-                                    this)));
-                        }
-                    }
-                }
-                LOG.info("Текущее количество виртуальных пользователей {} из {}",
-                        getCountVU(),
-                        getMaxCountVU());
-
-                vuList.add(new DateTimeValue(System.currentTimeMillis(), getCountVU())); // фиксация активных VU
             }
         }
 
@@ -653,16 +612,6 @@ public class MultiRunService {
         } catch (InterruptedException e) {
             LOG.error("", e);
         }
-
-/*
-        LOG.warn("Не прерывайте работы программы, пауза {} сек...", stepTimeStatistics);
-        try {
-            Thread.sleep(stepTimeStatistics * 1000L);
-        } catch (
-                InterruptedException e) {
-            LOG.error("", e);
-        }
-*/
 
         // объединяем запросы всех VU
         try {
@@ -774,6 +723,41 @@ public class MultiRunService {
         }
     }
 
+    /**
+     * Старт группы VU
+     */
+    public void startGroupVU(){
+
+        // настало время увеличения количества VU
+        if (isTimeAddVU() || getCountVU() < getMinCountVU()) { // первоначальная инициализация или настало время увеличения количества VU
+            if (!isStartedAllVU()) { // не все VU стартовали
+                int step = (getCountVU() == 0 ? getMinCountVU() : getStepCountVU());
+                for (int u = 0; u < step; u++) {
+                    if (startVU()) {
+/*
+                            Future<List<Call>> futureCall = executorService.submit(new CallableVU(
+                                    getCountVU(),
+                                    baseScript,
+                                    executorService,
+                                    this));
+                            futureList.add(futureCall);
+*/
+                        futureList.add(executorService.submit(new CallableVU(
+                                getCountVU(),
+                                baseScript,
+                                executorService,
+                                this)));
+                    }
+                }
+            }
+            LOG.info("Текущее количество виртуальных пользователей {} из {}",
+                    getCountVU(),
+                    getMaxCountVU());
+
+            vuList.add(new DateTimeValue(System.currentTimeMillis(), getCountVU())); // фиксация активных VU
+        }
+
+    }
 
     public DataFromSQL getDataFromSQL() {
         return dataFromSQL;

@@ -4,9 +4,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
+import ru.utils.load.utils.MultiRunService;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Created by SBT-Belov-SeA on 24.01.2020
@@ -17,45 +17,36 @@ public class RunnableTaskVU implements Runnable {
 
     private final String name;
     private ScriptRun baseScript;
-    private List<Call> callList;
-//    private MultiRunService multiRunService;
+    private List<Call> callListVU;
+    private MultiRunService multiRunService;
 
     public RunnableTaskVU(
-            String threadName,
+            String name,
             ScriptRun baseScript,
-            List<Call> callList
-//            MultiRunService multiRunService
+            List<Call> callListVU,
+            MultiRunService multiRunService
     ) {
-        this.name = threadName + "_Task";
+        this.name = name + "_Task";
         this.baseScript = baseScript;
-        this.callList = callList;
-//        this.multiRunService = multiRunService;
+        this.callListVU = callListVU;
+        this.multiRunService = multiRunService;
     }
 
     @Override
     public void run() {
+        multiRunService.threadInc(); // счетчик активных потоков
         long start = System.currentTimeMillis();
-        String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
         if (baseScript.start()) {
-            synchronized (callList) {
-                callList.add(new Call(
-                        rqUid,
+            synchronized (callListVU) {
+                callListVU.add(new Call(
                         start,
                         System.currentTimeMillis())); // фиксируем вызов
             }
         } else {
-            synchronized (callList) {
-                callList.add(new Call(
-                        rqUid,
-                        start)); // фиксируем вызов
+            synchronized (callListVU) {
+                callListVU.add(new Call(start)); // фиксируем вызов
             }
         }
-
-/*
-        multiRunService.callListAdd(new Call(rqUid, start)); // фиксируем вызов
-        if (baseScript.start()) {
-            multiRunService.setTimeEndInCall(rqUid, System.currentTimeMillis()); // сохраняем длительность выполнения
-        }
-*/
+        multiRunService.threadDec();
     }
 }

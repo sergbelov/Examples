@@ -105,9 +105,7 @@ public class MultiLoad implements ScriptRun {
         if (1==1) {
             return;
         }
-
  */
-
         multiRunService.start(this);
     }
 

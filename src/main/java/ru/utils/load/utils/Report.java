@@ -70,7 +70,10 @@ public class Report {
                         "#009f9f"))
                 .append("\n\t\t</div>\n");
 
-        String[] lineTitle1 = {"Отправлено запросов", "COMPLETE", "RUNNING"};
+        String[] lineTitle1 = {
+                "Отправлено запросов",
+                "COMPLETE",
+                "RUNNING"};
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         "Производительность ",
@@ -81,7 +84,11 @@ public class Report {
                         true))
                 .append("\n\t\t</div>\n");
 
-        String[] lineTitle2 = {"Минимальная длительность (мс)", "Средняя длительность (мс)", "Перцентиль 90% (мс)", "Максимальная длительность (мс)"};
+        String[] lineTitle2 = {
+                "Минимальная длительность (мс)",
+                "Средняя длительность (мс)",
+                "Перцентиль 90% (мс)",
+                "Максимальная длительность (мс)"};
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         "Длительность выполнения",
@@ -113,7 +120,7 @@ public class Report {
                     .append("\n\t\t</div>\n");
         }
 
-        LOG.warn("Не прерывайте работы программы, пауза {} сек...", 10);
+        LOG.warn("Не прерывайте работы, пауза {} сек...", 10);
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
@@ -187,7 +194,9 @@ public class Report {
                 "\n</html>");
 
         // сохраняем HTML - файл
-        fileUtils.writeFile("Reports/" + multiRunService.getName() + "_" + sdf3.format(System.currentTimeMillis()) + ".html", sbHtml.toString());
+        fileUtils.writeFile("Reports/" + multiRunService.getName() + "_" +
+                sdf3.format(multiRunService.getTestStartTime()) + "-" +
+                sdf3.format(multiRunService.getTestStopTime()) + ".html", sbHtml.toString());
     }
 
 

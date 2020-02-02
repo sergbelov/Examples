@@ -264,7 +264,7 @@ public class Graph {
                 // точка с всплывающим описанием
                 sbSignatureTitle.append("<g> " +
                         "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 2) + "\"/> " +
-                        "<title>" + decimalFormat.format(metricsList.get(i).getValue(e)) + "</title> " +
+                        "<title>" + decimalFormat.format(metricsList.get(i).getValue(e)) + " " + sdf1.format(metricsList.get(i).getTime()) + "</title> " +
                         "</g>\n");
             }
         }

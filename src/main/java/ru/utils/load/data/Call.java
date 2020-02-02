@@ -4,24 +4,17 @@ package ru.utils.load.data;
  * Информация по вызовам API
  */
 public class Call {
-    String rqUid;    // идентификатор
     long timeBegin;  // время вызова API
     long timeEnd;    // длительность выполнения API
 
-    public Call(String rqUid, long timeBegin) {
-        this.rqUid = rqUid;
+    public Call(long timeBegin) {
         this.timeBegin = timeBegin;
         this.timeEnd = 0;
     }
 
-    public Call(String rqUid, long timeBegin, long timeEnd) {
-        this.rqUid = rqUid;
+    public Call(long timeBegin, long timeEnd) {
         this.timeBegin = timeBegin;
         this.timeEnd = timeEnd;
-    }
-
-    public String getRqUid() {
-        return rqUid;
     }
 
     public long getTimeBegin() {

@@ -28,7 +28,7 @@ public class CallableVU implements Callable<List<Call>> {
             MultiRunService multiRunService
     ) {
         this.name = "CallableVU" + threadNum;
-        LOG.info("Инициализация потока {}", name);
+        LOG.debug("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;
         this.multiRunService = multiRunService;
@@ -36,48 +36,39 @@ public class CallableVU implements Callable<List<Call>> {
 
     @Override
     public List<Call> call() throws Exception {
+        multiRunService.threadInc(); // счетчик активных потоков
         List<Call> callListVU = new ArrayList<>();
         LOG.info("Старт потока {}", name);
-        long pacing = (long) (multiRunService.getPacing() * 1000);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
                 executorService.submit(new RunnableTaskVU(
                         name,
                         baseScript,
-                        callListVU));
-//                        multiRunService));
+                        callListVU,
+                        multiRunService));
             } else {
-                String rqUid = UUID.randomUUID().toString().replaceAll("-", "");
-/*
-                sleep((int) (Math.random() * 2000));
-                callList.add(new Call(
-                        rqUid,
-                        start,
-                        System.currentTimeMillis())); // фиксируем вызов
-*/
                 if (baseScript.start()) {
                     callListVU.add(new Call(
-                            rqUid,
                             start,
                             System.currentTimeMillis())); // фиксируем вызов
                 } else {
-                    callListVU.add(new Call(
-                            rqUid,
-                            start)); // фиксируем вызов
+                    callListVU.add(new Call(start)); // фиксируем вызов
                 }
             }
 
             if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {
-                sleep(pacing); // задержка перед запуском следующей итерации
+                sleep(multiRunService.getPacing()); // задержка перед запуском следующей итерации
             } else {
                 long curDur = System.currentTimeMillis() - start;
-                if (pacing > curDur) {
-                    sleep(pacing - curDur); // задержка перед запуском следующей итерации
+                if (multiRunService.getPacing() > curDur) {
+                    sleep(multiRunService.getPacing() - curDur); // задержка перед запуском следующей итерации
                 }
             }
         }
         LOG.info("Остановка потока {}", name);
+        multiRunService.threadDec();
+        multiRunService.stopVU();
         return callListVU;
     }
 

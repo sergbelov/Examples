@@ -544,18 +544,19 @@ public class MultiRunService {
     }
 
 
+    /**
+     * Нагрузка
+     * @param baseScript
+     */
     public void start(ScriptRun baseScript) {
-        // разогрев
-        LOG.info("Разогрев...");
-        start(baseScript, true);
-        LOG.info("Разогрев завершен...");
-
-        // нагрузка
-        start(baseScript, false);
+        start(baseScript, true);  // разогрев
+        start(baseScript, false); // нагрузка
     }
 
     /**
      * Нагрузка
+     * @param baseScript
+     * @param isWarming
      */
     public void start(ScriptRun baseScript, boolean isWarming) {
         CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -569,11 +570,11 @@ public class MultiRunService {
 
         int memMinCountVU = minCountVU;
         int memMaxCountVU = maxCountVU;
-        countVU = 0; // текущее количество VU
         testStartTime = System.currentTimeMillis(); // время старта теста
         if (isWarming) {
-            minCountVU = 10;
-            maxCountVU = 10;
+            LOG.info("Разогрев...");
+            minCountVU = 5;
+            maxCountVU = 5;
             testStopTime = testStartTime + stepTimeStatistics * 3000L; // время завершения теста (разогрев)
         } else {
             testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
@@ -581,7 +582,7 @@ public class MultiRunService {
         prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
         nextTimeAddVU = testStartTime + stepTimeVU * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
         nextTimeStatiscitcs = testStartTime + stepTimeStatistics * 1000L; // время следующего снятия статистики
-
+        countVU = 0; // текущее количество VU
 
         LOG.info("#####" +
                         "\ntestStartTime: {}" +
@@ -665,11 +666,20 @@ public class MultiRunService {
 
         // объединяем запросы всех VU
         try {
+/*
             for (int f = 0; f < futureList.size(); f++) {
                 if (isWarming) {
                     callListWarming.addAll(futureList.get(f).get());
                 } else {
                     callList.addAll(futureList.get(f).get());
+                }
+            }
+*/
+            for (Future<List<Call>> future : futureList){
+                if (isWarming) {
+                    callListWarming.addAll(future.get());
+                } else {
+                    callList.addAll(future.get());
                 }
             }
         } catch (InterruptedException e) {
@@ -686,6 +696,7 @@ public class MultiRunService {
         if (isWarming) {
             minCountVU = memMinCountVU;
             maxCountVU = memMaxCountVU;
+            LOG.info("Разогрев завершен...");
         } else {
             if (statisticsOnLine) {
                 // статистика на конец теста

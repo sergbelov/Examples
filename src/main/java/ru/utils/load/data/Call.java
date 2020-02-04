@@ -4,6 +4,7 @@ package ru.utils.load.data;
  * Информация по вызовам API
  */
 public class Call {
+    String rqUid;    // идентификатор
     long timeBegin;  // время вызова API
     long timeEnd;    // длительность выполнения API
 

@@ -1,9 +1,9 @@
 package ru.utils.load.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import ru.utils.load.data.Call;
 import ru.utils.load.data.DateTimeValue;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.utils.db.DBService;
 
 import java.sql.ResultSet;
@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
- * Сбор информации из БД
+ * Сбор информации из БД БПМ
  */
 public class DataFromSQL {
     private static final Logger LOG = LogManager.getLogger(DataFromSQL.class);
@@ -23,20 +23,16 @@ public class DataFromSQL {
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
     private DBService dbService = null;
-    private Long bpmPrevStartTime;
 
     public DataFromSQL() {
     }
 
     public void init(
-            long testStartTime,
             String dbUrl,
             String dbUser,
             String dbPassword){
 
-        this.bpmPrevStartTime = testStartTime;
-
-        // подключаемся к БД
+        // подключаемся к БД БПМ
         dbService = new DBService.Builder()
                 .dbUrl(dbUrl)
                 .dbUserName(dbUser)
@@ -51,58 +47,38 @@ public class DataFromSQL {
         }
     }
 
+
     /**
-     * Сбор статистики по выполнению процессов в
+     * Сбор статистики по выполнению процессов в БПМ
+     * @param startTime
+     * @param stopTime
      * @param callList
      * @param bpmProcessStatisticList
      * @return
      */
     public String getStatisticsFromBpm(
+            long startTime,
             long stopTime,
             List<Call> callList,
             List<DateTimeValue> bpmProcessStatisticList) {
-        long startTime = bpmPrevStartTime + 1;
-        LOG.info("BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
-        String sql = getStatisticsFromBpm(
-                callList,
-                bpmProcessStatisticList,
-                startTime,
-                stopTime);
-        synchronized (bpmPrevStartTime) {
-            bpmPrevStartTime = stopTime;
-        }
-        return sql;
-    }
 
-    /**
-     * Сбор статистики по выполнению процессов в
-     * @param callList
-     * @param bpmProcessStatisticList
-     * @param startTime
-     * @param stopTime
-     * @return
-     */
-    public String getStatisticsFromBpm(
-            List<Call> callList,
-            List<DateTimeValue> bpmProcessStatisticList,
-            long startTime,
-            long stopTime) {
-
-        // запрос к БД для получения статистики
-        String sql = "select count(1) as cnt,\n";
-
-        int sent = (int) callList
-                .stream()
-                .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
-                .count();
-
+        int sent = 0;
         int complete = 0;
         int running = 0;
 
+        LOG.debug("BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
+
+        // запрос к БД БПМ для получения статистики
+        String sql = "select count(1) as cnt,";
+
         if (dbService != null && dbService.isConnection()) {
 
+            sent = (int) callList
+                    .stream()
+                    .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
+                    .count();
             try {
-                LOG.trace("Обработка данных SQL...\n{}", sql);
+                LOG.trace("Обработка данных SQL БПМ...\n{}", sql);
                 ResultSet resultSet = dbService.executeQuery(sql);
                 while (resultSet.next()) {
                     LOG.trace("processstate = {}, cnt = {}",
@@ -124,22 +100,21 @@ public class DataFromSQL {
             } catch (SQLException e) {
                 LOG.error("", e);
             }
-            LOG.debug("Обработка данных SQL завершена.");
+            LOG.debug("Обработка данных SQL БПМ завершена.");
 
         } else {
 
+            sent = (int) (Math.random() * 1000) + 100;
             complete = (int) (Math.random() * sent);
             running = sent - complete;
         }
 
-        synchronized (bpmProcessStatisticList) {
-            bpmProcessStatisticList.add(new DateTimeValue(
-                    startTime,
-                    stopTime,
-                    sent,
-                    complete,
-                    running));
-        }
+        bpmProcessStatisticList.add(new DateTimeValue(
+                startTime,
+                stopTime,
+                sent,
+                complete,
+                running));
         return sql;
     }
 

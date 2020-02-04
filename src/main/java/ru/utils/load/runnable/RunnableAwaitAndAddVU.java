@@ -9,16 +9,17 @@ import java.util.concurrent.CountDownLatch;
 /**
  * Created by SBT-Belov-SeA on 24.01.2020
  * Проверяем наличие не выполненных задач
+ * Добавленние новой группы VU
  */
-public class RunnableAddVUAwait implements Runnable {
+public class RunnableAwaitAndAddVU implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableAddVUAwait.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableAwaitAndAddVU.class);
 
-    private final String name = "RunnableAwait";
+    private final String name = "RunnableAwaitAndAddVU";
     private CountDownLatch countDownLatch;
     private MultiRunService multiRunService;
 
-    public RunnableAddVUAwait(
+    public RunnableAwaitAndAddVU(
             CountDownLatch countDownLatch,
             MultiRunService multiRunService
     ) {
@@ -32,17 +33,9 @@ public class RunnableAddVUAwait implements Runnable {
         LOG.info("Старт потока {}", name);
         while (multiRunService.isRunning() && (
                 System.currentTimeMillis() < multiRunService.getTestStopTime() ||
-                multiRunService.getThreadCount() > 0)) {
+                        multiRunService.getThreadCount() > 0)) {
 
-            multiRunService.startGroupVU();
-
-/*
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-*/
+            multiRunService.startGroupVU(); // старт новой группы VU (если нужно)
         }
         countDownLatch.countDown();
         LOG.info("Остановка потока {}", name);

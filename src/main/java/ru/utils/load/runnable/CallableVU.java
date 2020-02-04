@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
 public class CallableVU implements Callable<List<Call>> {
@@ -37,8 +38,8 @@ public class CallableVU implements Callable<List<Call>> {
     @Override
     public List<Call> call() throws Exception {
         multiRunService.threadInc(); // счетчик активных потоков
-        List<Call> callListVU = new ArrayList<>();
-        LOG.info("Старт потока {}", name);
+        List<Call> callListVU = new CopyOnWriteArrayList<>();
+        LOG.info("Старт потока {}, всего активных потоков {}", name, multiRunService.getThreadCount());
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
@@ -66,9 +67,11 @@ public class CallableVU implements Callable<List<Call>> {
                 }
             }
         }
-        LOG.info("Остановка потока {}", name);
         multiRunService.threadDec();
         multiRunService.stopVU();
+        LOG.info("Остановка потока {}, осталось {}",
+                name,
+                multiRunService.getThreadCount());
         return callListVU;
     }
 

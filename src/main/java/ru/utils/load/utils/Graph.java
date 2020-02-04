@@ -1,8 +1,8 @@
 package ru.utils.load.utils;
 
+import ru.utils.load.data.DateTimeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.DateTimeValue;
 
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -73,6 +73,7 @@ public class Graph {
             boolean printMetrics,
             String color) {
 
+        LOG.info("Формирование графика {}", titleGraph);
         int xSize = Math.max(1200, metricsList.size());
         int ySize = 600;
         int xStart = xSize / 30;
@@ -102,22 +103,22 @@ public class Graph {
         }
         xValueMax = xValueMax - startTime;
 
-        StringBuilder sbResult = new StringBuilder(
+        StringBuilder sbResult = new StringBuilder("<!--" + titleGraph + "-->\n" +
                 "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
-                        "\t\t\t\t<text " +
-                        "font-size=\"" + (fontSize * 2) + "\" " +
-                        "x=\"" + (xSize / 2) + "\" " +
-                        "y=\"" + (yStart - fontSize * 2) + "\">" +
-                        "" + titleGraph + "</text>\n" +
-                        "<!-- Область графика -->\n" +
-                        "\t\t\t\t<rect " +
-                        "stroke=\"#0f0f0f\" " +
-                        "fill=\"" + background + "\" " +
-                        "x=\"" + xStart + "\" " +
-                        "y=\"" + yStart + "\" " +
-                        "width=\"" + xSize + "\" " +
-                        "height=\"" + ySize + "\"/>\n" +
-                        "\n<!-- Описание -->\n");
+                "\t\t\t\t<text " +
+                "font-size=\"" + (fontSize * 2) + "\" " +
+                "x=\"" + (xSize / 2) + "\" " +
+                "y=\"" + (yStart - fontSize * 2) + "\">" +
+                "" + titleGraph + "</text>\n" +
+                "<!-- Область графика -->\n" +
+                "\t\t\t\t<rect " +
+                "stroke=\"#0f0f0f\" " +
+                "fill=\"" + background + "\" " +
+                "x=\"" + xStart + "\" " +
+                "y=\"" + yStart + "\" " +
+                "width=\"" + xSize + "\" " +
+                "height=\"" + ySize + "\"/>\n" +
+                "<!-- Описание -->\n");
 
         // описание графиков
         double yCur = fontSize / 2 + 2;
@@ -131,7 +132,7 @@ public class Graph {
         }
 
         // ось Y
-        sbResult.append("\n<!-- Ось Y -->\n");
+        sbResult.append("<!-- Ось Y -->\n");
         if (yValueMax > 1) {
             yValueMax = (int) (Math.ceil(yValueMax / 5.00) * 5); // максимальное значение на графике - ближайшее большее кратное 5
         }
@@ -167,7 +168,7 @@ public class Graph {
 
 
         // ось X
-        sbResult.append("\n<!-- Ось X -->\n");
+        sbResult.append("<!-- Ось X -->\n");
         xValueMax = (long) (Math.ceil(xValueMax / 5000.00) * 5000); // максимальное значение на графике - ближайшее большее кратное 5 сек
         int kfX = 60;
         double xScale = Math.min(kfX, xValueMax);
@@ -213,7 +214,8 @@ public class Graph {
         for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
             String curColor = metricsList.get(0).getValueSize() > 1 ? colors[e] : color;
             sbGraph[e] = new StringBuilder();
-            sbGraph[e].append("\n\n<!-- График" + (e + 1) + " -->\n\t\t\t\t<polyline " +
+            sbGraph[e].append("<!-- График" + (e + 1) + " -->\n" +
+                    "\t\t\t\t<polyline " +
                     "fill=\"none\" " +
                     "stroke=\"" + curColor + "\" " +
                     "stroke-width=\"" + (lineSize * 2) + "\" " +
@@ -264,12 +266,12 @@ public class Graph {
                 // точка с всплывающим описанием
                 sbSignatureTitle.append("<g> " +
                         "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 2) + "\"/> " +
-                        "<title>" + decimalFormat.format(metricsList.get(i).getValue(e)) + " " + sdf1.format(metricsList.get(i).getTime()) + "</title> " +
+                        "<title>" + decimalFormat.format(metricsList.get(i).getValue(e)) + "</title> " +
                         "</g>\n");
             }
         }
         for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
-            sbGraph[e].append("\"/>\n\n");
+            sbGraph[e].append("\"/>\n");
             sbResult.append(sbGraph[e].toString());
         }
         sbResult.append(sbSignature.toString());

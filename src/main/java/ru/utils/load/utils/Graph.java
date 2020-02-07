@@ -33,6 +33,7 @@ public class Graph {
      * @param metricsList
      * @param step
      * @param printMetrics
+     * @param multiRunService
      * @return
      */
     public String getSvgGraphLine(
@@ -41,7 +42,8 @@ public class Graph {
             long startTime,
             List<DateTimeValue> metricsList,
             boolean step,
-            boolean printMetrics) {
+            boolean printMetrics,
+            MultiRunService multiRunService) {
         return getSvgGraphLine(
                 titleGraph,
                 titleLines,
@@ -49,7 +51,8 @@ public class Graph {
                 metricsList,
                 step,
                 printMetrics,
-                "#00009f");
+                "#00009f",
+                multiRunService);
     }
 
     /**
@@ -62,6 +65,7 @@ public class Graph {
      * @param step
      * @param printMetrics
      * @param color
+     * @param multiRunService
      * @return
      */
     public String getSvgGraphLine(
@@ -71,9 +75,14 @@ public class Graph {
             List<DateTimeValue> metricsList,
             boolean step,
             boolean printMetrics,
-            String color) {
+            String color,
+            MultiRunService multiRunService) {
 
         LOG.info("Формирование графика {}", titleGraph);
+
+//        int graphCount = metricsList.get(0).getValueSize();
+        int graphCount = titleLines.length; // только те на которые есть описание (по количеству)
+
         int xSize = Math.max(1200, metricsList.size());
         int ySize = 600;
         int xStart = xSize / 30;
@@ -94,8 +103,9 @@ public class Graph {
         long xValueMax = 0L;
         double yValueMin = 999999999999999999.99;
         double yValueMax = 0.00;
+
         for (int i = 0; i < metricsList.size(); i++) {
-            for (int e = 0; e < metricsList.get(i).getValueSize(); e++) {
+            for (int e = 0; e < graphCount; e++) {
                 yValueMin = Math.min(yValueMin, metricsList.get(i).getValue(e));
                 yValueMax = Math.max(yValueMax, metricsList.get(i).getValue(e));
             }
@@ -107,7 +117,7 @@ public class Graph {
                 "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
                 "\t\t\t\t<text " +
                 "font-size=\"" + (fontSize * 2) + "\" " +
-                "x=\"" + (xSize / 2) + "\" " +
+                "x=\"" + (xSize / 2 - (titleGraph.length() * xText) / 2) + "\" " +
                 "y=\"" + (yStart - fontSize * 2) + "\">" +
                 "" + titleGraph + "</text>\n" +
                 "<!-- Область графика -->\n" +
@@ -148,7 +158,7 @@ public class Graph {
         double yStep = ySize / (yScale * 1.00);
         double yValue = 0.00;
         yCur = yMax;
-//        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep);
+//        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}; yCur:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep, yCur);
 
         while (yCur > yStart) {
             yCur = yCur - yStep;
@@ -210,9 +220,13 @@ public class Graph {
         StringBuilder sbSignature = new StringBuilder("<!-- Метрики на графике -->\n"); // значения метрик на графике
         StringBuilder sbSignatureTitle = new StringBuilder("<!-- Всплывающие надписи -->\n"); // значения метрик на графике
 
-        StringBuilder[] sbGraph = new StringBuilder[metricsList.get(0).getValueSize()]; // графики
-        for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
-            String curColor = metricsList.get(0).getValueSize() > 1 ? colors[e] : color;
+
+//        StringBuilder[] sbGraph = new StringBuilder[metricsList.get(0).getValueSize()]; // графики
+//        for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
+        StringBuilder[] sbGraph = new StringBuilder[graphCount]; // графики
+        for (int e = 0; e < graphCount; e++) {
+//            String curColor = metricsList.get(0).getValueSize() > 1 ? colors[e] : color;
+            String curColor = graphCount > 1 ? colors[e] : color;
             sbGraph[e] = new StringBuilder();
             sbGraph[e].append("<!-- График" + (e + 1) + " -->\n" +
                     "\t\t\t\t<polyline " +
@@ -227,14 +241,14 @@ public class Graph {
 
             // ступеньки
             if (step && i > 0) {
-                for (int e = 0; e < metricsList.get(i).getValueSize(); e++) {
+                for (int e = 0; e < graphCount; e++) {
                     sbGraph[e].append(xCur + "," + (yMax - Math.round(metricsList.get(i - 1).getValue(e) * yRatio)) + " \n");
                 }
             }
 
             List<Double> yPrevList = new ArrayList<>();
-            for (int e = 0; e < metricsList.get(i).getValueSize(); e++) {
-                String curColor = metricsList.get(0).getValueSize() > 1 ? colors[e] : color;
+            for (int e = 0; e < graphCount; e++) {
+                String curColor = graphCount > 1 ? colors[e] : color;
                 double y = yMax - Math.round(metricsList.get(i).getValue(e) * yRatio);
                 // график
                 sbGraph[e].append(xCur + "," + y + " \n");
@@ -266,11 +280,14 @@ public class Graph {
                 // точка с всплывающим описанием
                 sbSignatureTitle.append("<g> " +
                         "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 2) + "\"/> " +
-                        "<title>" + decimalFormat.format(metricsList.get(i).getValue(e)) + "</title> " +
+                        "<title>Время: " +
+                        sdf1.format(metricsList.get(i).getTime()) + "; VU: " +
+                        multiRunService.getVuCount(metricsList.get(i).getTime()) + "; Значение: " +
+                        decimalFormat.format(metricsList.get(i).getValue(e)) + "</title> " +
                         "</g>\n");
             }
         }
-        for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
+        for (int e = 0; e < graphCount; e++) {
             sbGraph[e].append("\"/>\n");
             sbResult.append(sbGraph[e].toString());
         }

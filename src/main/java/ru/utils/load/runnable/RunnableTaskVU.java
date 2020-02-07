@@ -7,7 +7,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Created by SBT-Belov-SeA on 24.01.2020
@@ -28,6 +27,7 @@ public class RunnableTaskVU implements Runnable {
             MultiRunService multiRunService
     ) {
         this.name = name + "_Task";
+        LOG.trace("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.callListVU = callListVU;
         this.multiRunService = multiRunService;
@@ -35,13 +35,19 @@ public class RunnableTaskVU implements Runnable {
 
     @Override
     public void run() {
+        LOG.trace("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
         multiRunService.threadInc(); // счетчик активных потоков
         long start = System.currentTimeMillis();
-        if (baseScript.start()) {
+        if (baseScript.start(multiRunService.getApiNum())) {
+            long stop = System.currentTimeMillis();
+            long curDur = stop - start;
+//            if (curDur > multiRunService.getPacing()) {
+//                LOG.warn("Длительность выполнения {} превышает pacing ({} > {})", name, curDur, multiRunService.getPacing());
+//            }
             synchronized (callListVU) {
                 callListVU.add(new Call(
                         start,
-                        System.currentTimeMillis())); // фиксируем вызов
+                        stop)); // фиксируем вызов
             }
         } else {
             synchronized (callListVU) {
@@ -49,5 +55,6 @@ public class RunnableTaskVU implements Runnable {
             }
         }
         multiRunService.threadDec();
+        LOG.trace("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
     }
 }

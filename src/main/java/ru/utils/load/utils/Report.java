@@ -6,9 +6,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import ru.utils.files.FileUtils;
 import ru.utils.load.data.Call;
-import ru.utils.load.data.ErrorGroupComment;
-import ru.utils.load.data.ErrorRs;
-import ru.utils.load.data.ErrorsGroup;
+import ru.utils.load.data.errors.ErrorRsGroup;
+import ru.utils.load.data.errors.ErrorRs;
+import ru.utils.load.data.errors.ErrorsGroup;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -30,21 +30,26 @@ public class Report {
     private FileUtils fileUtils = new FileUtils();
     private ErrorsGroup errorsGroup = new ErrorsGroup(); // типы ошибок (для группировки)
 
-    public Report() {
+    /**
+     * Сохраняем отчет в HTML - файл
+     *
+     * @param multiRunService
+     */
+    public void saveReportHtml(
+            MultiRunService multiRunService,
+            String pathReport) {
+        saveReportHtml(multiRunService, pathReport, false);
     }
 
     /**
      * Сохраняем отчет в HTML - файл
+     *
      * @param multiRunService
      */
-    public void saveReportHtml(MultiRunService multiRunService) {
-        saveReportHtml(multiRunService, false);
-    }
-    /**
-     * Сохраняем отчет в HTML - файл
-     * @param multiRunService
-     */
-    public void saveReportHtml(MultiRunService multiRunService, boolean printMetrics) {
+    public void saveReportHtml(
+            MultiRunService multiRunService,
+            String pathReport,
+            boolean printMetrics) {
 
         LOG.info("Формируем отчет...");
         // формируем HTML - файл
@@ -54,9 +59,13 @@ public class Report {
                         "\t\t<meta charset=\"UTF-8\">\n" +
                         "\t\t<style>\n" +
                         "\t\t\tbody, html{width:100%; height:100%; margin:0; background:#fdfdfd}\n\n" +
-                        "\t\t\t.graph{width:80%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px solid #ccc; background:#fff}\n\n" +
+                        "\t\t\t.graph{width:80%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px; solid #ccc; background:#fff}\n\n" +
                         "\t\t\ttable{border: solid 1px; border-collapse: collapse;}\n" +
                         "\t\t\ttd{border: solid 1px;}\n" +
+                        "\t\t\tth{border: solid 1px;}\n" +
+                        "\t\t\t.td_red{border: solid 1px; background-color: rgb(255, 192, 192);}\n" +
+                        "\t\t\t.td_green{border: solid 1px; background-color: rgb(192, 255, 192);}\n" +
+                        "\t\t\t.td_yellow{border: solid 1px; background-color: rgb(255, 255, 192);}\n" +
                         "\t\t</style>\n" +
                         "\t</head>\n" +
                         "\t<body>\n" +
@@ -77,17 +86,19 @@ public class Report {
                         multiRunService.getVuList(),
                         true,
                         printMetrics,
-                        "#0000ff"))
+                        "#0000ff",
+                        multiRunService))
                 .append("\t\t</div>\n");
 
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
-                        "TPC",
+                        "Количество операций в секунду (TPC)",
                         new String[]{"TPC - отправлено", "TPC - выполнено"},
                         multiRunService.getTestStartTime(),
                         multiRunService.getTpcList(),
                         false,
-                        printMetrics))
+                        printMetrics,
+                        multiRunService))
                 .append("\t\t</div>\n");
 
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -97,8 +108,58 @@ public class Report {
                         multiRunService.getTestStartTime(),
                         multiRunService.getBpmProcessStatisticList(),
                         false,
-                        printMetrics))
+                        printMetrics,
+                        multiRunService))
                 .append("\t\t</div>\n");
+
+        String sqlBpm = multiRunService.getDataFromSQL().getStatisticsFromBpm(
+                multiRunService.getKeyBpm(),
+                multiRunService.getTestStartTime(),
+                multiRunService.getTestStopTime(),
+                multiRunService.getCallList(),
+                multiRunService.getBpmProcessStatisticList());
+        int lastIndexBpm = multiRunService.getBpmProcessStatisticList().size() - 1;
+        sbHtml.append("<!-- Статистика из БД БПМ  -->\n")
+                .append(sqlBpm)
+                .append("<br><br>\n\t\t<div>\n<table><tbody>\n" +
+                        "<tr><th>Сервис</th>\n" +
+                        "<th>Всего отправлено</th>\n" +
+                        "<th>COMPLETE</th>\n" +
+                        "<th>RUNNING</th>\n" +
+                        "<th>Потеряно</th>\n")
+                .append("<tr><td>")
+                .append(multiRunService.getName())
+                .append("</td><td>")
+                .append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0))
+                .append("</td>");
+
+        if (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) > 0) {
+            sbHtml.append("<td class=\"td_green\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1))
+                .append("</td>");
+
+        if (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2) > 0) {
+            sbHtml.append("<td class=\"td_yellow\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2))
+                .append("</td>");
+
+        if ((multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) +
+                multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)) !=
+                multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0)) {
+            sbHtml.append("<td class=\"td_red\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0) -
+                (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) +
+                 multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)))
+                .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
@@ -107,19 +168,52 @@ public class Report {
                         multiRunService.getTestStartTime(),
                         multiRunService.getDurationList(),
                         false,
-                        printMetrics))
+                        printMetrics,
+                        multiRunService))
                 .append("\t\t</div>\n");
+
+        multiRunService.getStatistics(multiRunService.getTestStartTime(), multiRunService.getTestStopTime());
+        int lastIndexDur = multiRunService.getDurationList().size() - 1;
+        sbHtml.append("<!-- Статистика по длительности выполнения сервиса -->\n" +
+                "\t\t<div>\n<table><tbody>\n" +
+                "<tr><th rowspan=\"2\">Сервис</th>\n" +
+                "<th colspan=\"4\">Длительность выполнения (мс)</th>\n" +
+                "<th colspan=\"3\">Количество</th></tr>\n" +
+                "<tr><th>минимальная</th>\n" +
+                "<th>средняя</th>\n" +
+                "<th>перцентиль 90%</th>\n" +
+                "<th>максимальная</th>\n" +
+                "<th>всего</th>\n" +
+                "<th>с ответом</th>\n" +
+                "<th>без ответа</th>\n")
+                .append("<tr><td>")
+                .append(multiRunService.getName())
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(0))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(1))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(2))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(3))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(4))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(5))
+                .append("</td><td>")
+                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(4) - multiRunService.getDurationList().get(lastIndexDur).getIntValue(5))
+                .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
         // выведем ошибки при наличии
         boolean printError = false;
-        for (int i = 0; i < multiRunService.getErrorGroupList().size(); i++){
-            if (multiRunService.getErrorGroupList().get(i).getValue() > 0){
+        for (int i = 0; i < multiRunService.getErrorGroupList().size(); i++) {
+            if (multiRunService.getErrorGroupList().get(i).getValue() > 0) {
                 printError = true;
                 break;
             }
         }
         if (printError) {
-            sbHtml.append("\n\t\t<div class=\"graph\">\n")
+            sbHtml.append("<!-- Ошибки -->\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine(
                             "Ошибки",
                             new String[]{"Ошибки"},
@@ -127,82 +221,52 @@ public class Report {
                             multiRunService.getErrorGroupList(),
                             false,
                             printMetrics,
-                            "#ff0000"))
+                            "#ff0000",
+                            multiRunService))
                     .append("\t\t</div>\n");
         }
-
-        multiRunService.getStatistics(multiRunService.getTestStartTime(), multiRunService.getTestStopTime());
-        int lastIndex = multiRunService.getDurationList().size() - 1;
-//        min, avg, prc90, max
-        sbHtml.append("\n\t\t<div>\n" +
-                "<table><tbody>\n" +
-                 "<tr><td>Минимальная длительность (мс)</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndex).getIntValue(0))
-                .append("</td></tr>\n" +
-                        "<tr><td>Средняя длительность (мс)</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndex).getIntValue(1))
-                .append("</td></tr>\n" +
-                        "<tr><td>Перцентиль 90%(мс)</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndex).getIntValue(2))
-                .append("</td></tr>\n" +
-                        "<tr><td>Максимальная длительность(мс)</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndex).getIntValue(3))
-                .append("</td></tr>\n" +
-                        "</tbody></table>\n" +
-                        "</div><br><br>\n");
-
-
-        String sqlBpm = multiRunService.getDataFromSQL().getStatisticsFromBpm(
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime(),
-                multiRunService.getCallList(),
-                multiRunService.getBpmProcessStatisticList());
-        lastIndex = multiRunService.getBpmProcessStatisticList().size()-1;
-        sbHtml.append("\n\t\t<div>\n")
-                .append(sqlBpm)
-                .append("<br><br>\n\n<table><tbody>\n" +
-                        "<tr><td>Отправлено запросов</td><td>")
-                .append(multiRunService.getBpmProcessStatisticList().get(lastIndex).getIntValue(0))
-                .append("</td></tr>\n" +
-                        "<tr><td>БД БПМ - в статусе COMPLETE</td><td>")
-                .append(multiRunService.getBpmProcessStatisticList().get(lastIndex).getIntValue(1))
-                .append("</td></tr>\n" +
-                        "<tr><td>БД БПМ - в статусе RUNNING</td><td>")
-                .append(multiRunService.getBpmProcessStatisticList().get(lastIndex).getIntValue(2))
-                .append("</td></tr>\n" +
-                        "</tbody></table>\n" +
-                        "</div>\n");
-
-/*
-        // список не исполненных запросов
-        sbHtml.append(getRunningRequests(multiRunService.getCallList()));
-*/
-
 
         // группируем ошибки по типам
         if (printError) {
             sbHtml.append(getErrorsGroupComment(
                     multiRunService.getErrorList(),
-                    multiRunService.getErrorGroupCommentList()));
+                    multiRunService.getErrorRsGroupList()));
         }
 
+
         // ссылка на Графану (Хосты детализировано)
-        sbHtml.append(getGrafanaHostsDetailUrl(
+        sbHtml.append(getLinkUrl(
+                "Grafana - ППРБ Хосты детализированно",
                 multiRunService.getGrafanaHostsDetailUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
+                String.valueOf(multiRunService.getTestStartTime()),
+                String.valueOf(multiRunService.getTestStopTime())));
+
+        // ссылка на Графану (Хосты детализировано CPU)
+        sbHtml.append(getLinkUrl(
+                "Grafana - ППРБ Хосты детализированно CPU",
+                multiRunService.getGrafanaHostsDetailCpuUrl(),
+                String.valueOf(multiRunService.getTestStartTime()),
+                String.valueOf(multiRunService.getTestStopTime())));
+
+        // ссылка на Графану (TransportThreadPools)
+        sbHtml.append(getLinkUrl(
+                "Grafana - ППРБ TransportThreadPools",
+                multiRunService.getGrafanaTransportThreadPoolsUrl(),
+                String.valueOf(multiRunService.getTestStartTime()),
+                String.valueOf(multiRunService.getTestStopTime())));
 
         // ссылка на Спланк
-        sbHtml.append(getSplunkUrl(
+        sbHtml.append(getLinkUrl(
+                "Splunk - Метрики BPM",
                 multiRunService.getSplunkUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
+                String.valueOf(multiRunService.getTestStartTime()).substring(0, 10),
+                String.valueOf(multiRunService.getTestStopTime()).substring(0, 10)));
 
-        sbHtml.append("\n<br>\n\t</body>" +
+        sbHtml.append("\n\t</body>" +
                 "\n</html>");
 
         // сохраняем HTML - файл
-        String fileName = "Reports/" + multiRunService.getName() + "_" +
+        String fileName = pathReport + multiRunService.getName() + "_" +
                 sdf3.format(multiRunService.getTestStartTime()) + "-" +
                 sdf3.format(multiRunService.getTestStopTime()) + ".html";
         fileUtils.writeFile(fileName, sbHtml.toString());
@@ -211,14 +275,15 @@ public class Report {
 
     /**
      * Список не исполненных запросов
+     *
      * @param callList
      * @return
      */
     private String getRunningRequests(List<Call> callList) {
         StringBuilder res = new StringBuilder();
         int cnt = 0;
-        for (int i = 0; i < callList.size(); i++){
-            if (callList.get(i).getDuration() == 0){
+        for (int i = 0; i < callList.size(); i++) {
+            if (callList.get(i).getDuration() == 0) {
                 res.append("<tr><td>")
                         .append(++cnt)
                         .append("</td><td>")
@@ -226,7 +291,7 @@ public class Report {
                         .append("</td></tr>\n");
             }
         }
-        if (res.length() > 0){
+        if (res.length() > 0) {
             return "<br>\nНе исполненные запросы<br>\n" +
                     "<table>" + res.toString() + "</table>\n";
         } else return "";
@@ -238,48 +303,52 @@ public class Report {
      */
     public String getErrorsGroupComment(
             List<ErrorRs> errorList,
-            List<ErrorGroupComment> errorGroupCommentList
-    ){
+            List<ErrorRsGroup> errorRsGroupList
+    ) {
         StringBuilder sbErrors = new StringBuilder("\n<br><div>\nОшибки<br>\n<table><tbody>\n" +
-                "<tr><td>Группа ошибок</td>" +
-                "<td>Количество</td>" +
-                "<td>Первая ошибка из группы</td></tr>");
+                "<tr><th>Группа ошибок</th>" +
+                "<th>Количество</th>" +
+                "<th>Первая ошибка из группы</th></tr>\n");
 
-        for (int i = 0; i < errorList.size(); i++){
-            int find1;
-            String text = errorList.get(i).getText();
-            if ((find1 = findErrorRegx(text)) > -1){
-                String comment = errorsGroup.getComment(find1);
-                int find2;
-                if ((find2 = findErrorGroupCommentList(errorGroupCommentList, comment)) > -1){
-                    errorGroupCommentList.get(find2).incCount();
+        try {
+            for (int i = 0; i < errorList.size(); i++) {
+                int find1;
+                String text = errorList.get(i).getText();
+                if ((find1 = findErrorGroup(text)) > -1) {
+                    String comment = errorsGroup.getComment(find1);
+                    int find2;
+                    if ((find2 = findErrorGroupCommentList(errorRsGroupList, comment)) > -1) {
+                        errorRsGroupList.get(find2).incCount();
+                    } else {
+                        errorRsGroupList.add(new ErrorRsGroup(text, comment, 1));
+                    }
                 } else {
-                    errorGroupCommentList.add(new ErrorGroupComment(text, comment, 1));
+                    sbErrors.append("<tr>")
+                            .append("<td>not group</td>")
+                            .append("<td>1</td>")
+                            .append("<td>")
+                            .append(text)
+                            .append("</td>")
+                            .append("</tr>\n");
                 }
-            } else {
+            }
+
+            // соберем сгруппированные ошибки
+            for (int i = 0; i < errorRsGroupList.size(); i++) {
                 sbErrors.append("<tr>")
-                        .append("<td>not group</td>")
-                        .append("<td>1</td>")
                         .append("<td>")
-                        .append(text)
+                        .append(errorRsGroupList.get(i).getComment())
+                        .append("</td>")
+                        .append("<td>")
+                        .append(errorRsGroupList.get(i).getCount())
+                        .append("</td>")
+                        .append("<td>")
+                        .append(errorRsGroupList.get(i).getFirstError())
                         .append("</td>")
                         .append("</tr>\n");
             }
-        }
-
-        // соберем сгруппированные ошибки
-        for (int i = 0; i < errorGroupCommentList.size(); i++){
-            sbErrors.append("<tr>")
-                    .append("<td>")
-                    .append(errorGroupCommentList.get(i).getComment())
-                    .append("</td>")
-                    .append("<td>")
-                    .append(errorGroupCommentList.get(i).getCount())
-                    .append("</td>")
-                    .append("<td>")
-                    .append(errorGroupCommentList.get(i).getFirstError())
-                    .append("</td>")
-                    .append("</tr>\n");
+        } catch (Exception e) {
+            LOG.error("Не удалось сгруппировать ошибки\n", e);
         }
 
         sbErrors.append("</tbody></table>\n</div>\n");
@@ -287,18 +356,21 @@ public class Report {
     }
 
     /**
-     * Поиск зафиксированной группы
+     * Поиск зафиксированной группы с ошибкой
+     *
      * @param comment
      * @return
      */
     private int findErrorGroupCommentList(
-            List<ErrorGroupComment> errorGroupCommentList,
-            String comment){
+            List<ErrorRsGroup> errorRsGroupList,
+            String comment) {
         int res = -1;
-        for (int i = 0; i < errorGroupCommentList.size(); i++){
-            if (errorGroupCommentList.get(i).getComment().equals(comment)){
-                res = i;
-                break;
+        if (comment != null) {
+            for (int i = 0; i < errorRsGroupList.size(); i++) {
+                if (errorRsGroupList.get(i).getComment().equals(comment)) {
+                    res = i;
+                    break;
+                }
             }
         }
         return res;
@@ -306,67 +378,66 @@ public class Report {
 
     /**
      * Поиск типа ошибки
+     *
      * @param text
      * @return
      */
-    private int findErrorRegx(String text){
+    private int findErrorGroup(String text) {
         int res = -1;
-        for (int i = 0; i < errorsGroup.getCount(); i++){
-            int find = 0;
-            int count = errorsGroup.getRegx(i).length;
-            for (int j = 0; j < count; j++){
-                if (text.indexOf(errorsGroup.getRegx(i)[j]) > -1){
-                    find++;
+        if (text != null) {
+            for (int i = 0; i < errorsGroup.getCount(); i++) {
+                int find = 0;
+                int count = errorsGroup.getConditions(i).length;
+                for (int j = 0; j < count; j++) {
+                    if (text.indexOf(errorsGroup.getConditions(i)[j]) > -1) {
+                        find++;
+                    } else {
+                        break;
+                    }
                 }
-            }
-            if (find == count){
-                res = i;
-                break;
+                if (find == count) { // нашлись все совпадения
+                    res = i;
+                    break;
+                }
             }
         }
         return res;
     }
 
     /**
-     * Формирование URL для просмотра в Графане (Хосты детелизировано)
+     * Формирование URL по шаблону
+     *
+     * @param blank     - название ссылки
+     * @param baseUrl   - базовый URL
      * @param startTime
      * @param stopTime
      * @return
      */
-    private String getGrafanaHostsDetailUrl(String grafanaHostsDetailUrl, long startTime, long stopTime){
-        StringBuilder res = new StringBuilder("\n<div>" +
-                "<p><a href=\"");
-        res.append(grafanaHostsDetailUrl
-                    .replace("{startTime}", String.valueOf(startTime))
-                    .replace("{stopTime}", String.valueOf(stopTime)));
-        res.append("\" target=\"_blank\">Grafana - ППРБ Хосты детализированно</a>" +
-                "</p></div>\n");
-        LOG.debug("Ссылка на Grafana {}", res.toString());
-        return res.toString();
-    }
+    private String getLinkUrl(
+            String blank,
+            String baseUrl,
+            String startTime,
+            String stopTime) {
 
-    private String getSplunkUrl(String splunkUrl, long startTime, long stopTime){
-        StringBuilder res = new StringBuilder("<div>" +
-                "<p><a href=\"");
-        res.append(splunkUrl
-                .replace("{startTime}", String.valueOf(startTime).substring(0, 10))
-                .replace("{stopTime}", String.valueOf(stopTime).substring(0,10)));
-        res.append("\" target=\"_blank\">Splunk - Метрики BPM</a>" +
-                "</p></div>\n");
-        LOG.debug("Ссылка на Splunk {}", res.toString());
+        StringBuilder res = new StringBuilder("\n<div><p><a href=\"");
+        res.append(baseUrl
+                .replace("{startTime}", startTime)
+                .replace("{stopTime}", stopTime));
+        res.append("\" target=\"_blank\">" + blank + "</a></p></div>\n");
+        LOG.debug("Ссылка на {} {}", blank, res.toString());
         return res.toString();
-//        1580286544
     }
 
     /**
      * Информация о версии модуля и активности хостов
+     *
      * @param csmUrl
      * @return
      */
-    private String getInfoFromCSM(String csmUrl){
+    private String getInfoFromCSM(String csmUrl) {
         StringBuilder res = new StringBuilder("\n<h3>Версия модуля, активность хостов<h3>\n" +
                 "<table><tbody>\n" +
-                "<tr><td>Host</td><td>Module</td><td>Version</td><td>Active</td></tr>\n");
+                "<tr><th>Host</th><th>Module</th><th>Version</th><th>Active</th></tr>\n");
         try {
             URL url = new URL(csmUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -382,7 +453,7 @@ public class Report {
 
             LOG.debug("CSM Response: {}", data.toString());
             JSONArray jsonArray = new JSONArray(data.toString());
-            for (int h = 0; h < jsonArray.length(); h++){
+            for (int h = 0; h < jsonArray.length(); h++) {
                 JSONObject jsonObjectHost = jsonArray.getJSONObject(h);
                 LOG.debug("CSM Response[{}]: {}", h, jsonObjectHost.toString());
 
@@ -400,19 +471,22 @@ public class Report {
                         .append("</td>")
                         .append("<td>")
                         .append(version)
-                        .append("</td>")
-                        .append("<td>")
-                        .append(enabled ? "Да" : "Нет")
-                        .append("</td>")
-                        .append("</tr>\n");
+                        .append("</td>");
+
+                if (enabled) {
+                    res.append("<td class=\"td_green\">Да</td>");
+                } else {
+                    res.append("<td class=\"td_red\">Нет</td>");
+                }
+
+                res.append("</tr>\n");
 
                 LOG.debug("{} {} {} {}", host, module, version, enabled);
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Ошибка при получении данных с CSM\n", e);
         }
-
         res.append("</tbody></table>\n");
         return res.toString();
     }

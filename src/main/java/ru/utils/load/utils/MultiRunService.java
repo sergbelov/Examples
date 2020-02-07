@@ -3,12 +3,11 @@ package ru.utils.load.utils;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.data.DateTimeValue;
-import ru.utils.load.data.ErrorGroupComment;
-import ru.utils.load.data.ErrorRs;
+import ru.utils.load.data.errors.ErrorRsGroup;
+import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.files.PropertiesService;
 import ru.utils.load.runnable.CallableVU;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
 
@@ -16,7 +15,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,13 +29,11 @@ public class MultiRunService {
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new ArrayList<>(); // список вызовов API
     private List<DateTimeValue> tpcList = new ArrayList<>(); // TPC
-    private List<DateTimeValue> durationList = new ArrayList<>(); // Длительность выполнения (min, avg, prc90, max)
+    private List<DateTimeValue> durationList = new ArrayList<>(); // Длительность выполнения (min, avg, prc90, max, count, count_ok)
     private List<DateTimeValue> bpmProcessStatisticList = new ArrayList<>(); // статистика обработки задач в БПМ
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
     private List<DateTimeValue> errorGroupList = new ArrayList<>(); // ошибки при выполнении API сгруппированы
-    private List<ErrorGroupComment> errorGroupCommentList = new ArrayList<>(); // количество ошибок по типам
-
-    private List<String> reportList = new ArrayList<>(); // текстовый отчет (для отладки)
+    private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
 
     private ScriptRun baseScript;
     private List<Future<List<Call>>> futureList = new ArrayList<>();
@@ -46,12 +42,12 @@ public class MultiRunService {
     private AtomicInteger threadCount; // // счетчик потоков
     private AtomicInteger vuCount; // текущее количество VU
 
+    private int apiNum;
     private String name;
     private long testStartTime;
     private long testStopTime;
     private long nextTimeAddVU;
     private Long prevStartTimeStatistic;
-
 
     // параметры теста
     private int testDuration = 1; // длительность теста в минутах
@@ -71,34 +67,18 @@ public class MultiRunService {
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
 
     private String grafanaHostsDetailUrl; // Графана - Хосты детализованно (URL)
+    private String grafanaHostsDetailCpuUrl; // Графана - Хосты детализованно CPU (URL)
+    private String grafanaTransportThreadPoolsUrl; //Графана - TransportThreadPools (URL)
     private String splunkUrl; // Спланк (URL)
     private String csmUrl; // CSM (URL)
 
-    boolean running = true; // тест продолжается
+    private String keyBpm;
+
+    private String pathReport;
+
+    Boolean running = true; // тест продолжается
     boolean warning = true; // разогрев
 
-    private static final String PROPERTIES_FILE = "load.properties";
-    private static PropertiesService propertiesService = new PropertiesService(new LinkedHashMap<String, String>() {{
-        put("TEST_DURATION", "1");
-        put("VU_COINT_MIN", "10");
-        put("VU_COUNT_MAX", "100");
-        put("VU_STEP_TIME", "5");
-        put("VU_STEP_TIME_DELAY", "1");
-        put("VU_STEP_COUNT", "10");
-        put("PACING", "1000");
-        put("PACING_TYPE", "1");
-        put("STATISTICS_STEP_TIME", "5");
-        put("STOP_TEST_ON_ERROR", "true");
-        put("COUNT_ERROR_FOR_STOP_TEST", "100");
-
-        put("DB_URL", "");
-        put("DB_USER_NAME", "");
-        put("DB_USER_PASSWORD", "");
-
-        put("GRAFANA_HOSTS_DETAIL", "");
-        put("SPLUNK", "");
-        put("CSM", "");
-    }});
 
     private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
     private Report report = new Report();
@@ -106,41 +86,64 @@ public class MultiRunService {
     /**
      * инициализация параметров
      */
-    public void init(String name) {
+    public void init(
+            int apiNum,
+            String name,
+            int testDuration,
+            int vuCountMin,
+            int vuCountMax,
+            int vuStepTime,
+            long vuStepTimeDelay,
+            int vuStepCount,
+            long pacing,
+            int pacingType,
+            int statisticsStepTime,
+            boolean stopTestOnError,
+            int countErrorForStopTest,
+            String grafanaHostsDetailUrl,
+            String grafanaHostsDetailCpuUrl,
+            String grafanaTransportThreadPoolsUrl,
+            String splunkUrl,
+            String csmUrl,
+            DataFromSQL dataFromSQL,
+            String keyBpm,
+            String pathReport
+    ) {
+        this.apiNum = apiNum;
         this.name = name;
-        propertiesService.readProperties(PROPERTIES_FILE);
-
-        testDuration = propertiesService.getInt("TEST_DURATION");
-        vuCountMin = propertiesService.getInt("VU_COINT_MIN");
-        vuCountMax = propertiesService.getInt("VU_COUNT_MAX");
-        vuStepTime = propertiesService.getInt("VU_STEP_TIME");
-        vuStepTimeDelay = (long) (propertiesService.getDouble("VU_STEP_TIME_DELAY") * 1000);
-        vuStepCount = propertiesService.getInt("VU_STEP_COUNT");
-        pacing = propertiesService.getLong("PACING");
-        pacingType = propertiesService.getInt("PACING_TYPE");
-        statisticsStepTime = propertiesService.getInt("STATISTICS_STEP_TIME");
-        stopTestOnError = propertiesService.getBoolean("STOP_TEST_ON_ERROR");
-        countErrorForStopTest = propertiesService.getInt("COUNT_ERROR_FOR_STOP_TEST");
-        grafanaHostsDetailUrl = propertiesService.getString("GRAFANA_HOSTS_DETAIL");
-        splunkUrl = propertiesService.getString("SPLUNK");
-        csmUrl = propertiesService.getString("CSM");
+        this.testDuration = testDuration;
+        this.vuCountMin = vuCountMin;
+        this.vuCountMax = vuCountMax;
+        this.vuStepTime = vuStepTime;
+        this.vuStepTimeDelay = vuStepTimeDelay;
+        this.vuStepCount = vuStepCount;
+        this.pacing = pacing;
+        this.pacingType = pacingType;
+        this.statisticsStepTime = statisticsStepTime;
+        this.stopTestOnError = stopTestOnError;
+        this.countErrorForStopTest = countErrorForStopTest;
+        this.grafanaHostsDetailUrl = grafanaHostsDetailUrl;
+        this.grafanaHostsDetailCpuUrl = grafanaHostsDetailCpuUrl;
+        this.grafanaTransportThreadPoolsUrl = grafanaTransportThreadPoolsUrl;
+        this.splunkUrl = splunkUrl;
+        this.csmUrl = csmUrl;
+        this.dataFromSQL = dataFromSQL;
+        this.keyBpm = keyBpm;
+        this.pathReport = pathReport;
 
         if (!checkParam()) { // ошибка в параметрах
             System.exit(1);
         }
-
-        dataFromSQL.init( // подключаемся к БД
-                propertiesService.getString("DB_URL"),
-                propertiesService.getString("DB_USER_NAME"),
-                propertiesService.getStringDecode("DB_USER_PASSWORD"));
     }
 
     public void end() {
-        dataFromSQL.end();
+//        dataFromSQL.end();
     }
 
     public MultiRunService() {
     }
+
+    public int getApiNum() { return apiNum; }
 
     public String getName() {
         return name;
@@ -170,6 +173,10 @@ public class MultiRunService {
         return bpmProcessStatisticList;
     }
 
+    public String getKeyBpm() {
+        return keyBpm;
+    }
+
     public List<ErrorRs> getErrorList() {
         return errorList;
     }
@@ -178,12 +185,8 @@ public class MultiRunService {
         return errorGroupList;
     }
 
-    public List<ErrorGroupComment> getErrorGroupCommentList() {
-        return errorGroupCommentList;
-    }
-
-    public List<String> getReportList() {
-        return reportList;
+    public List<ErrorRsGroup> getErrorRsGroupList() {
+        return errorRsGroupList;
     }
 
     public long getTestStartTime() {
@@ -205,6 +208,12 @@ public class MultiRunService {
     public String getGrafanaHostsDetailUrl() {
         return grafanaHostsDetailUrl;
     }
+
+    public String getGrafanaHostsDetailCpuUrl() {
+        return grafanaHostsDetailCpuUrl;
+    }
+
+    public String getGrafanaTransportThreadPoolsUrl() { return grafanaTransportThreadPoolsUrl;}
 
     public String getSplunkUrl() {
         return splunkUrl;
@@ -249,24 +258,42 @@ public class MultiRunService {
     public String getParams() {
         StringBuilder res = new StringBuilder("\n<h3>Параметры<h3>\n" +
                 "<table border=\"1\"><tbody>\n");
-        res.append("<tr><td>Длительность теста (мин):</td><td>")
+        res.append("<tr><td>Длительность теста (мин)</td><td>")
                 .append(testDuration)
                 .append("</td></tr>\n")
-                .append("<tr><td>Задержка перед выполнением следующей операции (мс):</td><td>")
+                .append("<tr><td>Задержка перед выполнением следующей операции (мс)</td><td>")
                 .append(pacing)
                 .append("</td></tr>\n")
                 .append("<tr><td>Режим задержки:<br>0 - задержка от момента старта операции (без ожидания выполнения);<br>1 - задержка от момента старта операции (с учетом ожидания выполения);<br>2 - задержка от момента завершения выполнения операции;</td><td>")
                 .append(pacingType)
+                .append("</td></tr>\n")
+                .append("<tr><td>Начальное количество VU</td><td>")
+                .append(vuCountMin)
+                .append("</td></tr>\n")
+                .append("<tr><td>Периодичность увеличения VU (сек)</td><td>")
+                .append(vuStepTime)
+                .append("</td></tr>\n")
+                .append("<tr><td>Количество VU в группе</td><td>")
+                .append(vuStepCount)
+                .append("</td></tr>\n")
+                .append("<tr><td>Задержка между стартами VU в группе (сек)</td><td>")
+                .append(vuStepTimeDelay)
+                .append("</td></tr>\n")
+                .append("<tr><td>Максимальное количество VU</td><td>")
+                .append(vuCountMax)
                 .append("</td></tr>\n")
                 .append("<tr><td>Периодичность снятия метрик (сек):</td><td>")
                 .append(statisticsStepTime)
                 .append("</td></tr>\n")
                 .append("<tr><td>Прерывать тест при большом количестве ошибок:</td><td>")
                 .append(stopTestOnError ? "Да" : "Нет")
-                .append("</td></tr>\n")
-                .append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
-                .append(countErrorForStopTest)
-                .append("</td></tr>\n</tbody></table>\n");
+                .append("</td></tr>\n");
+                if (stopTestOnError) {
+                    res.append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
+                       .append(countErrorForStopTest)
+                       .append("</td></tr>\n");
+                }
+                res.append("</tbody></table>\n");
         return res.toString();
     }
 
@@ -303,7 +330,28 @@ public class MultiRunService {
             synchronized (errorList) {
                 errorList.add(new ErrorRs(time, text));
             }
+            if (isStopTestOnError() && getErrorCount() > getCountErrorForStopTest()){ //ToDo
+                stop();
+            }
+
         }
+    }
+
+    /**
+     * Количество VU на момент времени
+     * @param time
+     * @return
+     */
+    public int getVuCount(long time){
+        int res = 0;
+        for (int i = 0; i < vuList.size(); i++){
+            if (vuList.get(i).getTime() > time){
+                break;
+            } else {
+                res = vuList.get(i).getIntValue();
+            }
+        }
+        return res;
     }
 
     /**
@@ -378,7 +426,7 @@ public class MultiRunService {
                     for (int u = 0; u < step; u++) {
                         if (startVU()) {
                             futureList.add(executorService.submit(new CallableVU(
-                                    getVuCount(),
+                                    name + " CallableVU" + getVuCount(),
                                     baseScript,
                                     executorService,
                                     this)));
@@ -392,7 +440,8 @@ public class MultiRunService {
                             }
                         }
                     }
-                    LOG.info("Текущее количество виртуальных пользователей {} из {}",
+                    LOG.info("{}: текущее количество VU {} из {}",
+                            name,
                             getVuCount(),
                             vuCountMax);
                     if (vuStepTimeDelay == 0) { // фиксируем всю группу
@@ -444,11 +493,13 @@ public class MultiRunService {
      * Перестаем подавать новую нагрузку
      */
     public void stop() {
-        if (!warning) { // разогрев не прерываем
+        if (!warning) { // при разогреве тест не прерываем
             if (running) {
-                LOG.warn("Из-за большого количества ошибок прерываем подачу нагрузки...");
+                LOG.warn("{}: из-за большого количества ошибок прерываем подачу нагрузки...", name);
             }
-            running = false;
+            synchronized (running) {
+                running = false;
+            }
         }
     }
 
@@ -469,22 +520,25 @@ public class MultiRunService {
     private boolean checkParam() {
         boolean r = true;
         if (vuStepTime > 0 && vuStepCount > 0) {
-            if (vuCountMin + vuStepCount * ((testDuration * 60L) / vuStepTime - 1) < vuCountMax) {
-                LOG.error("\n\nВнимание!!! Заданные параметры не позволяют выйти на планируемую максимальную нагрузку за отведенное время ({} < {})",
+            if (vuCountMin + vuStepCount * ((testDuration * 60L) / vuStepTime) < vuCountMax) {
+                LOG.error("\n{}: Внимание!!! Заданные параметры не позволяют выйти на планируемую максимальную нагрузку за отведенное время ({} < {})",
+                        name,
                         vuCountMin + vuStepCount * ((testDuration * 60L) / vuStepTime - 1),
                         vuCountMax);
                 r = false;
             }
         }
         if (vuCountMin > vuCountMax) {
-            LOG.error("\n\nВнимание!!! Минимальное значение VU ({}) больше максимального значения VU ({})",
+            LOG.error("\n{}: Внимание!!! Минимальное значение VU ({}) больше максимального значения VU ({})",
+                    name,
                     vuCountMin,
                     vuCountMax);
             r = false;
 
         }
         if ((vuStepTime == 0 || vuStepCount == 0) && vuCountMin < vuCountMax) {
-            LOG.error("\n\nВнимание!!! Минимальное значение VU ({}) меньше максимального значения VU ({}), при этом параметры шага - время или количество равны 0 ({} / {})",
+            LOG.error("\n{}: Внимание!!! Минимальное значение VU ({}) меньше максимального значения VU ({}), при этом параметры шага - время или количество равны 0 ({} / {})",
+                    name,
                     vuCountMin,
                     vuCountMax,
                     vuStepTime,
@@ -493,19 +547,28 @@ public class MultiRunService {
 
         }
         if (vuStepTime < statisticsStepTime) {
-            LOG.error("\n\nВнимание!!! Пользователи добавляются чаще чем снимается статистика ({} / {})",
+            LOG.error("\n{}: Внимание!!! Пользователи добавляются чаще чем снимается статистика ({} / {})",
+                    name,
                     vuStepTime,
                     statisticsStepTime);
             r = false;
         }
+        if (vuStepTime * 1000 < vuStepTimeDelay * vuCountMin) {
+            LOG.error("\n{}: Внимание!!! {} начальных пользователей с задержкой {} мс не успеют стартовать за время между шагами {} мс",
+                    name,
+                    vuCountMin,
+                    vuStepTimeDelay,
+                    vuStepTime * 1000);
+            r = false;
+        }
         if (vuStepTime * 1000 < vuStepTimeDelay * vuStepCount) {
-            LOG.error("\n\nВнимание!!! Заданное количество пользователей {} с задержкой {} мс не успеет стартовать за время между шагами {} мс",
+            LOG.error("\n{}: Внимание!!! {} пользователей с задержкой {} мс не успеют стартовать за время между шагами {} мс",
+                    name,
                     vuStepCount,
                     vuStepTimeDelay,
                     vuStepTime * 1000);
             r = false;
         }
-
         return r;
     }
 
@@ -518,7 +581,7 @@ public class MultiRunService {
     }
 
     public void getStatistics(long startTime, long stopTime) {
-        LOG.debug("Статистика {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
+        LOG.debug("{}: Статистика {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
 
         long minDuraton = 999999999999999999L;
         long maxDuration = 0L;
@@ -566,25 +629,30 @@ public class MultiRunService {
                         (int) minDuraton,
                         (int) avgDuration,
                         (int) percentileValue,
-                        (int) maxDuration)));
+                        (int) maxDuration,
+                        (int) countCallAll,
+                        (int) countCallComplete)));
 
         // статистика выполнения процессов в БПМ
         dataFromSQL.getStatisticsFromBpm(
+                keyBpm,
                 startTime,
                 stopTime,
                 callList,
                 bpmProcessStatisticList);
 
-        // ошибки
-        int countError = 0;
-        int countErrorAll = 0;
-        for (int i = 0; i < errorList.size(); i++) {
-            countErrorAll++;
-            if (errorList.get(i).getTime() >= startTime && errorList.get(i).getTime() <= stopTime) {
-                countError++;
+        // ошибки (не фиксируем при сборе статистики за весь период)
+        if (startTime != testStartTime || stopTime != testStopTime) {
+            int countError = 0;
+            int countErrorAll = 0;
+            for (int i = 0; i < errorList.size(); i++) {
+                countErrorAll++;
+                if (errorList.get(i).getTime() >= startTime && errorList.get(i).getTime() <= stopTime) {
+                    countError++;
+                }
             }
+            errorGroupList.add(new DateTimeValue(stopTime, countError)); // количество ошибок
         }
-        errorGroupList.add(new DateTimeValue(stopTime, countError)); // количество ошибок
         prevStartTimeStatistic = stopTime;
     }
 
@@ -636,6 +704,7 @@ public class MultiRunService {
         executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
         executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
+                name + " RunnableAwaitAndAddVU",
                 countDownLatch,
                 this));
 
@@ -643,7 +712,7 @@ public class MultiRunService {
         int vuCountMaxMem = vuCountMax;
         testStartTime = System.currentTimeMillis(); // время старта теста
         if (isWarming) {
-            LOG.info("Разогрев...");
+            LOG.info("{}: Разогрев...", name);
             vuCountMin = 5;
             vuCountMax = 5;
             testStopTime = testStartTime + statisticsStepTime * 3000L; // время завершения теста (разогрев)
@@ -653,10 +722,11 @@ public class MultiRunService {
         prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
         nextTimeAddVU = testStartTime + vuStepTime * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
 
-        LOG.info("#####" +
+        LOG.info("##### {}" +
                         "\ntestStartTime: {}" +
                         "\ntestStopTime: {}" +
                         "\nnextTimeAddVU: {}",
+                name,
                 sdf1.format(testStartTime),
                 sdf1.format(testStopTime),
                 sdf1.format(nextTimeAddVU));
@@ -673,11 +743,11 @@ public class MultiRunService {
         try {
             countDownLatch.await(); // ждем завершения работы всех потоков
         } catch (InterruptedException e) {
-            LOG.error("", e);
+            LOG.error("{}\n", name, e);
         }
 
         // объединяем запросы всех VU
-        LOG.info("Объединение метрик по всем VU....");
+        LOG.info("{}: Объединение метрик по всем VU...", name);
         try {
             for (Future<List<Call>> future : futureList) {
                 if (!isWarming) {
@@ -685,21 +755,20 @@ public class MultiRunService {
                 }
             }
         } catch (InterruptedException e) {
-            LOG.error("", e);
+            LOG.error("{}\n", name, e);
         } catch (ExecutionException e) {
-            LOG.error("", e);
+            LOG.error("{}\n", name, e);
         }
         executorServiceAwaitAndAddVU.shutdown();
         executorService.shutdown();
-        LOG.info("Завершено объединение метрик по всем VU");
+        LOG.info("{}: Завершено объединение метрик по всем VU", name);
 
         if (isWarming) {
             vuCountMin = vuCountMinMem;
             vuCountMax = vuCountMaxMem;
-            LOG.info("Разогрев завершен...");
+            LOG.info("{}: Разогрев завершен...", name);
         } else {
-            LOG.info("Сбор статистики...");
-//            LOG.warn("Не прерывайте работы программы, пауза {} сек...", 10);
+            LOG.info("{}: Сбор статистики...", name);
             try { // даем время завершиться начатым заданиям
                 Thread.sleep(Math.max(pacing * 10, 10000));
             } catch (InterruptedException e) {
@@ -718,65 +787,10 @@ public class MultiRunService {
                 timeStart = timeStart + statisticsStepTime * 1000L;
                 getStatistics(timeStart);
             }
-            LOG.info("Завершен сбор статистики");
-
-/*
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int r = 0; r < reportList.size(); r++) {
-            stringBuilder.append(reportList.get(r).toString());
-        }
-*/
-
-/*
-        for (int i = 0; i < vuList.size(); i++) {
-            stringBuilder.append(sdf1.format(vuList.get(i).getTime()))
-                    .append(", ")
-                    .append(vuList.get(i).getTime())
-                    .append(", ")
-                    .append(vuList.get(i).getValue())
-                    .append("\n");
-
-        }
-*/
-
-/*
-        for (int i = 0; i < tpcList.size(); i++) {
-            stringBuilder.append(tpcList.get(i).getTime())
-                    .append(" - ")
-                    .append(tpcList.get(i).getDoubleValue())
-                    .append("\n");
-
-        }
-*/
-
-/*
-        for (int i = 0; i < callList.size(); i++){
-            LOG.info("{} {} {} {}",
-                    i,
-                    callList.get(i).getRqUid(),
-                    callList.get(i).getTimeBegin(),
-                    callList.get(i).getDuration());
-        }
-*/
-
-/*
-        for (int i = 0; i < bpmProcessStatisticList.size(); i++) {
-            stringBuilder.append(sdf1.format(bpmProcessStatisticList.get(i).getPeriodBegin()))
-                    .append(" - ")
-                    .append(sdf1.format(bpmProcessStatisticList.get(i).getPeriodEnd()))
-                    .append(" sent: ")
-                    .append(bpmProcessStatisticList.get(i).getValue(0))
-                    .append(" complete: ")
-                    .append(bpmProcessStatisticList.get(i).getValue(1))
-                    .append(" running: ")
-                    .append(bpmProcessStatisticList.get(i).getValue(2))
-                    .append("\n");
-        }
-*/
+            LOG.info("{}: Завершен сбор статистики", name);
 
             // сохраняем результаты в HTML - файл
-//            saveReportHtml(stringBuilder);
-            report.saveReportHtml(this);
+            report.saveReportHtml(this, pathReport);
         }
     }
 

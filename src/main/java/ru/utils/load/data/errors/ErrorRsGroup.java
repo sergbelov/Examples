@@ -1,16 +1,16 @@
-package ru.utils.load.data;
+package ru.utils.load.data.errors;
 
-public class ErrorGroupComment {
+public class ErrorRsGroup {
     String firstError;
     String comment;
     int count;
 
-    public ErrorGroupComment(String firstError, String comment) {
+    public ErrorRsGroup(String firstError, String comment) {
         this.firstError = firstError;
         this.comment = comment;
     }
 
-    public ErrorGroupComment(String firstError, String comment, int count) {
+    public ErrorRsGroup(String firstError, String comment, int count) {
         this.firstError = firstError;
         this.comment = comment;
         this.count = count;

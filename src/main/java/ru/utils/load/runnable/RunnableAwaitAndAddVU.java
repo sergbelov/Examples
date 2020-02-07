@@ -15,14 +15,16 @@ public class RunnableAwaitAndAddVU implements Runnable {
 
     private static final Logger LOG = LogManager.getLogger(RunnableAwaitAndAddVU.class);
 
-    private final String name = "RunnableAwaitAndAddVU";
+    private final String name;
     private CountDownLatch countDownLatch;
     private MultiRunService multiRunService;
 
     public RunnableAwaitAndAddVU(
+            String name,
             CountDownLatch countDownLatch,
             MultiRunService multiRunService
     ) {
+        this.name = name;
         LOG.debug("Инициализация потока {}", name);
         this.countDownLatch = countDownLatch;
         this.multiRunService = multiRunService;

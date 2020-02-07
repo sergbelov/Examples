@@ -41,6 +41,9 @@ public class DataFromSQL {
         dbService.connect();
     }
 
+    /**
+     * Отключаемся от БД
+     */
     public void end(){
         if (dbService != null) {
             dbService.disconnect();
@@ -57,6 +60,7 @@ public class DataFromSQL {
      * @return
      */
     public String getStatisticsFromBpm(
+            String key,
             long startTime,
             long stopTime,
             List<Call> callList,
@@ -69,7 +73,7 @@ public class DataFromSQL {
         LOG.debug("BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
 
         // запрос к БД БПМ для получения статистики
-        String sql = "select count(1) as cnt,";
+        String sql = "select count(1) as cnt,\n";
 
         if (dbService != null && dbService.isConnection()) {
 
@@ -97,7 +101,7 @@ public class DataFromSQL {
                     }
                 }
                 resultSet.close();
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 LOG.error("", e);
             }
             LOG.debug("Обработка данных SQL БПМ завершена.");

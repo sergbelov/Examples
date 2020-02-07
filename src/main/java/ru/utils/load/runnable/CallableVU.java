@@ -6,9 +6,7 @@ import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -23,12 +21,12 @@ public class CallableVU implements Callable<List<Call>> {
     private MultiRunService multiRunService;
 
     public CallableVU(
-            int threadNum,
+            String name,
             ScriptRun baseScript,
             ExecutorService executorService,
             MultiRunService multiRunService
     ) {
-        this.name = "CallableVU" + threadNum;
+        this.name = name;
         LOG.debug("Инициализация потока {}", name);
         this.baseScript = baseScript;
         this.executorService = executorService;
@@ -39,7 +37,7 @@ public class CallableVU implements Callable<List<Call>> {
     public List<Call> call() throws Exception {
         multiRunService.threadInc(); // счетчик активных потоков
         List<Call> callListVU = new CopyOnWriteArrayList<>();
-        LOG.info("Старт потока {}, всего активных потоков {}", name, multiRunService.getThreadCount());
+        LOG.info("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
@@ -49,7 +47,7 @@ public class CallableVU implements Callable<List<Call>> {
                         callListVU,
                         multiRunService));
             } else {
-                if (baseScript.start()) {
+                if (baseScript.start(multiRunService.getApiNum())) {
                     callListVU.add(new Call(
                             start,
                             System.currentTimeMillis())); // фиксируем вызов
@@ -64,14 +62,14 @@ public class CallableVU implements Callable<List<Call>> {
                 long curDur = System.currentTimeMillis() - start;
                 if (multiRunService.getPacing() > curDur) {
                     sleep(multiRunService.getPacing() - curDur); // задержка перед запуском следующей итерации
+//                } else if (curDur > multiRunService.getPacing()) {
+//                    LOG.warn("Длительность выполнения {} превышает pacing ({} > {})", name, curDur, multiRunService.getPacing());
                 }
             }
         }
         multiRunService.threadDec();
         multiRunService.stopVU();
-        LOG.info("Остановка потока {}, осталось {}",
-                name,
-                multiRunService.getThreadCount());
+        LOG.info("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
         return callListVU;
     }
 

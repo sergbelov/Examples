@@ -5,7 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import ru.utils.load.ScriptRun;
-import ru.utils.load.utils.MultiRunService;
+import ru.utils.load.utils.MultiRun;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -18,15 +18,15 @@ public class MultiLoad implements ScriptRun {
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
-    private MultiRunService multiRunService = new MultiRunService();
+    private MultiRun multiRun = new MultiRun();
 
 
     public void init() {
-        multiRunService.init("MultiLoad_Template");
+        multiRun.init("MultiLoad");
     }
 
     public void end() throws Exception {
-        multiRunService.end();
+        multiRun.end();
     }
 
     public void action() throws Exception {
@@ -106,26 +106,47 @@ public class MultiLoad implements ScriptRun {
             return;
         }
  */
-        multiRunService.start(this);
+        multiRun.start(this);
     }
 
 
     public static void main(String[] args) throws Exception {
         Configurator.setRootLevel(Level.INFO);
-        MultiLoad _multiLoad_ = new MultiLoad();
+        MultiLoad multiLoad = new MultiLoad();
 
-        _multiLoad_.init();
-        _multiLoad_.action();
-        _multiLoad_.end();
+        multiLoad.init();
+        multiLoad.action();
+        multiLoad.end();
     }
 
     /**
-     * Вызов API
+     * Запуск API по номеру
+     * @param apiNum
+     * @return
      */
-    public boolean start() {
+    public boolean start(int apiNum) {
+        boolean res = false;
+        switch (apiNum){
+            case 0:
+                res = start0(apiNum);
+                break;
+            case 1:
+                res = start1(apiNum);
+                break;
+            default:
+                LOG.warn("Не задана API под номером {}", apiNum);
+        }
+        return res;
+    }
+
+    /**
+     * Вызов API 0
+     */
+    public boolean start0(int apiNum) {
 
 // иммитация вызова API
-        long delay = (long) (Math.random() * 990) + 10;
+        long delay = (long) ((Math.random() * 900) + 100);
+//        delay = 2000;
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
@@ -133,17 +154,46 @@ public class MultiLoad implements ScriptRun {
         }
 
 // имитация возникновения ошибки
-        int rnd = (int) (Math.random() * 20);
-        rnd = 1;
-        if (rnd == 11) {
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 100));
+//        rnd = 1;
+        if (rnd == 11) { // типо ошибка
+//        if (rnd % 2 == 0) { // типо ошибка
             String text = "No resources to process message with messageId:\n" +
                     "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
-            multiRunService.errorListAdd(System.currentTimeMillis(), text);
-            if (multiRunService.isStopTestOnError() && multiRunService.getErrorCount() > multiRunService.getCountErrorForStopTest()){ //ToDo
-                multiRunService.stop();
-            }
+            // фиксируем возникновение ошибки
+            multiRun.getMultiRunService(apiNum).errorListAdd(System.currentTimeMillis(), text);
             return false;
         }
+
+        return true;
+    }
+
+
+    /**
+     * Вызов API 1
+     */
+    public boolean start1(int apiNum) {
+
+// иммитация вызова API
+        long delay = (long) ((Math.random() * 1900) + 100);
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+// имитация возникновения ошибки
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 20));
+//        rnd = 1;
+        if (rnd == 11) { // типо ошибка
+//        if (rnd % 2 == 0) { // типо ошибка
+            String text = "No resources to process message with messageId:\n" +
+                    "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
+            // фиксируем возникновение ошибки
+            multiRun.getMultiRunService(apiNum).errorListAdd(System.currentTimeMillis(), text);
+            return false;
+        }
+
         return true;
     }
 }

@@ -1,4 +1,4 @@
-package ru.utils.load.data;
+package ru.utils.load.data.errors;
 
 public class ErrorRs {
     long time;

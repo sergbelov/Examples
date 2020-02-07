@@ -1,0 +1,35 @@
+[
+  {
+    "className": "MultiLoad",
+    "testPlanList": [
+      {
+        "apiNum": 0,
+        "name": "MultiLoad_Template1",
+        "testDuration": 1,
+        "vuCountMin": 10,
+        "vuCountMax": 50,
+        "vuStepTime": 5,
+        "vuStepTimeDelay": 0,
+        "vuStepCount": 5,
+        "pacing": 500,
+        "pacingType": 1,
+        "statisticsStepTime": 5,
+        "keyBpm": "process01"
+      },
+      {
+        "apiNum": 1,
+        "name": "MultiLoad_Template2",
+        "testDuration": 1,
+        "vuCountMin": 10,
+        "vuCountMax": 50,
+        "vuStepTime": 5,
+        "vuStepTimeDelay": 0,
+        "vuStepCount": 10,
+        "pacing": 1500,
+        "pacingType": 1,
+        "statisticsStepTime": 4,
+        "keyBpm": "process01"
+      }
+    ]
+  }
+]

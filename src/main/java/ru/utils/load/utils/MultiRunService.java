@@ -42,6 +42,7 @@ public class MultiRunService {
     private AtomicInteger threadCount; // // счетчик потоков
     private AtomicInteger vuCount; // текущее количество VU
 
+    private MultiRun multiRun;
     private int apiNum;
     private String name;
     private long testStartTime;
@@ -77,7 +78,7 @@ public class MultiRunService {
     private String pathReport;
 
     Boolean running = true; // тест продолжается
-    boolean warning = true; // разогрев
+    boolean warming = true; // прогрев
 
 
     private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
@@ -87,6 +88,7 @@ public class MultiRunService {
      * инициализация параметров
      */
     public void init(
+            MultiRun multiRun,
             int apiNum,
             String name,
             int testDuration,
@@ -109,6 +111,7 @@ public class MultiRunService {
             String keyBpm,
             String pathReport
     ) {
+        this.multiRun = multiRun;
         this.apiNum = apiNum;
         this.name = name;
         this.testDuration = testDuration;
@@ -143,7 +146,9 @@ public class MultiRunService {
     public MultiRunService() {
     }
 
-    public int getApiNum() { return apiNum; }
+    public int getApiNum() {
+        return apiNum;
+    }
 
     public String getName() {
         return name;
@@ -213,7 +218,9 @@ public class MultiRunService {
         return grafanaHostsDetailCpuUrl;
     }
 
-    public String getGrafanaTransportThreadPoolsUrl() { return grafanaTransportThreadPoolsUrl;}
+    public String getGrafanaTransportThreadPoolsUrl() {
+        return grafanaTransportThreadPoolsUrl;
+    }
 
     public String getSplunkUrl() {
         return splunkUrl;
@@ -288,12 +295,12 @@ public class MultiRunService {
                 .append("<tr><td>Прерывать тест при большом количестве ошибок:</td><td>")
                 .append(stopTestOnError ? "Да" : "Нет")
                 .append("</td></tr>\n");
-                if (stopTestOnError) {
-                    res.append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
-                       .append(countErrorForStopTest)
-                       .append("</td></tr>\n");
-                }
-                res.append("</tbody></table>\n");
+        if (stopTestOnError) {
+            res.append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
+                    .append(countErrorForStopTest)
+                    .append("</td></tr>\n");
+        }
+        res.append("</tbody></table>\n");
         return res.toString();
     }
 
@@ -326,11 +333,11 @@ public class MultiRunService {
      * @param text
      */
     public void errorListAdd(long time, String text) {
-        if (!warning) { // при разогреве ошибки не фиксируем
+        if (!warming) { // при прогреве ошибки не фиксируем
             synchronized (errorList) {
                 errorList.add(new ErrorRs(time, text));
             }
-            if (isStopTestOnError() && getErrorCount() > getCountErrorForStopTest()){ //ToDo
+            if (isStopTestOnError() && getErrorCount() > getCountErrorForStopTest()) { //ToDo
                 stop();
             }
 
@@ -339,13 +346,14 @@ public class MultiRunService {
 
     /**
      * Количество VU на момент времени
+     *
      * @param time
      * @return
      */
-    public int getVuCount(long time){
+    public int getVuCount(long time) {
         int res = 0;
-        for (int i = 0; i < vuList.size(); i++){
-            if (vuList.get(i).getTime() > time){
+        for (int i = 0; i < vuList.size(); i++) {
+            if (vuList.get(i).getTime() > time) {
                 break;
             } else {
                 res = vuList.get(i).getIntValue();
@@ -493,7 +501,7 @@ public class MultiRunService {
      * Перестаем подавать новую нагрузку
      */
     public void stop() {
-        if (!warning) { // при разогреве тест не прерываем
+        if (!warming) { // при прогреве тест не прерываем
             if (running) {
                 LOG.warn("{}: из-за большого количества ошибок прерываем подачу нагрузки...", name);
             }
@@ -504,7 +512,16 @@ public class MultiRunService {
     }
 
     /**
-     * Подача нагрузки разрешена
+     * Идет прогрев ?
+     *
+     * @return
+     */
+    public boolean isWarming() {
+        return warming;
+    }
+
+    /**
+     * Подача нагрузки разрешена ?
      *
      * @return
      */
@@ -682,18 +699,18 @@ public class MultiRunService {
      */
     public void start(ScriptRun baseScript) {
         this.baseScript = baseScript;
-        start(true);  // разогрев
+        start(true);  // прогрев
         start(false); // нагрузка
     }
 
     /**
      * Нагрузка
      *
-     * @param isWarming
+     * @param warming
      */
-    public void start(boolean isWarming) {
+    public void start(boolean warming) {
         this.running = true;
-        this.warning = isWarming;
+        this.warming = warming;
         vuList.clear();
         futureList.clear();
         errorList.clear();
@@ -703,6 +720,15 @@ public class MultiRunService {
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
+
+        if (!warming) { // После прогрева нагрузка сервисов должна начаться одновременно
+            if (!multiRun.ready()) {
+                LOG.info("{}: Ожидание завершения прогрева всех сервисов...", name);
+                while (!multiRun.ready()) { // ждем завершения прогрева всех сервисов
+                }
+            }
+        }
+
         executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
                 name + " RunnableAwaitAndAddVU",
                 countDownLatch,
@@ -711,11 +737,11 @@ public class MultiRunService {
         int vuCountMinMem = vuCountMin;
         int vuCountMaxMem = vuCountMax;
         testStartTime = System.currentTimeMillis(); // время старта теста
-        if (isWarming) {
-            LOG.info("{}: Разогрев...", name);
+        if (warming) {
+            LOG.info("{}: Прогрев...", name);
             vuCountMin = 5;
             vuCountMax = 5;
-            testStopTime = testStartTime + statisticsStepTime * 3000L; // время завершения теста (разогрев)
+            testStopTime = testStartTime + statisticsStepTime * 3000L; // время завершения теста (прогрев)
         } else {
             testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
         }
@@ -750,7 +776,7 @@ public class MultiRunService {
         LOG.info("{}: Объединение метрик по всем VU...", name);
         try {
             for (Future<List<Call>> future : futureList) {
-                if (!isWarming) {
+                if (!warming) {
                     callList.addAll(future.get());
                 }
             }
@@ -763,10 +789,11 @@ public class MultiRunService {
         executorService.shutdown();
         LOG.info("{}: Завершено объединение метрик по всем VU", name);
 
-        if (isWarming) {
+        if (warming) {
             vuCountMin = vuCountMinMem;
             vuCountMax = vuCountMaxMem;
-            LOG.info("{}: Разогрев завершен...", name);
+            LOG.info("{}: Прогрев завершен...", name);
+            this.warming = false;
         } else {
             LOG.info("{}: Сбор статистики...", name);
             try { // даем время завершиться начатым заданиям

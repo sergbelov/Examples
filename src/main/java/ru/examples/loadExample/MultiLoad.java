@@ -21,8 +21,8 @@ public class MultiLoad implements ScriptRun {
     private MultiRun multiRun = new MultiRun();
 
 
-    public void init() {
-        multiRun.init("MultiLoad");
+    public boolean init() {
+        return multiRun.init("MultiLoad");
     }
 
     public void end() throws Exception {
@@ -30,7 +30,6 @@ public class MultiLoad implements ScriptRun {
     }
 
     public void action() throws Exception {
-
 /*
 // отладка графика VU
         testStartTime = 1579857384121L;
@@ -113,10 +112,11 @@ public class MultiLoad implements ScriptRun {
     public static void main(String[] args) throws Exception {
         Configurator.setRootLevel(Level.INFO);
         MultiLoad multiLoad = new MultiLoad();
-
-        multiLoad.init();
-        multiLoad.action();
+        if (multiLoad.init()) {
+            multiLoad.action();
+        }
         multiLoad.end();
+
     }
 
     /**
@@ -132,6 +132,9 @@ public class MultiLoad implements ScriptRun {
                 break;
             case 1:
                 res = start1(apiNum);
+                break;
+            case 2:
+                res = start2(apiNum);
                 break;
             default:
                 LOG.warn("Не задана API под номером {}", apiNum);
@@ -196,4 +199,33 @@ public class MultiLoad implements ScriptRun {
 
         return true;
     }
+
+    /**
+     * Вызов API 1
+     */
+    public boolean start2(int apiNum) {
+
+// иммитация вызова API
+        long delay = (long) ((Math.random() * 2900) + 100);
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+// имитация возникновения ошибки
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 20));
+//        rnd = 1;
+        if (rnd == 11) { // типо ошибка
+//        if (rnd % 2 == 0) { // типо ошибка
+            String text = "No resources to process message with messageId:\n" +
+                    "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
+            // фиксируем возникновение ошибки
+            multiRun.getMultiRunService(apiNum).errorListAdd(System.currentTimeMillis(), text);
+            return false;
+        }
+
+        return true;
+    }
+
 }

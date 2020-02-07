@@ -62,7 +62,7 @@ public class Report {
                         "\t\t\t.graph{width:80%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px; solid #ccc; background:#fff}\n\n" +
                         "\t\t\ttable{border: solid 1px; border-collapse: collapse;}\n" +
                         "\t\t\ttd{border: solid 1px;}\n" +
-                        "\t\t\tth{border: solid 1px;}\n" +
+                        "\t\t\tth{border: solid 1px; background: #dfdfdf;}\n" +
                         "\t\t\t.td_red{border: solid 1px; background-color: rgb(255, 192, 192);}\n" +
                         "\t\t\t.td_green{border: solid 1px; background-color: rgb(192, 255, 192);}\n" +
                         "\t\t\t.td_yellow{border: solid 1px; background-color: rgb(255, 255, 192);}\n" +

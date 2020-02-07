@@ -11,7 +11,7 @@
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
         "vuStepCount": 5,
-        "pacing": 500,
+        "pacing": 0,
         "pacingType": 1,
         "statisticsStepTime": 5,
         "keyBpm": "process01"
@@ -25,7 +25,21 @@
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
         "vuStepCount": 10,
-        "pacing": 1500,
+        "pacing": 0,
+        "pacingType": 1,
+        "statisticsStepTime": 4,
+        "keyBpm": "process01"
+      },
+      {
+        "apiNum": 2,
+        "name": "MultiLoad_Template3",
+        "testDuration": 2,
+        "vuCountMin": 10,
+        "vuCountMax": 100,
+        "vuStepTime": 5,
+        "vuStepTimeDelay": 0,
+        "vuStepCount": 10,
+        "pacing": 0,
         "pacingType": 1,
         "statisticsStepTime": 4,
         "keyBpm": "process01"

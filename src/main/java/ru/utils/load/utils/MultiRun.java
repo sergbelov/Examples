@@ -41,7 +41,7 @@ public class MultiRun {
     }});
 
     private List<TestPlans> testPlansList = new ArrayList<>();
-    private List<MultiRunService> multiRunService = new ArrayList<>();
+    private List<MultiRunService> multiRunServiceList = new ArrayList<>();
     private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
     private final boolean STOP_TEST_ON_ERROR;
     private final int COUNT_ERROR_FOR_STOP_TEST;
@@ -96,13 +96,14 @@ public class MultiRun {
      * Инициализация запуска сервисов (API) для заданного сценария (Класса)
      * @param className
      */
-    public void init(String className) {
+    public boolean init(String className) {
         for (TestPlans testPlans : testPlansList) {
             if (testPlans.getClassName().equals(className)){
                 for (TestPlan testPlan : testPlans.getTestPlanList()) {
                     apiMax++;
-                    multiRunService.add(new MultiRunService());
-                    multiRunService.get(apiMax).init(
+                    multiRunServiceList.add(new MultiRunService());
+                    multiRunServiceList.get(apiMax).init(
+                            this,
                             testPlan.getApiNum(),
                             testPlan.getName(),
                             testPlan.getTestDuration(),
@@ -125,9 +126,11 @@ public class MultiRun {
                             testPlan.getKeyBpm(),
                             PATH_REPORT);
                 }
-                break;
+                return true;
             }
         }
+        LOG.error("Не найден план тестирования для {}", className);
+        return false;
     }
 
     /**
@@ -136,18 +139,22 @@ public class MultiRun {
      * @return
      */
     public MultiRunService getMultiRunService(int apiNum) {
-        return multiRunService.get(apiNum);
+        return multiRunServiceList.get(apiNum);
     }
 
     public void start(ScriptRun baseScript){
+        if (apiMax == -1) {
+            LOG.error("Не задано количество тестируемых сервисов");
+            return;
+        }
         CountDownLatch countDownLatch = new CountDownLatch(apiMax+1);
         ExecutorService executorService = Executors.newFixedThreadPool(apiMax+1);
 
         for (int i = 0; i <= apiMax; i++){
             executorService.submit(new RunnableLoadAPI(
-                    multiRunService.get(i).getName(),
+                    multiRunServiceList.get(i).getName(),
                     baseScript,
-                    multiRunService.get(i),
+                    multiRunServiceList.get(i),
                     countDownLatch));
         }
         try {
@@ -156,5 +163,14 @@ public class MultiRun {
             LOG.error("", e);
         }
         executorService.shutdown();
+    }
+
+    public boolean ready(){
+        for (MultiRunService multiRunService: multiRunServiceList){
+            if (multiRunService.isWarming()){
+                return false;
+            }
+        }
+        return true;
     }
 }

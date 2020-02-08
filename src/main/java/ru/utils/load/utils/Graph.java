@@ -37,12 +37,18 @@ public class Graph {
      */
     public String getSvgGraphLine(
             MultiRunService multiRunService,
-            MetricViewGroup metricViewGroup,
+            String title,
             List<DateTimeValue> metricsList,
             boolean step,
             boolean printMetrics) {
 
-        // первую запись в metricsList игнорируем
+        // !!! первую запись в metricsList игнорируем
+
+        MetricViewGroup metricViewGroup = multiRunService.getMultiRun().getMetricViewGroup(title);
+        if (metricViewGroup == null){
+            LOG.error("Не найден MetricViewGroup для {}", title);
+        }
+
         LOG.info("Формирование графика {}", metricViewGroup.getTitle());
 
         long startTime = multiRunService.getTestStartTime();

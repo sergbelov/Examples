@@ -8,8 +8,6 @@ import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.metrics.MetricView;
-import ru.utils.load.data.metrics.MetricViewGroup;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.CallableVU;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
@@ -30,26 +28,23 @@ public class MultiRunService {
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
-    private List<Call> callList = new ArrayList<>(); // список вызовов API
-
+    private List<Call> callList = new ArrayList<>(); // список вызовов сервиса
 
     // список метрик
-    // 0 - minDuraton
-    // 1 - avgDuration
-    // 2 - percentile90Value
-    // 3 - maxDuration
-    // 4 - tpc
-    // 5 - tpcComplete
-    // 6 - countCallAll
-    // 7 - countCallComplete
-    // 8 - db.bpms.COMPLETE
-    // 9 - db.bpms.RUNNING
+    // 0  - durMin
+    // 1  - durAvg
+    // 2  - dur90
+    // 3  - durMax
+    // 4  - tpc
+    // 5  - tpcComplete
+    // 6  - countCallAll
+    // 7  - countCallComplete
+    // 8  - db.bpms.COMPLETE
+    // 9  - db.bpms.RUNNING
+    // 10 - ошибки
     private List<DateTimeValue> metricsList = new ArrayList<>();
 
-    private List<MetricViewGroup> metricViewGroupList = new ArrayList<>();
-
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
-    private List<DateTimeValue> errorGroupList = new ArrayList<>(); // ошибки при выполнении API сгруппированы
     private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
 
     private ScriptRun baseScript;
@@ -154,53 +149,6 @@ public class MultiRunService {
         if (!checkParam()) { // ошибка в параметрах
             System.exit(1);
         }
-
-
-        // === Список метрик
-        // 0 - minDuraton
-        // 1 - avgDuration
-        // 2 - percentile90Value
-        // 3 - maxDuration
-        // 4 - tpc
-        // 5 - tpcComplete
-        // 6 - countCallAll
-        // 7 - countCallComplete
-        // 8 - db.bpms.COMPLETE
-        // 9 - db.bpms.RUNNING
-
-
-        // === Графики
-
-        // 0 - VU
-        metricViewGroupList.add(new MetricViewGroup("Running Vusers",
-                Arrays.asList(new MetricView(0, "", "#0000ff"))));
-
-        // 1 - TPC
-        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPC)",
-                Arrays.asList(
-                        new MetricView(4, "TPC - отправлено", "#00009f"),
-                        new MetricView(5, "TPC - выполнено", "#00af00"))));
-
-        // 2 - Длительность выполнения
-        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения",
-                Arrays.asList(
-                        new MetricView(0, "Минимальная длительность (мс)", "#00009f"),
-                        new MetricView(1, "Средняя длительность (мс)", "#00af00"),
-                        new MetricView(2, "Перцентиль 90% (мс)", "#a0a000"),
-                        new MetricView(3, "Максимальная длительность (мс)", "#ff0000"))));
-
-        // 3 - Производительность БПМ
-        metricViewGroupList.add(new MetricViewGroup("Производительность БПМ",
-                Arrays.asList(
-                        new MetricView(6, "Отправлено запросов", "#00009f"),
-                        new MetricView(8, "COMPLETE", "#00af00"),
-                        new MetricView(9, "RUNNING", "#a0a000"))));
-
-        // 4 - Ошибки
-        metricViewGroupList.add(new MetricViewGroup("Ошибки",
-                Arrays.asList(new MetricView(0, "", "#ff0000"))));
-
-//        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }
 
     public void end() {
@@ -222,24 +170,13 @@ public class MultiRunService {
         return dataFromSQL;
     }
 
+    public MultiRun getMultiRun() { return multiRun; }
+
     public List<DateTimeValue> getVuList() {
         return vuList;
     }
 
     public List<DateTimeValue> getMetricsList() { return metricsList; }
-
-    public List<MetricViewGroup> getMetricViewGroupList() { return  metricViewGroupList;}
-
-    public MetricViewGroup getMetricViewGroup(String title) {
-        for (int i = 0; i < metricViewGroupList.size(); i++){
-            if (metricViewGroupList.get(i).getTitle().equalsIgnoreCase(title)){
-                return getMetricViewGroup(i);
-            }
-        }
-        return null;
-    }
-
-    public MetricViewGroup getMetricViewGroup(int num) { return  metricViewGroupList.get(num);}
 
     public List<Call> getCallList() {
         return callList;
@@ -251,10 +188,6 @@ public class MultiRunService {
 
     public List<ErrorRs> getErrorList() {
         return errorList;
-    }
-
-    public List<DateTimeValue> getErrorGroupList() {
-        return errorGroupList;
     }
 
     public List<ErrorRsGroup> getErrorRsGroupList() {
@@ -558,15 +491,6 @@ public class MultiRunService {
     }
 
     /**
-     * Количество ошибок в последней группе
-     *
-     * @return
-     */
-    public int getErrorCountInLastGroup() {
-        return errorGroupList.get(errorGroupList.size() - 1).getIntValue();
-    }
-
-    /**
      * Перестаем подавать новую нагрузку
      */
     public void stop() {
@@ -669,9 +593,9 @@ public class MultiRunService {
     public void getStatistics(long startTime, long stopTime) {
         LOG.debug("{}: Статистика {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
 
-        long minDuraton = 999999999999999999L;
-        long maxDuration = 0L;
-        long avgDuration = 0L;
+        long durMin = 999999999999999999L;
+        long durMax = 0L;
+        long durAvg = 0L;
         int countCallAll = 0;
         int countCallComplete = 0;
         int countCallTpc = 0;
@@ -680,9 +604,9 @@ public class MultiRunService {
             countCallAll++;
             if (callList.get(i).getTimeBegin() >= startTime && callList.get(i).getTimeBegin() <= stopTime) {
                 if (callList.get(i).getDuration() > 0) {
-                    minDuraton = Math.min(minDuraton, callList.get(i).getDuration());
-                    maxDuration = Math.max(maxDuration, callList.get(i).getDuration());
-                    avgDuration = avgDuration + callList.get(i).getDuration();
+                    durMin = Math.min(durMin, callList.get(i).getDuration());
+                    durMax = Math.max(durMax, callList.get(i).getDuration());
+                    durAvg = durAvg + callList.get(i).getDuration();
                     countCallComplete++;
                 }
                 countCallTpc++;
@@ -692,11 +616,11 @@ public class MultiRunService {
         double tpc = countCallTpc / (statisticsStepTime * 1.00);
         double tpcComplete = countCallComplete / (statisticsStepTime * 1.00);
 
-        long percentile90Value = 0L;
+        long dur90 = 0L;
         if (countCallComplete > 0) {
             Percentile percentile90 = new Percentile();
-            avgDuration = avgDuration / countCallComplete;
-            percentile90Value = (long) percentile90.evaluate(
+            durAvg = durAvg / countCallComplete;
+            dur90 = (long) percentile90.evaluate(
                     callList
                             .stream()
                             .filter(x -> (x.getDuration() > 0 & x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
@@ -704,8 +628,8 @@ public class MultiRunService {
                             .toArray(), 90);
         }
 
-        if (minDuraton == 999999999999999999L) {
-            minDuraton = 0L;
+        if (durMin == 999999999999999999L) {
+            durMin = 0L;
         }
 
         // статистика выполнения процессов в БПМ
@@ -715,23 +639,29 @@ public class MultiRunService {
                 startTime,
                 stopTime);
 
-        LOG.info("{} {} {}",
-            countCallTpc,
-            dbResponse.getIntValue("COMPLETE"),
-            dbResponse.getIntValue("RUNNING"));
-
         if (sqlSelect == null){
             sqlSelect = dbResponse.getSqlSelect();
         }
+
+        // ошибки (не фиксируем при сборе статистики за весь период)
+        int countError = 0;
+        if (startTime != testStartTime || stopTime != testStopTime) {
+            for (int i = 0; i < errorList.size(); i++) {
+                if (errorList.get(i).getTime() >= startTime && errorList.get(i).getTime() <= stopTime) {
+                    countError++;
+                }
+            }
+        }
+
 
         // добавляем полученные метрики в список
         metricsList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
-                        (int) minDuraton,
-                        (int) avgDuration,
-                        (int) percentile90Value,
-                        (int) maxDuration,
+                        (int) durMin,
+                        (int) durAvg,
+                        (int) dur90,
+                        (int) durMax,
 
                         tpc,
                         tpcComplete,
@@ -740,20 +670,10 @@ public class MultiRunService {
                         countCallComplete,
 
                         dbResponse.getIntValue("COMPLETE"),
-                        dbResponse.getIntValue("RUNNING"))));
+                        dbResponse.getIntValue("RUNNING"),
 
-        // ошибки (не фиксируем при сборе статистики за весь период)
-        if (startTime != testStartTime || stopTime != testStopTime) {
-            int countError = 0;
-            int countErrorAll = 0;
-            for (int i = 0; i < errorList.size(); i++) {
-                countErrorAll++;
-                if (errorList.get(i).getTime() >= startTime && errorList.get(i).getTime() <= stopTime) {
-                    countError++;
-                }
-            }
-            errorGroupList.add(new DateTimeValue(stopTime, countError)); // количество ошибок
-        }
+                        countError)));
+
         prevStartTimeStatistic = stopTime;
     }
 

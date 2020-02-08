@@ -55,24 +55,24 @@ public class Report {
 
         // === Графики
         // 0 - VU
-        // 1 - TPC
-        // 2 - Длительность выполнения
+        // 1 - Длительность выполнения
+        // 2 - TPC
         // 3 - Производительность БПМ
         // 4 - Ошибки
 
 
         // === Список метрик
-        // 0 - minDuraton
-        // 1 - avgDuration
-        // 2 - percentile90Value
-        // 3 - maxDuration
-        // 4 - tpc
-        // 5 - tpcComplete
-        // 6 - countCallAll
-        // 7 - countCallComplete
-        // 8 - db.bpms.COMPLETE
-        // 9 - db.bpms.RUNNING
-
+        // 0  - durMin
+        // 1  - durAvg
+        // 2  - dur90
+        // 3  - durMax
+        // 4  - tpc
+        // 5  - tpcComplete
+        // 6  - countCallAll
+        // 7  - countCallComplete
+        // 8  - db.bpms.COMPLETE
+        // 9  - db.bpms.RUNNING
+        // 10 - ошибки
         LOG.info("Формируем отчет...");
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
@@ -107,7 +107,7 @@ public class Report {
         sbHtml.append("\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         multiRunService,
-                        multiRunService.getMetricViewGroup("Running Vusers"),
+                        "Running Vusers",
                         multiRunService.getVuList(),
                         true,
                         printMetrics))
@@ -117,7 +117,7 @@ public class Report {
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         multiRunService,
-                        multiRunService.getMetricViewGroup("Длительность выполнения"),
+                        "Длительность выполнения",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
@@ -157,7 +157,7 @@ public class Report {
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         multiRunService,
-                        multiRunService.getMetricViewGroup("Количество операций в секунду (TPC)"),
+                        "Количество операций в секунду (TPC)",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
@@ -167,7 +167,7 @@ public class Report {
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
                         multiRunService,
-                        multiRunService.getMetricViewGroup("Производительность БПМ"),
+                        "Производительность БПМ",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
@@ -216,25 +216,18 @@ public class Report {
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
 
-        // выведем ошибки (при наличии)
-        boolean printError = false;
-        for (int i = 0; i < multiRunService.getErrorGroupList().size(); i++) {
-            if (multiRunService.getErrorGroupList().get(i).getValue() > 0) {
-                printError = true;
-                break;
-            }
-        }
+        // ошибки (при наличии)
+        boolean printError = (multiRunService.getErrorList().size() > 0) ? true : false;
         if (printError) {
             sbHtml.append("<!-- Ошибки -->\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine(
                             multiRunService,
-                            multiRunService.getMetricViewGroup("Ошибки"),
-                            multiRunService.getErrorGroupList(),
+                            "Ошибки",
+                            multiRunService.getMetricsList(),
                             false,
                             printMetrics))
                     .append("\t\t</div>\n");
         }
-
         // группируем ошибки по типам
         if (printError) {
             sbHtml.append(getErrorsGroupComment(

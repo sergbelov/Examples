@@ -8,6 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
+import ru.utils.load.data.metrics.MetricView;
+import ru.utils.load.data.metrics.MetricViewGroup;
 import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
 import ru.utils.load.runnable.RunnableLoadAPI;
@@ -15,6 +17,7 @@ import ru.utils.load.runnable.RunnableLoadAPI;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -40,6 +43,25 @@ public class MultiRun {
         put("PATH_REPORT", "Reports/");
     }});
 
+    // список метрик
+    // 0  - durMin
+    // 1  - durAvg
+    // 2  - dur90
+    // 3  - durMax
+    // 4  - tpc
+    // 5  - tpcComplete
+    // 6  - countCallAll
+    // 7  - countCallComplete
+    // 8  - db.bpms.COMPLETE
+    // 9  - db.bpms.RUNNING
+    // 10 - ошибки
+    private final String[] vars = {"durMin", "durAvg", "dur90", "durMax",
+            "tpc", "tpcComplete",
+            "countCallAll", "countCallComplete",
+            "COMPLETE", "RUNNING",
+            "errors"};
+
+    private List<MetricViewGroup> metricViewGroupList = new ArrayList<>();
     private List<TestPlans> testPlansList = new ArrayList<>();
     private List<MultiRunService> multiRunServiceList = new ArrayList<>();
     private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
@@ -85,6 +107,41 @@ public class MultiRun {
         } catch (Exception e) {
             LOG.error("Ошибка при чтении данных из файла {}\n", fileNameLoadParameters, e);
         }
+
+        // === Графики
+
+        // 0 - VU
+        metricViewGroupList.add(new MetricViewGroup("Running Vusers",
+                Arrays.asList(new MetricView(0, "", "#0000ff"))));
+
+        // 1 - Длительность выполнения
+        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения",
+                Arrays.asList(
+                        new MetricView(0, "минимальная длительность (мс)", "#00009f"),
+                        new MetricView(1, "средняя длительность (мс)", "#00af00"),
+                        new MetricView(2, "перцентиль 90% (мс)", "#a0a000"),
+                        new MetricView(3, "максимальная длительность (мс)", "#ff0000"))));
+
+        // 2 - TPC
+        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPC)",
+                Arrays.asList(
+                        new MetricView(4, "TPC - отправлено", "#00009f"),
+                        new MetricView(5, "TPC - выполнено", "#00af00"))));
+
+
+        // 3 - Производительность БПМ
+        metricViewGroupList.add(new MetricViewGroup("Производительность БПМ",
+                Arrays.asList(
+                        new MetricView(6, "отправлено запросов", "#00009f"),
+                        new MetricView(8, "COMPLETE", "#00af00"),
+                        new MetricView(9, "RUNNING", "#a0a000"))));
+
+        // 4 - Ошибки
+        metricViewGroupList.add(new MetricViewGroup("Ошибки",
+                Arrays.asList(new MetricView(10, "", "#ff0000"))));
+
+//        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
+
     }
 
     public void end(){
@@ -182,4 +239,22 @@ public class MultiRun {
         }
         return true;
     }
+
+    public List<MetricViewGroup> getMetricViewGroupList() {
+        return  metricViewGroupList;
+    }
+
+    public MetricViewGroup getMetricViewGroup(String title) {
+        for (int i = 0; i < metricViewGroupList.size(); i++){
+            if (metricViewGroupList.get(i).getTitle().equalsIgnoreCase(title)){
+                return getMetricViewGroup(i);
+            }
+        }
+        return null;
+    }
+
+    public MetricViewGroup getMetricViewGroup(int num) {
+        return  metricViewGroupList.get(num);
+    }
+
 }

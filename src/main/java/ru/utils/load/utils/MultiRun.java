@@ -150,6 +150,14 @@ public class MultiRun {
         CountDownLatch countDownLatch = new CountDownLatch(apiMax+1);
         ExecutorService executorService = Executors.newFixedThreadPool(apiMax+1);
 
+        for (MultiRunService multiRunService: multiRunServiceList){
+            executorService.submit(new RunnableLoadAPI(
+                    multiRunService.getName(),
+                    baseScript,
+                    multiRunService,
+                    countDownLatch));
+        }
+/*
         for (int i = 0; i <= apiMax; i++){
             executorService.submit(new RunnableLoadAPI(
                     multiRunServiceList.get(i).getName(),
@@ -157,6 +165,7 @@ public class MultiRun {
                     multiRunServiceList.get(i),
                     countDownLatch));
         }
+*/
         try {
             countDownLatch.await();
         } catch (InterruptedException e) {
@@ -165,7 +174,7 @@ public class MultiRun {
         executorService.shutdown();
     }
 
-    public boolean ready(){
+    public boolean isWarmingComplete(){
         for (MultiRunService multiRunService: multiRunServiceList){
             if (multiRunService.isWarming()){
                 return false;

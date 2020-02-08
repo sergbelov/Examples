@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -69,7 +70,11 @@ public class Report {
                         "\t\t</style>\n" +
                         "\t</head>\n" +
                         "\t<body>\n" +
-                        "<h2>" + multiRunService.getName() + " (" + sdf2.format(multiRunService.getTestStartTime()) + " - " + sdf2.format(multiRunService.getTestStopTime()) + ")</h2>\n");
+                        "<h2>" + multiRunService.getName() +
+                        " период " + sdf2.format(multiRunService.getTestStartTime()) +
+                        " - " + sdf2.format(multiRunService.getTestStopTime()) + " (" +
+                        timeMillisToString(multiRunService.getTestStartTime(), multiRunService.getTestStopTime()) +
+                        ")</h2>\n");
 
         // информация по версиям модуля и активности хостов
         sbHtml.append(getInfoFromCSM(multiRunService.getCsmUrl()));
@@ -123,7 +128,7 @@ public class Report {
                 .append(sqlBpm)
                 .append("<br><br>\n\t\t<div>\n<table><tbody>\n" +
                         "<tr><th>Сервис</th>\n" +
-                        "<th>Всего отправлено</th>\n" +
+                        "<th>Отправлено</th>\n" +
                         "<th>COMPLETE</th>\n" +
                         "<th>RUNNING</th>\n" +
                         "<th>Потеряно</th>\n")
@@ -158,7 +163,7 @@ public class Report {
         }
         sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0) -
                 (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) +
-                 multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)))
+                        multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)))
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -183,7 +188,7 @@ public class Report {
                 "<th>средняя</th>\n" +
                 "<th>перцентиль 90%</th>\n" +
                 "<th>максимальная</th>\n" +
-                "<th>всего</th>\n" +
+                "<th>общее</th>\n" +
                 "<th>с ответом</th>\n" +
                 "<th>без ответа</th>\n")
                 .append("<tr><td>")
@@ -489,5 +494,27 @@ public class Report {
         }
         res.append("</tbody></table>\n");
         return res.toString();
+    }
+
+    public String timeMillisToString(long startTime, long stopTime){
+        long time = 0;
+        try {
+            time = sdf2.parse(sdf2.format(stopTime)).getTime() - sdf2.parse(sdf2.format(startTime)).getTime();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return timeMillisToString(time);
+    }
+    /**
+     * Преобразуем длительность периода в миллисекундах в чч:мм:сс
+     *
+     * @param millis
+     * @return
+     */
+    public String timeMillisToString(long millis) {
+        long hour = millis / (3600 * 1000),
+                min = millis / (60 * 1000) % 60,
+                sec = (int) Math.ceil(millis / 1000.00 % 60);
+        return String.format("%02d:%02d:%02d", hour, min, sec);
     }
 }

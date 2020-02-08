@@ -13,6 +13,8 @@ public class DateTimeExample {
 
         System.out.println("==============\r\nDate to String");
 
+        System.out.println(timeMillisToString(2001));
+
         DateFormat dateFormatDef = DateFormat.getDateInstance(DateFormat.FULL, Locale.getDefault());
         DateFormat dateFormatEng = DateFormat.getDateInstance(DateFormat.FULL, Locale.ENGLISH);
         System.out.println(dateFormatDef.format(new Date()));
@@ -39,5 +41,12 @@ public class DateTimeExample {
             e.printStackTrace();
         }
         System.out.println(date);
+    }
+
+    public static String timeMillisToString(long millis){
+        long hour = millis / (3600 * 1000),
+                min = millis / (60 * 1000) % 60,
+                sec = (int)Math.ceil(millis / 1000.00 % 60);
+        return String.format("%02d:%02d:%02d", hour, min, sec);
     }
 }

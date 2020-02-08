@@ -722,9 +722,9 @@ public class MultiRunService {
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
 
         if (!warming) { // После прогрева нагрузка сервисов должна начаться одновременно
-            if (!multiRun.ready()) {
+            if (!multiRun.isWarmingComplete()) {
                 LOG.info("{}: Ожидание завершения прогрева всех сервисов...", name);
-                while (!multiRun.ready()) { // ждем завершения прогрева всех сервисов
+                while (!multiRun.isWarmingComplete()) { // ждем завершения прогрева всех сервисов
                 }
             }
         }

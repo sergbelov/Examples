@@ -19,15 +19,15 @@
       {
         "apiNum": 1,
         "name": "MultiLoad_Template2",
-        "testDuration": 1,
+        "testDuration": 2,
         "vuCountMin": 10,
         "vuCountMax": 50,
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
         "vuStepCount": 10,
-        "pacing": 0,
-        "pacingType": 1,
-        "statisticsStepTime": 4,
+        "pacing": 1000,
+        "pacingType": 0,
+        "statisticsStepTime": 5,
         "keyBpm": "process01"
       },
       {
@@ -41,7 +41,7 @@
         "vuStepCount": 10,
         "pacing": 0,
         "pacingType": 1,
-        "statisticsStepTime": 4,
+        "statisticsStepTime": 5,
         "keyBpm": "process01"
       }
     ]

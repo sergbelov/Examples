@@ -80,19 +80,19 @@ public class DateTimeValue {
         return valueList.get(num).intValue();
     }
 
-    public double getLongValue() {
+    public long getLongValue() {
         return getLongValue(0);
     }
 
-    public double getLongValue(int num) {
+    public long getLongValue(int num) {
         return valueList.get(num).longValue();
     }
 
-    public double getFloatValue() {
+    public float getFloatValue() {
         return getFloatValue(0);
     }
 
-    public double getFloatValue(int num) {
+    public float getFloatValue(int num) {
         return valueList.get(num).floatValue();
     }
 

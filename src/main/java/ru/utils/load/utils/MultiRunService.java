@@ -8,6 +8,9 @@ import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.load.data.metrics.MetricView;
+import ru.utils.load.data.metrics.MetricViewGroup;
+import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.CallableVU;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
 
@@ -28,9 +31,23 @@ public class MultiRunService {
 
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new ArrayList<>(); // список вызовов API
-    private List<DateTimeValue> tpcList = new ArrayList<>(); // TPC
-    private List<DateTimeValue> durationList = new ArrayList<>(); // Длительность выполнения (min, avg, prc90, max, count, count_ok)
-    private List<DateTimeValue> bpmProcessStatisticList = new ArrayList<>(); // статистика обработки задач в БПМ
+
+
+    // список метрик
+    // 0 - minDuraton
+    // 1 - avgDuration
+    // 2 - percentile90Value
+    // 3 - maxDuration
+    // 4 - tpc
+    // 5 - tpcComplete
+    // 6 - countCallAll
+    // 7 - countCallComplete
+    // 8 - db.bpms.COMPLETE
+    // 9 - db.bpms.RUNNING
+    private List<DateTimeValue> metricsList = new ArrayList<>();
+
+    private List<MetricViewGroup> metricViewGroupList = new ArrayList<>();
+
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
     private List<DateTimeValue> errorGroupList = new ArrayList<>(); // ошибки при выполнении API сгруппированы
     private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
@@ -80,7 +97,7 @@ public class MultiRunService {
     Boolean running = true; // тест продолжается
     boolean warming = true; // прогрев
 
-
+    private String sqlSelect = null;
     private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
     private Report report = new Report();
 
@@ -137,6 +154,53 @@ public class MultiRunService {
         if (!checkParam()) { // ошибка в параметрах
             System.exit(1);
         }
+
+
+        // === Список метрик
+        // 0 - minDuraton
+        // 1 - avgDuration
+        // 2 - percentile90Value
+        // 3 - maxDuration
+        // 4 - tpc
+        // 5 - tpcComplete
+        // 6 - countCallAll
+        // 7 - countCallComplete
+        // 8 - db.bpms.COMPLETE
+        // 9 - db.bpms.RUNNING
+
+
+        // === Графики
+
+        // 0 - VU
+        metricViewGroupList.add(new MetricViewGroup("Running Vusers",
+                Arrays.asList(new MetricView(0, "", "#0000ff"))));
+
+        // 1 - TPC
+        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPC)",
+                Arrays.asList(
+                        new MetricView(4, "TPC - отправлено", "#00009f"),
+                        new MetricView(5, "TPC - выполнено", "#00af00"))));
+
+        // 2 - Длительность выполнения
+        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения",
+                Arrays.asList(
+                        new MetricView(0, "Минимальная длительность (мс)", "#00009f"),
+                        new MetricView(1, "Средняя длительность (мс)", "#00af00"),
+                        new MetricView(2, "Перцентиль 90% (мс)", "#a0a000"),
+                        new MetricView(3, "Максимальная длительность (мс)", "#ff0000"))));
+
+        // 3 - Производительность БПМ
+        metricViewGroupList.add(new MetricViewGroup("Производительность БПМ",
+                Arrays.asList(
+                        new MetricView(6, "Отправлено запросов", "#00009f"),
+                        new MetricView(8, "COMPLETE", "#00af00"),
+                        new MetricView(9, "RUNNING", "#a0a000"))));
+
+        // 4 - Ошибки
+        metricViewGroupList.add(new MetricViewGroup("Ошибки",
+                Arrays.asList(new MetricView(0, "", "#ff0000"))));
+
+//        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }
 
     public void end() {
@@ -162,20 +226,23 @@ public class MultiRunService {
         return vuList;
     }
 
+    public List<DateTimeValue> getMetricsList() { return metricsList; }
+
+    public List<MetricViewGroup> getMetricViewGroupList() { return  metricViewGroupList;}
+
+    public MetricViewGroup getMetricViewGroup(String title) {
+        for (int i = 0; i < metricViewGroupList.size(); i++){
+            if (metricViewGroupList.get(i).getTitle().equalsIgnoreCase(title)){
+                return getMetricViewGroup(i);
+            }
+        }
+        return null;
+    }
+
+    public MetricViewGroup getMetricViewGroup(int num) { return  metricViewGroupList.get(num);}
+
     public List<Call> getCallList() {
         return callList;
-    }
-
-    public List<DateTimeValue> getTpcList() {
-        return tpcList;
-    }
-
-    public List<DateTimeValue> getDurationList() {
-        return durationList;
-    }
-
-    public List<DateTimeValue> getBpmProcessStatisticList() {
-        return bpmProcessStatisticList;
     }
 
     public String getKeyBpm() {
@@ -229,6 +296,8 @@ public class MultiRunService {
     public String getCsmUrl() {
         return csmUrl;
     }
+
+    public String getSqlSelect() { return sqlSelect;}
 
     /**
      * Количество активных потоков
@@ -622,13 +691,12 @@ public class MultiRunService {
 
         double tpc = countCallTpc / (statisticsStepTime * 1.00);
         double tpcComplete = countCallComplete / (statisticsStepTime * 1.00);
-        tpcList.add(new DateTimeValue(stopTime, Arrays.asList(tpc, tpcComplete))); // TPC
 
-        long percentileValue = 0L;
+        long percentile90Value = 0L;
         if (countCallComplete > 0) {
-            Percentile percentile = new Percentile();
+            Percentile percentile90 = new Percentile();
             avgDuration = avgDuration / countCallComplete;
-            percentileValue = (long) percentile.evaluate(
+            percentile90Value = (long) percentile90.evaluate(
                     callList
                             .stream()
                             .filter(x -> (x.getDuration() > 0 & x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
@@ -640,23 +708,39 @@ public class MultiRunService {
             minDuraton = 0L;
         }
 
-        durationList.add(new DateTimeValue(
+        // статистика выполнения процессов в БПМ
+        DBResponse dbResponse = dataFromSQL.getStatisticsFromBpm(
+                countCallTpc, // для демо при отсутсвии БД
+                keyBpm,
+                startTime,
+                stopTime);
+
+        LOG.info("{} {} {}",
+            countCallTpc,
+            dbResponse.getIntValue("COMPLETE"),
+            dbResponse.getIntValue("RUNNING"));
+
+        if (sqlSelect == null){
+            sqlSelect = dbResponse.getSqlSelect();
+        }
+
+        // добавляем полученные метрики в список
+        metricsList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
                         (int) minDuraton,
                         (int) avgDuration,
-                        (int) percentileValue,
+                        (int) percentile90Value,
                         (int) maxDuration,
-                        (int) countCallAll,
-                        (int) countCallComplete)));
 
-        // статистика выполнения процессов в БПМ
-        dataFromSQL.getStatisticsFromBpm(
-                keyBpm,
-                startTime,
-                stopTime,
-                callList,
-                bpmProcessStatisticList);
+                        tpc,
+                        tpcComplete,
+
+                        countCallTpc,
+                        countCallComplete,
+
+                        dbResponse.getIntValue("COMPLETE"),
+                        dbResponse.getIntValue("RUNNING"))));
 
         // ошибки (не фиксируем при сборе статистики за весь период)
         if (startTime != testStartTime || stopTime != testStopTime) {
@@ -672,24 +756,6 @@ public class MultiRunService {
         }
         prevStartTimeStatistic = stopTime;
     }
-
-/*
-    public void getStatistics(
-            ExecutorService executorService,
-            boolean wait) {
-
-        if (wait) { // ожидаем
-            getStatistics(System.currentTimeMillis());
-        } else {
-            executorService.submit(new Runnable() { // без ожидания выполнения (используем пул для фонов)
-                @Override
-                public void run() {
-                    getStatistics(System.currentTimeMillis());
-                }
-            });
-        }
-    }
-*/
 
 
     /**
@@ -729,6 +795,7 @@ public class MultiRunService {
             }
         }
 
+        vuListAdd(testStartTime, 0); // первую запись игнорируем при формировании графиков
         executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
                 name + " RunnableAwaitAndAddVU",
                 countDownLatch,
@@ -745,7 +812,6 @@ public class MultiRunService {
         } else {
             testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
         }
-        prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
         nextTimeAddVU = testStartTime + vuStepTime * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
 
         LOG.info("##### {}" +
@@ -757,7 +823,6 @@ public class MultiRunService {
                 sdf1.format(testStopTime),
                 sdf1.format(nextTimeAddVU));
 
-//        vuList.add(new DateTimeValue(testStartTime, vuCountMin)); // стартовое количество VU
         vuListAdd(testStartTime, 0); // стартовое количество VU
 
 /*
@@ -797,7 +862,8 @@ public class MultiRunService {
         } else {
             LOG.info("{}: Сбор статистики...", name);
             try { // даем время завершиться начатым заданиям
-                Thread.sleep(Math.max(pacing * 10, 10000));
+//                Thread.sleep(Math.max(pacing * 10, 20000));
+                Thread.sleep(20000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -808,8 +874,12 @@ public class MultiRunService {
             long timeStop = testStopTime; // + statisticsStepTime * 1000L;
 
             // сбросим VU на конец теста
-            vuList.add(new DateTimeValue(testStopTime, getVuCount())); // фиксация активных VU
+            vuList.add(new DateTimeValue(testStopTime, getVuCount()));
 
+            // статистику за весь период сохраним первым элементом
+            getStatistics(timeStart, timeStop);
+
+            prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик
             while (timeStart <= timeStop) {
                 timeStart = timeStart + statisticsStepTime * 1000L;
                 getStatistics(timeStart);

@@ -9,6 +9,7 @@ import ru.utils.load.data.Call;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
+import ru.utils.load.data.sql.DBResponse;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -52,6 +53,26 @@ public class Report {
             String pathReport,
             boolean printMetrics) {
 
+        // === Графики
+        // 0 - VU
+        // 1 - TPC
+        // 2 - Длительность выполнения
+        // 3 - Производительность БПМ
+        // 4 - Ошибки
+
+
+        // === Список метрик
+        // 0 - minDuraton
+        // 1 - avgDuration
+        // 2 - percentile90Value
+        // 3 - maxDuration
+        // 4 - tpc
+        // 5 - tpcComplete
+        // 6 - countCallAll
+        // 7 - countCallComplete
+        // 8 - db.bpms.COMPLETE
+        // 9 - db.bpms.RUNNING
+
         LOG.info("Формируем отчет...");
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
@@ -82,103 +103,26 @@ public class Report {
         // параметры
         sbHtml.append(multiRunService.getParams());
 
-
+        // старт VU
         sbHtml.append("\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
-                        "Running Vusers",
-                        new String[]{"Running Vusers"},
-                        multiRunService.getTestStartTime(),
+                        multiRunService,
+                        multiRunService.getMetricViewGroup("Running Vusers"),
                         multiRunService.getVuList(),
                         true,
-                        printMetrics,
-                        "#0000ff",
-                        multiRunService))
+                        printMetrics))
                 .append("\t\t</div>\n");
 
+        // длительность выполнения
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine(
-                        "Количество операций в секунду (TPC)",
-                        new String[]{"TPC - отправлено", "TPC - выполнено"},
-                        multiRunService.getTestStartTime(),
-                        multiRunService.getTpcList(),
+                        multiRunService,
+                        multiRunService.getMetricViewGroup("Длительность выполнения"),
+                        multiRunService.getMetricsList(),
                         false,
-                        printMetrics,
-                        multiRunService))
+                        printMetrics))
                 .append("\t\t</div>\n");
 
-        sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
-                        "Производительность БПМ",
-                        new String[]{"Отправлено запросов", "COMPLETE", "RUNNING"},
-                        multiRunService.getTestStartTime(),
-                        multiRunService.getBpmProcessStatisticList(),
-                        false,
-                        printMetrics,
-                        multiRunService))
-                .append("\t\t</div>\n");
-
-        String sqlBpm = multiRunService.getDataFromSQL().getStatisticsFromBpm(
-                multiRunService.getKeyBpm(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime(),
-                multiRunService.getCallList(),
-                multiRunService.getBpmProcessStatisticList());
-        int lastIndexBpm = multiRunService.getBpmProcessStatisticList().size() - 1;
-        sbHtml.append("<!-- Статистика из БД БПМ  -->\n")
-                .append(sqlBpm)
-                .append("<br><br>\n\t\t<div>\n<table><tbody>\n" +
-                        "<tr><th>Сервис</th>\n" +
-                        "<th>Отправлено</th>\n" +
-                        "<th>COMPLETE</th>\n" +
-                        "<th>RUNNING</th>\n" +
-                        "<th>Потеряно</th>\n")
-                .append("<tr><td>")
-                .append(multiRunService.getName())
-                .append("</td><td>")
-                .append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0))
-                .append("</td>");
-
-        if (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) > 0) {
-            sbHtml.append("<td class=\"td_green\">");
-        } else {
-            sbHtml.append("<td>");
-        }
-        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1))
-                .append("</td>");
-
-        if (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2) > 0) {
-            sbHtml.append("<td class=\"td_yellow\">");
-        } else {
-            sbHtml.append("<td>");
-        }
-        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2))
-                .append("</td>");
-
-        if ((multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) +
-                multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)) !=
-                multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0)) {
-            sbHtml.append("<td class=\"td_red\">");
-        } else {
-            sbHtml.append("<td>");
-        }
-        sbHtml.append(multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(0) -
-                (multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(1) +
-                        multiRunService.getBpmProcessStatisticList().get(lastIndexBpm).getIntValue(2)))
-                .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
-
-        sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
-                        "Длительность выполнения",
-                        new String[]{"Минимальная длительность (мс)", "Средняя длительность (мс)", "Перцентиль 90% (мс)", "Максимальная длительность (мс)"},
-                        multiRunService.getTestStartTime(),
-                        multiRunService.getDurationList(),
-                        false,
-                        printMetrics,
-                        multiRunService))
-                .append("\t\t</div>\n");
-
-        multiRunService.getStatistics(multiRunService.getTestStartTime(), multiRunService.getTestStopTime());
-        int lastIndexDur = multiRunService.getDurationList().size() - 1;
         sbHtml.append("<!-- Статистика по длительности выполнения сервиса -->\n" +
                 "\t\t<div>\n<table><tbody>\n" +
                 "<tr><th rowspan=\"2\">Сервис</th>\n" +
@@ -194,22 +138,85 @@ public class Report {
                 .append("<tr><td>")
                 .append(multiRunService.getName())
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(0))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(0))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(1))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(1))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(2))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(2))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(3))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(3))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(4))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(6))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(5))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(7))
                 .append("</td><td>")
-                .append(multiRunService.getDurationList().get(lastIndexDur).getIntValue(4) - multiRunService.getDurationList().get(lastIndexDur).getIntValue(5))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(6) - multiRunService.getMetricsList().get(0).getIntValue(7))
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
-        // выведем ошибки при наличии
+        // TPC
+        sbHtml.append("\n\t\t<div class=\"graph\">\n")
+                .append(graph.getSvgGraphLine(
+                        multiRunService,
+                        multiRunService.getMetricViewGroup("Количество операций в секунду (TPC)"),
+                        multiRunService.getMetricsList(),
+                        false,
+                        printMetrics))
+                .append("\t\t</div>\n");
+
+        // Производительность БПМ
+        sbHtml.append("\n\t\t<div class=\"graph\">\n")
+                .append(graph.getSvgGraphLine(
+                        multiRunService,
+                        multiRunService.getMetricViewGroup("Производительность БПМ"),
+                        multiRunService.getMetricsList(),
+                        false,
+                        printMetrics))
+                .append("\t\t</div>\n");
+
+        sbHtml.append("<!-- Статистика из БД БПМ  -->\n")
+                .append(multiRunService.getSqlSelect())
+                .append("<br><br>\n\t\t<div>\n<table><tbody>\n" +
+                        "<tr><th>Сервис</th>\n" +
+                        "<th>Отправлено</th>\n" +
+                        "<th>COMPLETE</th>\n" +
+                        "<th>RUNNING</th>\n" +
+                        "<th>Потеряно</th>\n")
+                .append("<tr><td>")
+                .append(multiRunService.getName())
+                .append("</td><td>")
+                .append(multiRunService.getMetricsList().get(0).getIntValue(6))
+                .append("</td>");
+
+        if (multiRunService.getMetricsList().get(0).getIntValue(8) > 0) {
+            sbHtml.append("<td class=\"td_green\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(8))
+                .append("</td>");
+
+        if (multiRunService.getMetricsList().get(0).getIntValue(9) > 0) {
+            sbHtml.append("<td class=\"td_yellow\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(9))
+                .append("</td>");
+
+        if ((multiRunService.getMetricsList().get(0).getIntValue(8) +
+                multiRunService.getMetricsList().get(0).getIntValue(9)) !=
+                multiRunService.getMetricsList().get(0).getIntValue(6)) {
+            sbHtml.append("<td class=\"td_red\">");
+        } else {
+            sbHtml.append("<td>");
+        }
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(6) -
+                (multiRunService.getMetricsList().get(0).getIntValue(8) +
+                        multiRunService.getMetricsList().get(0).getIntValue(9)))
+                .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
+
+
+        // выведем ошибки (при наличии)
         boolean printError = false;
         for (int i = 0; i < multiRunService.getErrorGroupList().size(); i++) {
             if (multiRunService.getErrorGroupList().get(i).getValue() > 0) {
@@ -220,14 +227,11 @@ public class Report {
         if (printError) {
             sbHtml.append("<!-- Ошибки -->\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine(
-                            "Ошибки",
-                            new String[]{"Ошибки"},
-                            multiRunService.getTestStartTime(),
+                            multiRunService,
+                            multiRunService.getMetricViewGroup("Ошибки"),
                             multiRunService.getErrorGroupList(),
                             false,
-                            printMetrics,
-                            "#ff0000",
-                            multiRunService))
+                            printMetrics))
                     .append("\t\t</div>\n");
         }
 
@@ -490,13 +494,13 @@ public class Report {
             }
 
         } catch (Exception e) {
-            LOG.error("Ошибка при получении данных с CSM\n", e);
+            LOG.error("Ошибка при получении данных из CSM\n", e);
         }
         res.append("</tbody></table>\n");
         return res.toString();
     }
 
-    public String timeMillisToString(long startTime, long stopTime){
+    public String timeMillisToString(long startTime, long stopTime) {
         long time = 0;
         try {
             time = sdf2.parse(sdf2.format(stopTime)).getTime() - sdf2.parse(sdf2.format(startTime)).getTime();
@@ -505,6 +509,7 @@ public class Report {
         }
         return timeMillisToString(time);
     }
+
     /**
      * Преобразуем длительность периода в миллисекундах в чч:мм:сс
      *

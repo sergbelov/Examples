@@ -1,6 +1,8 @@
 package ru.utils.load.utils;
 
 import ru.utils.load.data.Call;
+import ru.utils.load.data.sql.DBData;
+import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.data.DateTimeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,7 +33,7 @@ public class DataFromSQL {
     public void init(
             String dbUrl,
             String dbUser,
-            String dbPassword){
+            String dbPassword) {
 
         // подключаемся к БД БПМ
         dbService = new DBService.Builder()
@@ -44,7 +47,7 @@ public class DataFromSQL {
     /**
      * Отключаемся от БД
      */
-    public void end(){
+    public void end() {
         if (dbService != null) {
             dbService.disconnect();
         }
@@ -53,52 +56,36 @@ public class DataFromSQL {
 
     /**
      * Сбор статистики по выполнению процессов в БПМ
+     * @param key
      * @param startTime
      * @param stopTime
-     * @param callList
-     * @param bpmProcessStatisticList
      * @return
      */
-    public String getStatisticsFromBpm(
+    public DBResponse getStatisticsFromBpm(
+            int sent, // для демо при отсутсвии БД
             String key,
             long startTime,
-            long stopTime,
-            List<Call> callList,
-            List<DateTimeValue> bpmProcessStatisticList) {
+            long stopTime) {
 
-        int sent = 0;
-        int complete = 0;
-        int running = 0;
+        List<DBData> dbDataList = new ArrayList<>();
 
         LOG.debug("BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
 
         // запрос к БД БПМ для получения статистики
-        String sql = "select count(1) as cnt,\n";
+        String sql = "select 1 as value, count(1) as cnt\n";
 
         if (dbService != null && dbService.isConnection()) {
-
-            sent = (int) callList
-                    .stream()
-                    .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
-                    .count();
             try {
                 LOG.trace("Обработка данных SQL БПМ...\n{}", sql);
                 ResultSet resultSet = dbService.executeQuery(sql);
                 while (resultSet.next()) {
-                    LOG.trace("processstate = {}, cnt = {}",
-                            resultSet.getString("processstate"),
-                            resultSet.getInt("cnt"));
+                    LOG.trace("{} = {}",
+                            resultSet.getString(1),
+                            resultSet.getInt(2));
 
-                    switch (resultSet.getString("processstate")) {
-                        case "COMPLETED":
-                            complete = resultSet.getInt("cnt");
-                            break;
-                        case "RUNNING":
-                            running = resultSet.getInt("cnt");
-                            break;
-                        default:
-                            LOG.warn(" не обрабатывается статус {}", resultSet.getString("processstate"));
-                    }
+                    dbDataList.add(new DBData(
+                            resultSet.getString(1),
+                            resultSet.getInt(2)));
                 }
                 resultSet.close();
             } catch (Exception e) {
@@ -106,20 +93,20 @@ public class DataFromSQL {
             }
             LOG.debug("Обработка данных SQL БПМ завершена.");
 
-        } else {
-
-            sent = (int) (Math.random() * 1000) + 100;
-            complete = (int) (Math.random() * sent);
-            running = sent - complete;
+        } else { // нет подключения к БД (нагенерим случайных значений)
+/*
+            callList
+                    .stream()
+                    .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
+                    .count();
+*/
+            int complete = (int) (Math.random() * sent);
+            int running = (int) (Math.random() * (sent - complete));
+            dbDataList.add(new DBData("COMPLETE", complete));
+            dbDataList.add(new DBData("RUNNING", running));
         }
 
-        bpmProcessStatisticList.add(new DateTimeValue(
-                startTime,
-                stopTime,
-                sent,
-                complete,
-                running));
-        return sql;
+        return new DBResponse(sql, dbDataList);
     }
 
 }

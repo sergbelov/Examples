@@ -17,17 +17,19 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class Report {
     private static final Logger LOG = LogManager.getLogger(Report.class);
-
+    private final DecimalFormat decimalFormat = new DecimalFormat("###.##");
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
+    private MultiRunService multiRunService;
     private Graph graph = new Graph();
     private FileUtils fileUtils = new FileUtils();
     private ErrorsGroup errorsGroup = new ErrorsGroup(); // типы ошибок (для группировки)
@@ -54,6 +56,8 @@ public class Report {
             String pathReport,
             boolean printMetrics) {
 
+        this.multiRunService = multiRunService;
+
         /* ==== графики
             0 - VU
             1 - Длительность выполнения
@@ -76,6 +80,7 @@ public class Report {
             10 - errors
          */
         LOG.info("{}: Формирование отчета...", multiRunService.getName());
+
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
                 "<html>\n" +
@@ -163,7 +168,7 @@ public class Report {
                         printMetrics))
                 .append("\t\t</div>\n");
 
-        sbHtml.append(multiRunService.getTpsAvg());
+        sbHtml.append(getTpsAvg());
 
         // Статистика из БД БПМ
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -205,15 +210,15 @@ public class Report {
                 .append("</td>");
 
         if ((multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()) +
-             multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())) !=
-             multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum())) {
+                multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())) !=
+                multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum())) {
             sbHtml.append("<td class=\"td_red\">");
         } else {
             sbHtml.append("<td>");
         }
         sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum()) -
                 (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()) +
-                 multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())))
+                        multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())))
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
 
@@ -525,4 +530,80 @@ public class Report {
                 sec = (int) Math.ceil(millis / 1000.00 % 60);
         return String.format("%02d:%02d:%02d", hour, min, sec);
     }
+
+    /**
+     * Значение TPS
+     *
+     * @return
+     */
+    public String getTpsAvg() {
+        double tps = 0;
+        double tpsRs = 0;
+        int vuCount = 0;
+        int vuCountRs = 0;
+        int vuStartIndex = 0;
+        while (multiRunService.getVuList().get(vuStartIndex).getIntValue() == 0 && vuStartIndex < multiRunService.getVuList().size()) {
+            vuStartIndex++;
+        }
+        long startTime = multiRunService.getVuList().get(vuStartIndex).getTime();
+        int vuCountMem = multiRunService.getVuList().get(vuStartIndex).getIntValue();
+        vuStartIndex++;
+        for (int v = vuStartIndex; v < multiRunService.getVuList().size(); v++) {
+            if (multiRunService.getVuList().get(v).getIntValue() != vuCountMem) {
+                long stopTime = multiRunService.getVuList().get(v).getTime()-1;
+                if ((stopTime - startTime) > 999) {
+                    int countCall = 0;
+                    int countCallRs = 0;
+                    for (int i = 0; i < multiRunService.getCallList().size(); i++) {
+                        if (multiRunService.getCallList().get(i).getTimeBegin() >= startTime &&
+                            multiRunService.getCallList().get(i).getTimeBegin() <= stopTime) {
+                            countCall++;
+                            if (multiRunService.getCallList().get(i).getDuration() > 0) {
+                                countCallRs++;
+                            }
+                        }
+                    }
+                    double tpsCur = countCall / ((stopTime - (startTime+140)) / 1000.00); // + ToDo
+
+                    LOG.info("??? vu: {}; countCall: {}; ({} - {}); dur: {}; tps: {}",
+                            vuCountMem,
+                            countCall,
+                            sdf1.format(startTime),
+                            sdf1.format(stopTime),
+                            (stopTime - startTime) / 1000.00,
+                            tpsCur);
+
+                    if (tpsCur > tps) {
+                        tps = tpsCur;
+                        vuCount = vuCountMem;
+                    }
+                    tpsCur = countCallRs / ((stopTime - (startTime+140)) / 1000.00); // + ToDo
+                    if (tpsCur > tpsRs) {
+                        tpsRs = tpsCur;
+                        vuCountRs = vuCountMem;
+                    }
+                    startTime = stopTime+1;
+                    vuCountMem = multiRunService.getVuList().get(v).getIntValue();
+                }
+            }
+        }
+        StringBuilder res = new StringBuilder("<table><tbody>\n" +
+                "<tr><th rowspan=\"2\">Сервис</th>" +
+                "<th colspan=\"2\">TPS отправлено</th>" +
+                "<th colspan=\"2\">TPS выполнено</th></tr>\n" +
+                "<tr><th>max</th><th>VU</th><th>max</th><th>VU</th></tr>\n" +
+                "<tr><td>");
+        res.append(multiRunService.getName())
+                .append("</td><td>")
+                .append(decimalFormat.format(tps))
+                .append("</td><td>")
+                .append(vuCount)
+                .append("</td><td>")
+                .append(decimalFormat.format(tpsRs))
+                .append("</td><td>")
+                .append(vuCountRs)
+                .append("</td></tr>\n</tbody></table>\n");
+        return res.toString();
+    }
+
 }

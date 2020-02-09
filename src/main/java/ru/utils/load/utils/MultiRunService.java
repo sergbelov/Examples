@@ -13,7 +13,6 @@ import ru.utils.load.runnable.CallableVU;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
 
 import java.text.DateFormat;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultiRunService {
     private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
-    private final DecimalFormat decimalFormat = new DecimalFormat("###.##");
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -600,11 +598,14 @@ public class MultiRunService {
      * Снятие метрик - сам процесс
      */
     private void getStatistics(long stopTime) {
-        getStatistics(prevStartTimeStatistic + 1, stopTime);
+        getStatistics(prevStartTimeStatistic, stopTime-1);
     }
 
     public void getStatistics(long startTime, long stopTime) {
-        LOG.debug("{}: Статистика {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
+        LOG.debug("{}: Статистика {} - {}",
+                name,
+                sdf1.format(startTime),
+                sdf1.format(stopTime));
 
         long durMin = 999999999999999999L;
         long durMax = 0L;
@@ -698,7 +699,7 @@ public class MultiRunService {
 
                         countError)));
 
-        prevStartTimeStatistic = stopTime;
+        prevStartTimeStatistic = stopTime+1;
     }
 
 
@@ -836,66 +837,5 @@ public class MultiRunService {
             // сохраняем результаты в HTML - файл
             report.saveReportHtml(this, pathReport);
         }
-    }
-
-    /**
-     * Среднее значение TPS
-     *
-     * @return
-     */
-    public String getTpsAvg() {
-        double tps = 0;
-        double tpsRs = 0;
-        int vuCount = 0;
-        int vuCountRs = 0;
-        // стартовое количество VU
-        long startTime = vuList.get(1).getTime();
-        int vuCountMem = vuList.get(1).getIntValue();
-        for (int v = 2; v < vuList.size(); v++) {
-            if (vuList.get(v).getIntValue() > vuCountMem) {
-                long stopTime = vuList.get(v).getTime();
-                if ((stopTime - startTime) > 999) {
-                    int countCall = 0;
-                    int countCallRs = 0;
-                    for (int i = 0; i < callList.size(); i++) {
-                        if (callList.get(i).getTimeBegin() >= startTime && callList.get(i).getTimeBegin() <= stopTime) {
-                            if (callList.get(i).getDuration() > 0) {
-                                countCallRs++;
-                            }
-                            countCall++;
-                        }
-                    }
-                    double tpsCur = countCall / ((stopTime - startTime) / 1000.00);
-                    if (tpsCur > tps) {
-                        tps = tpsCur;
-                        vuCount = vuList.get(v).getIntValue();
-                    }
-                    tpsCur = countCallRs / ((stopTime - startTime) / 1000.00);
-                    if (tpsCur > tpsRs) {
-                        tpsRs = tpsCur;
-                        vuCountRs = vuList.get(v).getIntValue();
-                    }
-                    startTime = stopTime;
-                    vuCountMem = vuList.get(v).getIntValue();
-                }
-            }
-        }
-        StringBuilder res = new StringBuilder("<table><tbody>\n" +
-                "<tr><th rowspan=\"2\">Сервис</th>" +
-                "<th colspan=\"2\">TPS отправлено</th>" +
-                "<th colspan=\"2\">TPS выполнено</th></tr>\n" +
-                "<tr><th>max</th><th>VU</th><th>max</th><th>VU</th></tr>\n" +
-                "<tr><td>");
-        res.append(name)
-                .append("</td><td>")
-                .append(decimalFormat.format(tps))
-                .append("</td><td>")
-                .append(vuCount)
-                .append("</td><td>")
-                .append(decimalFormat.format(tpsRs))
-                .append("</td><td>")
-                .append(vuCountRs)
-                .append("</td></tr>\n</tbody></table>\n");
-        return res.toString();
     }
 }

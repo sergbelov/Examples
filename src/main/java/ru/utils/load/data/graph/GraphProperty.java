@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 
 
+/**
+ * Параметры графиков
+ */
 public class GraphProperty {
     private static final Logger LOG = LogManager.getLogger(GraphProperty.class);
     private List<MetricViewGroup> metricViewGroupList = new ArrayList<>();
@@ -17,29 +20,29 @@ public class GraphProperty {
     public GraphProperty() {
         // === Графики
 
-        // 0 - VU
+        // 0 - VU (отдельный список)
         metricViewGroupList.add(new MetricViewGroup("Running Vusers",
                 Arrays.asList(new MetricView(0, "", "#0000ff"))));
 
-        // 1 - Длительность выполнения
+        // 1 - Длительность выполнения (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Длительность выполнения",
                 Arrays.asList(
                         new MetricView(VarInList.DurMin.getNum(), "минимальная длительность (мс)", "#00009f"),
-                        new MetricView(VarInList.DurAvg.getNum(), "средняя длительность (мс)", "#00af00"),
-                        new MetricView(VarInList.Dur90.getNum(), "перцентиль 90% (мс)", "#a0a000"),
+                        new MetricView(VarInList.DurAvg.getNum(), "средняя длительность (мс)", "#9f9f00"),
+                        new MetricView(VarInList.Dur90.getNum(), "перцентиль 90% (мс)", "#009f00"),
                         new MetricView(VarInList.DurMax.getNum(), "максимальная длительность (мс)", "#ff0000"))));
-        // 2 - TPC
-        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPC)",
+        // 2 - TPS (в списке metricsList)
+        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPS)",
                 Arrays.asList(
-                        new MetricView(VarInList.Tpc.getNum(), "TPC - отправлено", "#00009f"),
-                        new MetricView(VarInList.TpcRs.getNum(), "TPC - выполнено", "#00af00"))));
-        // 3 - Статистика из БД БПМ
+                        new MetricView(VarInList.Tps.getNum(), "TPS - отправлено", "#00009f"),
+                        new MetricView(VarInList.TpsRs.getNum(), "TPS - выполнено", "#00af00"))));
+        // 3 - Статистика из БД БПМ (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Статистика из БД БПМ",
                 Arrays.asList(
                         new MetricView(VarInList.CountCall.getNum(), "отправлено запросов", "#00009f"),
-                        new MetricView(VarInList.DbComplete.getNum(), "COMPLETE", "#00af00"),
-                        new MetricView(VarInList.DbRunning.getNum(), "RUNNING", "#a0a000"))));
-        // 4 - Ошибки
+                        new MetricView(VarInList.DbComplete.getNum(), "COMPLETE", "#009f00"),
+                        new MetricView(VarInList.DbRunning.getNum(), "RUNNING", "#ff9f00"))));
+        // 4 - Ошибки (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Ошибки",
                 Arrays.asList(new MetricView(VarInList.Errors.getNum(), "", "#ff0000"))));
 

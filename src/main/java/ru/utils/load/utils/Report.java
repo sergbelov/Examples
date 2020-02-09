@@ -9,6 +9,7 @@ import ru.utils.load.data.Call;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
+import ru.utils.load.data.graph.VarInList;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -40,6 +41,7 @@ public class Report {
             MultiRunService multiRunService,
             String pathReport) {
         saveReportHtml(multiRunService, pathReport, false);
+//        saveReportHtml(multiRunService, pathReport, true);
     }
 
     /**
@@ -55,7 +57,7 @@ public class Report {
         /* ==== графики
             0 - VU
             1 - Длительность выполнения
-            2 - TPC
+            2 - TPS
             3 - Статистика из БД БПМ
             4 - Ошибки
         */
@@ -65,15 +67,15 @@ public class Report {
             1  - durAvg
             2  - dur90
             3  - durMax
-            4  - tpc
-            5  - tpcRs
+            4  - tps
+            5  - tpsRs
             6  - countCall
             7  - countCallComplete
             8  - dbComplete
             9  - dbRunning
             10 - errors
          */
-        LOG.info("Формируем отчет...");
+        LOG.info("{}: Формирование отчета...", multiRunService.getName());
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
                 "<html>\n" +
@@ -81,7 +83,7 @@ public class Report {
                         "\t\t<meta charset=\"UTF-8\">\n" +
                         "\t\t<style>\n" +
                         "\t\t\tbody, html{width:100%; height:100%; margin:0; background:#fdfdfd}\n\n" +
-                        "\t\t\t.graph{width:80%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px; solid #ccc; background:#fff}\n\n" +
+                        "\t\t\t.graph{width:95%; border-radius:5px; box-shadow: 0 0 1px 1px rgba(0,0,0,0.5); margin:50px auto; border:1px; solid #ccc; background:#fff}\n\n" +
                         "\t\t\ttable{border: solid 1px; border-collapse: collapse;}\n" +
                         "\t\t\ttd{border: solid 1px;}\n" +
                         "\t\t\tth{border: solid 1px; background: #dfdfdf;}\n" +
@@ -136,29 +138,32 @@ public class Report {
                 .append("<tr><td>")
                 .append(multiRunService.getName())
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(0))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DurMin.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(1))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DurAvg.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(2))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.Dur90.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(3))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DurMax.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(6))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(7))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCallCompete.getNum()))
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(6) - multiRunService.getMetricsList().get(0).getIntValue(7))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum()) -
+                        multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCallCompete.getNum()))
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
-        // TPC
+        // TPS
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine("Количество операций в секунду (TPC)",
+                .append(graph.getSvgGraphLine("Количество операций в секунду (TPS)",
                         multiRunService,
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
                 .append("\t\t</div>\n");
+
+        sbHtml.append(multiRunService.getTpsAvg());
 
         // Статистика из БД БПМ
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -180,35 +185,35 @@ public class Report {
                 .append("<tr><td>")
                 .append(multiRunService.getName())
                 .append("</td><td>")
-                .append(multiRunService.getMetricsList().get(0).getIntValue(6))
+                .append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum()))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).getIntValue(8) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum()) > 0) {
             sbHtml.append("<td class=\"td_green\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(8))
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum()))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).getIntValue(9) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()) > 0) {
             sbHtml.append("<td class=\"td_yellow\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(9))
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()))
                 .append("</td>");
 
-        if ((multiRunService.getMetricsList().get(0).getIntValue(8) +
-                multiRunService.getMetricsList().get(0).getIntValue(9)) !=
-                multiRunService.getMetricsList().get(0).getIntValue(6)) {
+        if ((multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()) +
+             multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())) !=
+             multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum())) {
             sbHtml.append("<td class=\"td_red\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(6) -
-                (multiRunService.getMetricsList().get(0).getIntValue(8) +
-                        multiRunService.getMetricsList().get(0).getIntValue(9)))
+        sbHtml.append(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall.getNum()) -
+                (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning.getNum()) +
+                 multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbComplete.getNum())))
                 .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
 
@@ -267,7 +272,7 @@ public class Report {
                 sdf3.format(multiRunService.getTestStartTime()) + "-" +
                 sdf3.format(multiRunService.getTestStopTime()) + ".html";
         fileUtils.writeFile(fileName, sbHtml.toString());
-        LOG.info("Сформирован отчет {}", fileName);
+        LOG.info("{}: Сформирован отчет {}", multiRunService.getName(), fileName);
     }
 
     /**
@@ -302,7 +307,7 @@ public class Report {
             List<ErrorRs> errorList,
             List<ErrorRsGroup> errorRsGroupList
     ) {
-        StringBuilder sbErrors = new StringBuilder("\n<br><div>\nОшибки<br>\n<table><tbody>\n" +
+        StringBuilder sbErrors = new StringBuilder("\n<div>\nОшибки<br>\n<table><tbody>\n" +
                 "<tr><th>Группа ошибок</th>" +
                 "<th>Количество</th>" +
                 "<th>Первая ошибка из группы</th></tr>\n");

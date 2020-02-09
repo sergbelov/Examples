@@ -69,6 +69,7 @@ public class CallableVU implements Callable<List<Call>> {
         }
         multiRunService.threadDec();
         multiRunService.stopVU();
+        multiRunService.vuListAdd();
         LOG.info("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
         return callListVU;
     }

@@ -56,16 +56,18 @@ public class DataFromSQL {
 
     /**
      * Сбор статистики по выполнению процессов в БПМ
+     *
      * @param key
      * @param startTime
      * @param stopTime
      * @return
      */
     public DBResponse getStatisticsFromBpm(
-            int sent, // для демо при отсутсвии БД
             String key,
             long startTime,
-            long stopTime) {
+            long stopTime,
+            int sent // для демо,  при отсутсвии БД
+    ) {
 
         List<DBData> dbDataList = new ArrayList<>();
 
@@ -94,14 +96,9 @@ public class DataFromSQL {
             LOG.debug("Обработка данных SQL БПМ завершена.");
 
         } else { // нет подключения к БД (нагенерим случайных значений)
-/*
-            callList
-                    .stream()
-                    .filter(x -> (x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
-                    .count();
-*/
+
             int complete = (int) (Math.random() * sent);
-            int running = (int) (Math.random() * (sent - complete));
+            int running = (int) (Math.random() * (complete));
             dbDataList.add(new DBData("COMPLETE", complete));
             dbDataList.add(new DBData("RUNNING", running));
         }

@@ -5,8 +5,8 @@ package ru.utils.load.data.graph;
 1  - durAvg
 2  - dur90
 3  - durMax
-4  - tpc
-5  - tpcRs
+4  - tps
+5  - tpsRs
 6  - countCall
 7  - countCallComplete
 8  - dbComplete
@@ -35,12 +35,12 @@ public enum VarInList {
             return 3;
         }
     },
-    Tpc {
+    Tps {
         public int getNum() {
             return 4;
         }
     },
-    TpcRs {
+    TpsRs {
         public int getNum() {
             return 5;
         }

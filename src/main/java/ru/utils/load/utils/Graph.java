@@ -28,24 +28,26 @@ public class Graph {
 
     /**
      * Линейный график (несколько показателей)
+     * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
      * @param multiRunService
-     * @param metricViewGroup
+     * @param title
      * @param metricsList
      * @param step
      * @param printMetrics
      * @return
      */
     public String getSvgGraphLine(
-            MultiRunService multiRunService,
             String title,
+            MultiRunService multiRunService,
             List<DateTimeValue> metricsList,
             boolean step,
             boolean printMetrics) {
 
-        // !!! первую запись в metricsList игнорируем
-
-        MetricViewGroup metricViewGroup = multiRunService.getMultiRun().getMetricViewGroup(title);
-        if (metricViewGroup == null){
+        MetricViewGroup metricViewGroup = multiRunService
+                .getMultiRun()
+                .getGraphProperty()
+                .getMetricViewGroup(title);
+        if (metricViewGroup == null) {
             LOG.error("Не найден MetricViewGroup для {}", title);
         }
 
@@ -53,7 +55,7 @@ public class Graph {
 
         long startTime = multiRunService.getTestStartTime();
 
-        int xSize = Math.max(1200, metricsList.size()-1);
+        int xSize = Math.max(1200, metricsList.size() - 1);
         int ySize = 600;
         int xStart = xSize / 30;
         int yStart = xSize / 20;
@@ -74,12 +76,9 @@ public class Graph {
         double yValueMax = 0.00;
 
         for (int i = 1; i < metricsList.size(); i++) {
-            for (int e = 0; e < metricsList.get(i).getValueSize(); e++) {
-                int numberViewMetric = getNumberViewMetric(e, metricViewGroup.getMetricViewList());
-                if (numberViewMetric > -1){
-                    yValueMin = Math.min(yValueMin, metricsList.get(i).getValue(e));
-                    yValueMax = Math.max(yValueMax, metricsList.get(i).getValue(e));
-                }
+            for (MetricView metricView : metricViewGroup.getMetricViewList()) {
+                yValueMin = Math.min(yValueMin, metricsList.get(i).getValue(metricView.getNumInList()));
+                yValueMax = Math.max(yValueMax, metricsList.get(i).getValue(metricView.getNumInList()));
             }
             xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
         }
@@ -104,11 +103,11 @@ public class Graph {
 
         // описание графиков
         double yCur = fontSize / 2 + 2;
-        for (int i = 0; i < metricViewGroup.getMetricCount(); i++) {
+        for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {
             if (!metricViewGroup.getMetricView(i).getTitle().isEmpty()) {
                 sbResult.append(
-                    "\t\t\t\t<polyline fill=\"none\" stroke=\"" + metricViewGroup.getMetricView(i).getColor() + "\" stroke-width=\"4\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
-                    "\t\t\t\t<text font-size=\"10\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + metricViewGroup.getMetricView(i).getTitle() + "</text>\n");
+                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + metricViewGroup.getMetricView(i).getColor() + "\" stroke-width=\"4\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
+                        "\t\t\t\t<text font-size=\"10\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + metricViewGroup.getMetricView(i).getTitle() + "</text>\n");
                 yCur = yCur + fontSize;
             }
         }
@@ -157,7 +156,7 @@ public class Graph {
         while (xValueMax % xScale != 0) {
             xScale--;
         }
-        xScale = Math.min(xScale, metricsList.size()-1);
+        xScale = Math.min(xScale, metricsList.size() - 1);
         double xRatio = xSize / (xValueMax * 1.00);
         double xRatioValue = xValueMax / xScale;
         double xStep = xSize / xScale;
@@ -192,44 +191,43 @@ public class Graph {
         StringBuilder sbSignature = new StringBuilder("<!-- Метрики на графике -->\n"); // значения метрик на графике
         StringBuilder sbSignatureTitle = new StringBuilder("<!-- Всплывающие надписи -->\n"); // значения метрик на графике
 
-        StringBuilder[] sbGraph = new StringBuilder[metricViewGroup.getMetricCount()]; // графики
-        for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
-            int numberViewMetric = getNumberViewMetric(e, metricViewGroup.getMetricViewList());
-            if (numberViewMetric > -1){
-                String curColor = metricViewGroup.getMetricView(numberViewMetric).getColor();
-                sbGraph[numberViewMetric] = new StringBuilder();
-                sbGraph[numberViewMetric].append("<!-- График" + (numberViewMetric + 1) + " -->\n" +
-                        "\t\t\t\t<polyline " +
-                        "fill=\"none\" " +
-                        "stroke=\"" + curColor + "\" " +
-                        "stroke-width=\"" + (lineSize * 2) + "\" " +
-                        "points=\"" + xCur + "," + yMax + " \n");
-            }
+        StringBuilder[] sbGraph = new StringBuilder[metricViewGroup.getMetricsCount()]; // графики
+        for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
+            String curColor = metricViewGroup.getMetricView(m).getColor();
+            sbGraph[m] = new StringBuilder();
+            sbGraph[m].append("<!-- График" + (m + 1) + " -->\n" +
+                    "\t\t\t\t<polyline " +
+                    "fill=\"none\" " +
+                    "stroke=\"" + curColor + "\" " +
+                    "stroke-width=\"" + (lineSize * 2) + "\" " +
+                    "points=\"" + xCur + "," + yMax + " \n");
         }
 
         for (int i = 1; i < metricsList.size(); i++) {
             xCur = (metricsList.get(i).getTime() - startTime) * xRatio + xStart;
             // ступеньки
             if (step && i > 0) {
-                for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
-                    int numberViewMetric = getNumberViewMetric(e, metricViewGroup.getMetricViewList());
-                    if (numberViewMetric > -1) {
-                        sbGraph[numberViewMetric].append(xCur + "," + (yMax - Math.round(metricsList.get(i - 1).getValue(e) * yRatio)) + " \n");
-                    }
+                for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
+                    int numInList = metricViewGroup
+                            .getMetricViewList()
+                            .get(m)
+                            .getNumInList();
+                    sbGraph[m].append(xCur + "," + (yMax - Math.round(metricsList.get(i - 1).getValue(numInList) * yRatio)) + " \n");
                 }
             }
 
             List<Double> yPrevList = new ArrayList<>();
-            for (int e = 0; e < metricsList.get(0).getValueSize(); e++) {
-                int numberViewMetric = getNumberViewMetric(e, metricViewGroup.getMetricViewList());
-                if (numberViewMetric > -1) {
-                    String curColor = metricViewGroup.getMetricView(numberViewMetric).getColor();
-                    double y = yMax - Math.round(metricsList.get(i).getValue(e) * yRatio);
+            for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
+                    int numInList = metricViewGroup
+                            .getMetricViewList()
+                            .get(m)
+                            .getNumInList();
+                    String curColor = metricViewGroup.getMetricView(m).getColor();
+                    double y = yMax - Math.round(metricsList.get(i).getValue(numInList) * yRatio);
                     // график
-                    sbGraph[numberViewMetric].append(xCur + "," + y + " \n");
-
+                    sbGraph[m].append(xCur + "," + y + " \n");
                     // значение отличается от предыдущего
-                    if (i == 1 || metricsList.get(i - 1).getValue(e) != metricsList.get(i).getValue(e)) {
+                    if (i == 1 || metricsList.get(i - 1).getValue(numInList) != metricsList.get(i).getValue(numInList)) {
                         // значение метрики
                         if (printMetrics) {
                             // надписи не пересекаются
@@ -247,7 +245,7 @@ public class Graph {
 //                                    "font-weight=\"bold\" " +
                                         "x=\"" + (xCur - xText) + "\" " +
                                         "y=\"" + (y - yText) + "\">" +
-                                        decimalFormat.format(metricsList.get(i).getValue(e)) + "</text>\n");
+                                        decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</text>\n");
                                 yPrevList.add(y);
                             }
                         }
@@ -258,12 +256,11 @@ public class Graph {
                             "<title>Время: " +
                             sdf1.format(metricsList.get(i).getTime()) + "; VU: " +
                             multiRunService.getVuCount(metricsList.get(i).getTime()) + "; Значение: " +
-                            decimalFormat.format(metricsList.get(i).getValue(e)) + "</title> " +
+                            decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
                             "</g>\n");
-                }
             }
         }
-        for (int i = 0; i < metricViewGroup.getMetricCount(); i++) {
+        for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {
             sbGraph[i].append("\"/>\n");
             sbResult.append(sbGraph[i].toString());
         }
@@ -274,19 +271,4 @@ public class Graph {
         return sbResult.toString();
     }
 
-    /**
-     * Нужно отображать текущую метрику ?
-     * @param num
-     * @return
-     */
-    private int getNumberViewMetric(int num, List<MetricView> metricViewList){
-        int res = -1;
-        for (int i = 0; i < metricViewList.size(); i++){
-            if (metricViewList.get(i).getNumInList() == num) {
-                res = i;
-                break;
-            }
-        }
-        return res;
-    }
 }

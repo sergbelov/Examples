@@ -30,18 +30,19 @@ public class MultiRunService {
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new ArrayList<>(); // список вызовов сервиса
 
-    // список метрик
-    // 0  - durMin
-    // 1  - durAvg
-    // 2  - dur90
-    // 3  - durMax
-    // 4  - tpc
-    // 5  - tpcComplete
-    // 6  - countCallAll
-    // 7  - countCallComplete
-    // 8  - db.bpms.COMPLETE
-    // 9  - db.bpms.RUNNING
-    // 10 - ошибки
+    /*  список метрик:
+        0  - durMin
+        1  - durAvg
+        2  - dur90
+        3  - durMax
+        4  - tpc
+        5  - tpcRs
+        6  - countCall
+        7  - countCallComplete
+        8  - dbComplete
+        9  - dbRunning
+        10 - errors
+    */
     private List<DateTimeValue> metricsList = new ArrayList<>();
 
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
@@ -170,13 +171,17 @@ public class MultiRunService {
         return dataFromSQL;
     }
 
-    public MultiRun getMultiRun() { return multiRun; }
+    public MultiRun getMultiRun() {
+        return multiRun;
+    }
 
     public List<DateTimeValue> getVuList() {
         return vuList;
     }
 
-    public List<DateTimeValue> getMetricsList() { return metricsList; }
+    public List<DateTimeValue> getMetricsList() {
+        return metricsList;
+    }
 
     public List<Call> getCallList() {
         return callList;
@@ -230,7 +235,9 @@ public class MultiRunService {
         return csmUrl;
     }
 
-    public String getSqlSelect() { return sqlSelect;}
+    public String getSqlSelect() {
+        return sqlSelect;
+    }
 
     /**
      * Количество активных потоков
@@ -596,12 +603,10 @@ public class MultiRunService {
         long durMin = 999999999999999999L;
         long durMax = 0L;
         long durAvg = 0L;
-        int countCallAll = 0;
+        int countCall = 0;
         int countCallComplete = 0;
-        int countCallTpc = 0;
 
         for (int i = 0; i < callList.size(); i++) {
-            countCallAll++;
             if (callList.get(i).getTimeBegin() >= startTime && callList.get(i).getTimeBegin() <= stopTime) {
                 if (callList.get(i).getDuration() > 0) {
                     durMin = Math.min(durMin, callList.get(i).getDuration());
@@ -609,12 +614,12 @@ public class MultiRunService {
                     durAvg = durAvg + callList.get(i).getDuration();
                     countCallComplete++;
                 }
-                countCallTpc++;
+                countCall++;
             }
         }
 
-        double tpc = countCallTpc / (statisticsStepTime * 1.00);
-        double tpcComplete = countCallComplete / (statisticsStepTime * 1.00);
+        double tpc = countCall / (statisticsStepTime * 1.00);
+        double tpcRs = countCallComplete / (statisticsStepTime * 1.00);
 
         long dur90 = 0L;
         if (countCallComplete > 0) {
@@ -634,12 +639,12 @@ public class MultiRunService {
 
         // статистика выполнения процессов в БПМ
         DBResponse dbResponse = dataFromSQL.getStatisticsFromBpm(
-                countCallTpc, // для демо при отсутсвии БД
+                countCall, // для демо при отсутсвии БД
                 keyBpm,
                 startTime,
                 stopTime);
 
-        if (sqlSelect == null){
+        if (sqlSelect == null) {
             sqlSelect = dbResponse.getSqlSelect();
         }
 
@@ -653,8 +658,20 @@ public class MultiRunService {
             }
         }
 
-
-        // добавляем полученные метрики в список
+        /*  добавляем полученные метрики в список
+            список метрик:
+            0  - durMin
+            1  - durAvg
+            2  - dur90
+            3  - durMax
+            4  - tpc
+            5  - tpcRs
+            6  - countCall
+            7  - countCallComplete
+            8  - dbComplete
+            9  - dbRunning
+            10 - errors
+        */
         metricsList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
@@ -664,9 +681,9 @@ public class MultiRunService {
                         (int) durMax,
 
                         tpc,
-                        tpcComplete,
+                        tpcRs,
 
-                        countCallTpc,
+                        countCall,
                         countCallComplete,
 
                         dbResponse.getIntValue("COMPLETE"),
@@ -715,7 +732,7 @@ public class MultiRunService {
             }
         }
 
-        vuListAdd(testStartTime, 0); // первую запись игнорируем при формировании графиков
+        vuListAdd(testStartTime, 0); // игнорируем нулевой элемент при формировании графиков
         executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
                 name + " RunnableAwaitAndAddVU",
                 countDownLatch,
@@ -796,7 +813,7 @@ public class MultiRunService {
             // сбросим VU на конец теста
             vuList.add(new DateTimeValue(testStopTime, getVuCount()));
 
-            // статистику за весь период сохраним первым элементом
+            // статистику за весь период сохраним нелевым элементом
             getStatistics(timeStart, timeStop);
 
             prevStartTimeStatistic = testStartTime; // для определения временного диапазона снятия метрик

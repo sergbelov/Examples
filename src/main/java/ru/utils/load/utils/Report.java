@@ -9,7 +9,6 @@ import ru.utils.load.data.Call;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
-import ru.utils.load.data.sql.DBResponse;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -53,26 +52,27 @@ public class Report {
             String pathReport,
             boolean printMetrics) {
 
-        // === Графики
-        // 0 - VU
-        // 1 - Длительность выполнения
-        // 2 - TPC
-        // 3 - Производительность БПМ
-        // 4 - Ошибки
+        /* ==== графики
+            0 - VU
+            1 - Длительность выполнения
+            2 - TPC
+            3 - Статистика из БД БПМ
+            4 - Ошибки
+        */
 
-
-        // === Список метрик
-        // 0  - durMin
-        // 1  - durAvg
-        // 2  - dur90
-        // 3  - durMax
-        // 4  - tpc
-        // 5  - tpcComplete
-        // 6  - countCallAll
-        // 7  - countCallComplete
-        // 8  - db.bpms.COMPLETE
-        // 9  - db.bpms.RUNNING
-        // 10 - ошибки
+        /* ==== список метрик:
+            0  - durMin
+            1  - durAvg
+            2  - dur90
+            3  - durMax
+            4  - tpc
+            5  - tpcRs
+            6  - countCall
+            7  - countCallComplete
+            8  - dbComplete
+            9  - dbRunning
+            10 - errors
+         */
         LOG.info("Формируем отчет...");
         // формируем HTML - файл
         StringBuilder sbHtml = new StringBuilder(
@@ -105,9 +105,8 @@ public class Report {
 
         // старт VU
         sbHtml.append("\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
+                .append(graph.getSvgGraphLine("Running Vusers",
                         multiRunService,
-                        "Running Vusers",
                         multiRunService.getVuList(),
                         true,
                         printMetrics))
@@ -115,9 +114,8 @@ public class Report {
 
         // длительность выполнения
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
+                .append(graph.getSvgGraphLine("Длительность выполнения",
                         multiRunService,
-                        "Длительность выполнения",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
@@ -155,19 +153,17 @@ public class Report {
 
         // TPC
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
+                .append(graph.getSvgGraphLine("Количество операций в секунду (TPC)",
                         multiRunService,
-                        "Количество операций в секунду (TPC)",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
                 .append("\t\t</div>\n");
 
-        // Производительность БПМ
+        // Статистика из БД БПМ
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine(
+                .append(graph.getSvgGraphLine("Статистика из БД БПМ",
                         multiRunService,
-                        "Производительность БПМ",
                         multiRunService.getMetricsList(),
                         false,
                         printMetrics))
@@ -220,9 +216,8 @@ public class Report {
         boolean printError = (multiRunService.getErrorList().size() > 0) ? true : false;
         if (printError) {
             sbHtml.append("<!-- Ошибки -->\n\t\t<div class=\"graph\">\n")
-                    .append(graph.getSvgGraphLine(
+                    .append(graph.getSvgGraphLine("Ошибки",
                             multiRunService,
-                            "Ошибки",
                             multiRunService.getMetricsList(),
                             false,
                             printMetrics))
@@ -440,59 +435,69 @@ public class Report {
         StringBuilder res = new StringBuilder("\n<h3>Версия модуля, активность хостов<h3>\n" +
                 "<table><tbody>\n" +
                 "<tr><th>Host</th><th>Module</th><th>Version</th><th>Active</th></tr>\n");
-        try {
-            URL url = new URL(csmUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setDoOutput(true);
-            InputStream content = connection.getInputStream();
-            BufferedReader in = new BufferedReader(new InputStreamReader(content));
-            String line;
-            StringBuilder data = new StringBuilder();
-            while ((line = in.readLine()) != null) {
-                data.append(line);
-            }
-
-            LOG.debug("CSM Response: {}", data.toString());
-            JSONArray jsonArray = new JSONArray(data.toString());
-            for (int h = 0; h < jsonArray.length(); h++) {
-                JSONObject jsonObjectHost = jsonArray.getJSONObject(h);
-                LOG.debug("CSM Response[{}]: {}", h, jsonObjectHost.toString());
-
-                String host = jsonObjectHost.getString("host");
-                String module = jsonObjectHost.getJSONObject("module").getString("normalName");
-                String version = jsonObjectHost.getJSONObject("module").getString("version");
-                boolean enabled = jsonObjectHost.getJSONObject("module").getBoolean("enabled");
-
-                res.append("<tr>")
-                        .append("<td>")
-                        .append(host)
-                        .append("</td>")
-                        .append("<td>")
-                        .append(module)
-                        .append("</td>")
-                        .append("<td>")
-                        .append(version)
-                        .append("</td>");
-
-                if (enabled) {
-                    res.append("<td class=\"td_green\">Да</td>");
-                } else {
-                    res.append("<td class=\"td_red\">Нет</td>");
+        if (!csmUrl.isEmpty()) {
+            try {
+                URL url = new URL(csmUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setDoOutput(true);
+                InputStream content = connection.getInputStream();
+                BufferedReader in = new BufferedReader(new InputStreamReader(content));
+                String line;
+                StringBuilder data = new StringBuilder();
+                while ((line = in.readLine()) != null) {
+                    data.append(line);
                 }
 
-                res.append("</tr>\n");
+                LOG.debug("CSM Response: {}", data.toString());
+                JSONArray jsonArray = new JSONArray(data.toString());
+                for (int h = 0; h < jsonArray.length(); h++) {
+                    JSONObject jsonObjectHost = jsonArray.getJSONObject(h);
+                    LOG.debug("CSM Response[{}]: {}", h, jsonObjectHost.toString());
 
-                LOG.debug("{} {} {} {}", host, module, version, enabled);
+                    String host = jsonObjectHost.getString("host");
+                    String module = jsonObjectHost.getJSONObject("module").getString("normalName");
+                    String version = jsonObjectHost.getJSONObject("module").getString("version");
+                    boolean enabled = jsonObjectHost.getJSONObject("module").getBoolean("enabled");
+
+                    res.append("<tr>")
+                            .append("<td>")
+                            .append(host)
+                            .append("</td>")
+                            .append("<td>")
+                            .append(module)
+                            .append("</td>")
+                            .append("<td>")
+                            .append(version)
+                            .append("</td>");
+
+                    if (enabled) {
+                        res.append("<td class=\"td_green\">Да</td>");
+                    } else {
+                        res.append("<td class=\"td_red\">Нет</td>");
+                    }
+
+                    res.append("</tr>\n");
+
+                    LOG.debug("{} {} {} {}", host, module, version, enabled);
+                }
+
+            } catch (Exception e) {
+                LOG.error("Ошибка при получении данных из CSM\n", e);
             }
-
-        } catch (Exception e) {
-            LOG.error("Ошибка при получении данных из CSM\n", e);
         }
         res.append("</tbody></table>\n");
         return res.toString();
     }
 
+
+    /**
+     * Преобразуем длительность периода в миллисекундах в чч:мм:сс
+     *
+     * @param startTime
+     * @param stopTime
+     * @return
+     */
     public String timeMillisToString(long startTime, long stopTime) {
         long time = 0;
         try {

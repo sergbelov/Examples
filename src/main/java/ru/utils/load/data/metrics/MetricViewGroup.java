@@ -26,7 +26,7 @@ public class MetricViewGroup {
         return metricViewList.get(num);
     }
 
-    public int getMetricCount(){
+    public int getMetricsCount(){
         return metricViewList.size();
     }
 }

@@ -1,0 +1,96 @@
+<svg width="1300" height="800" style="enable-background:new 0 0 128 128;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<text font-size="20" x="558" y="40">Running Vusers</text>
+	<rect stroke="#0f0f0f" fill="#dfdfdf" x="40" y="60" width="1200" height="600"/>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,636.0  1240,636.0"/>
+	<text font-size="12" x="0" y="639.0">2</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,612.0  1240,612.0"/>
+	<text font-size="12" x="0" y="615.0">4</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,588.0  1240,588.0"/>
+	<text font-size="12" x="0" y="591.0">6</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,564.0  1240,564.0"/>
+	<text font-size="12" x="0" y="567.0">8</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,540.0  1240,540.0"/>
+	<text font-size="12" x="0" y="543.0">10</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,516.0  1240,516.0"/>
+	<text font-size="12" x="0" y="519.0">12</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,492.0  1240,492.0"/>
+	<text font-size="12" x="0" y="495.0">14</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,468.0  1240,468.0"/>
+	<text font-size="12" x="0" y="471.0">16</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,444.0  1240,444.0"/>
+	<text font-size="12" x="0" y="447.0">18</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,420.0  1240,420.0"/>
+	<text font-size="12" x="0" y="423.0">20</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,396.0  1240,396.0"/>
+	<text font-size="12" x="0" y="399.0">22</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,372.0  1240,372.0"/>
+	<text font-size="12" x="0" y="375.0">24</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,348.0  1240,348.0"/>
+	<text font-size="12" x="0" y="351.0">26</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,324.0  1240,324.0"/>
+	<text font-size="12" x="0" y="327.0">28</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,300.0  1240,300.0"/>
+	<text font-size="12" x="0" y="303.0">30</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,276.0  1240,276.0"/>
+	<text font-size="12" x="0" y="279.0">32</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,252.0  1240,252.0"/>
+	<text font-size="12" x="0" y="255.0">34</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,228.0  1240,228.0"/>
+	<text font-size="12" x="0" y="231.0">36</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,204.0  1240,204.0"/>
+	<text font-size="12" x="0" y="207.0">38</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,180.0  1240,180.0"/>
+	<text font-size="12" x="0" y="183.0">40</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,156.0  1240,156.0"/>
+	<text font-size="12" x="0" y="159.0">42</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,132.0  1240,132.0"/>
+	<text font-size="12" x="0" y="135.0">44</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,108.0  1240,108.0"/>
+	<text font-size="12" x="0" y="111.0">46</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,84.0  1240,84.0"/>
+	<text font-size="12" x="0" y="87.0">48</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="40,60.0  1240,60.0"/>
+	<text font-size="12" x="0" y="63.0">50</text>
+<!-- Ось X -->
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="40.0" y="663">08.02.2020 22:00:49</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="211.42857142857142,60  211.42857142857142,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="211.42857142857142" y="663">08.02.2020 22:01:10</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="382.85714285714283,60  382.85714285714283,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="382.85714285714283" y="663">08.02.2020 22:01:31</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="554.2857142857142,60  554.2857142857142,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="554.2857142857142" y="663">08.02.2020 22:01:51</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="725.7142857142857,60  725.7142857142857,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="725.7142857142857" y="663">08.02.2020 22:02:12</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="897.1428571428571,60  897.1428571428571,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="897.1428571428571" y="663">08.02.2020 22:02:33</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="1068.5714285714284,60  1068.5714285714284,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="1068.5714285714284" y="663">08.02.2020 22:02:54</text>
+	<polyline fill="none" stroke="#a0a0a0" stroke-dasharray="6" stroke-width="1" points="1239.9999999999998,60  1239.9999999999998,660"/>
+	<text font-size="12" letter-spacing="0.5" writing-mode="tb" x="1239.9999999999998" y="663">08.02.2020 22:03:14</text>
+<!-- График1 -->
+	<polyline fill="none" stroke="#0000ff" stroke-width="2" points="40.0,660 
+40.0,660 
+40.0,660.0 
+40.04965517241379,660 
+40.04965517241379,540.0 
+81.40413793103448,540 
+81.40413793103448,420.0 
+122.78344827586207,420 
+122.78344827586207,300.0 
+164.17931034482757,300 
+164.17931034482757,180.0 
+205.55862068965519,180 
+205.55862068965519,60.0 
+1206.664827586207,60 
+1206.664827586207,660.0 
+"/>
+<!-- Метрики на графике -->
+<!-- Всплывающие надписи -->
+<g> <circle stroke="#0000ff" cx="40.0" cy="660.0" r="2"/> <title>Время: 08/02/2020 22:00:49.831; VU: 0; Значение: 0</title> </g>
+<g> <circle stroke="#0000ff" cx="40.04965517241379" cy="540.0" r="2"/> <title>Время: 08/02/2020 22:00:49.837; VU: 10; Значение: 10</title> </g>
+<g> <circle stroke="#0000ff" cx="81.40413793103448" cy="420.0" r="2"/> <title>Время: 08/02/2020 22:00:54.834; VU: 20; Значение: 20</title> </g>
+<g> <circle stroke="#0000ff" cx="122.78344827586207" cy="300.0" r="2"/> <title>Время: 08/02/2020 22:00:59.834; VU: 30; Значение: 30</title> </g>
+<g> <circle stroke="#0000ff" cx="164.17931034482757" cy="180.0" r="2"/> <title>Время: 08/02/2020 22:01:04.836; VU: 40; Значение: 40</title> </g>
+<g> <circle stroke="#0000ff" cx="205.55862068965519" cy="60.0" r="2"/> <title>Время: 08/02/2020 22:01:09.836; VU: 50; Значение: 50</title> </g>
+<g> <circle stroke="#0000ff" cx="1206.664827586207" cy="660.0" r="2"/> <title>Время: 08/02/2020 22:03:10.803; VU: 0; Значение: 0</title> </g>
+</svg>

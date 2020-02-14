@@ -42,6 +42,7 @@ public class MultiLoad implements ScriptRun {
     }
 
 
+
     public static void main(String[] args) throws Exception {
         Configurator.setRootLevel(Level.INFO);
         MultiLoad multiLoad = new MultiLoad();

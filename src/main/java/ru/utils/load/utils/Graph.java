@@ -8,19 +8,20 @@ import ru.utils.load.data.metrics.MetricViewGroup;
 
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Graph {
     private static final Logger LOG = LogManager.getLogger(Graph.class);
-
-    private final DecimalFormat decimalFormat = new DecimalFormat("###.##");
-
+    private final NumberFormat decimalFormat = NumberFormat.getInstance();
     private final DateFormat datetimeFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
+    private final DateFormat sdf4 = new SimpleDateFormat("HH:mm:ss.SSS");
+    private final DateFormat sdf5 = new SimpleDateFormat("yyyyMMdd");
 
     public Graph() {
     }
@@ -67,8 +68,8 @@ public class Graph {
         int yText = xSize / 400;
         int fontSize = xSize / 120;
         int fontAxisSize = xSize / 110;
-        int lineSize = Math.max(1, xSize / 2000);
-        String background = "#dfdfdf";
+        int lineSize = Math.max(1, xSize / 5000);
+        String background = "#f0f0f0"; //"#dfdfdf";
 
         // максимальное/минимальное значение Y и X
         long xValueMax = 0L;
@@ -103,7 +104,7 @@ public class Graph {
         for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {
             if (!metricViewGroup.getMetricView(i).getTitle().isEmpty()) {
                 sbResult.append(
-                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + metricViewGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize*2) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
+                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + metricViewGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize * 4) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
                         "\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + metricViewGroup.getMetricView(i).getTitle() + "</text>\n");
                 yCur = yCur + fontSize;
             }
@@ -126,6 +127,7 @@ public class Graph {
         double yStep = ySize / (yScale * 1.00);
         double yValue = 0.00;
         yCur = yMax;
+        double yValueMem = yValue;
 //        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}; yCur:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep, yCur);
 
         while (yCur > (yStart+yStep/2)) {
@@ -136,14 +138,16 @@ public class Graph {
                     "stroke=\"#a0a0a0\" " +
                     "stroke-dasharray=\"" + xText + "\" " +
                     "stroke-width=\"" + lineSize + "\" " +
-                    "points=\"" + xStart + "," + yCur + "  " + xMax + "," + yCur + "\"/>\n")
-                    .append("\t\t\t\t<text " +
-                            "font-size=\"" + fontAxisSize + "\" " +
+                    "points=\"" + xStart + "," + yCur + "  " + xMax + "," + yCur + "\"/>\n");
+            if (yValueMem != yValue) {
+                    sbResult.append("\t\t\t\t<text " +
+                            "font-size=\"" + fontSize + "\" " +
                             "x=\"0\" " +
                             "y=\"" + (yCur + yText) + "\">" +
-                            decimalFormat.format(yValue) + "</text>\n");
+                        decimalFormat.format(yValue) + "</text>\n");
+            }
+            yValueMem = yValue;
         }
-
 
         // ось X
         sbResult.append("<!-- Ось X -->\n");
@@ -161,6 +165,7 @@ public class Graph {
         long xValue = startTime;
 //        LOG.info("xSize:{}; xStart: {}; xScale:{}; xRatio:{}; xRatioValue:{}; xStep:{}", xSize, xStart, xScale, xRatio, xRatioValue, xStep);
 
+        long xValueMem = 0;
         while ((int) xCur <= xMax) {
 //            LOG.info("xMax: {}, xCur: {}", xMax, xCur);
             if (xCur > xStart) {
@@ -172,12 +177,18 @@ public class Graph {
                         "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n");
             }
             sbResult.append("\t\t\t\t<text " +
-                    "font-size=\"" + fontAxisSize + "\" " +
-                    "letter-spacing=\"3\" " + // 0.5
+                    "font-size=\"" + fontSize + "\" " +
+                    "letter-spacing=\"0\" " + // 0.5
                     "writing-mode=\"tb\" " +
                     "x=\"" + xCur + "\" " +
-                    "y=\"" + (yMax + yText) + "\">" +
-                    datetimeFormat.format(xValue) + "</text>\n");
+                    "y=\"" + (yMax + yText) + "\">");
+//                    datetimeFormat.format(xValue) + "</text>\n");
+            if (!sdf5.format(xValueMem).equals(sdf5.format(xValue))){ // полную даты выводим 1 раз
+                sbResult.append(sdf1.format(xValue)).append("</text>\n");
+                xValueMem = xValue;
+            } else {
+                sbResult.append(sdf4.format(xValue)).append("</text>\n");
+            }
             xCur = xCur + xStep;
             xValue = xValue + (long) xRatioValue;
         }
@@ -214,7 +225,7 @@ public class Graph {
 
             List<Double> yPrevList = new ArrayList<>();
             for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
-                    int numInList = metricViewGroup
+                    int numInList = metricViewGroup // номер метрики в общем вписке
                             .getMetricViewList()
                             .get(m)
                             .getNumInList();
@@ -248,11 +259,14 @@ public class Graph {
                     }
                     // точка с всплывающим описанием
                     sbSignatureTitle.append("<g> " +
-                            "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 3) + "\"/> " +
-                            "<title>Время: " +
-                            sdf1.format(metricsList.get(i).getTime()) + "; VU: " +
-                            multiRunService.getVuCount(metricsList.get(i).getTime()) + "; Значение: " +
-                            decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
+                            "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 5) + "\"/> " +
+                            "<title>");
+                    if (!metricViewGroup.getMetricView(m).getTitle().isEmpty()) {
+                        sbSignatureTitle.append(metricViewGroup.getMetricView(m).getTitle() + "; ");
+                    }
+                    sbSignatureTitle.append("время: " + sdf1.format(metricsList.get(i).getTime()) + "; " +
+                            "VU: " +  multiRunService.getVuCount(metricsList.get(i).getTime()) + "; " +
+                            "значение: " + decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
                             "</g>\n");
             }
         }

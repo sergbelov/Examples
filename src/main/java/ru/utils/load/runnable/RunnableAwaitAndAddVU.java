@@ -33,12 +33,15 @@ public class RunnableAwaitAndAddVU implements Runnable {
     @Override
     public void run() {
         LOG.info("Старт потока {}", name);
+
+        //ToDo отладить при прерывании теста
         while (multiRunService.isRunning() && (
                 System.currentTimeMillis() < multiRunService.getTestStopTime() ||
-                        multiRunService.getThreadCount() > 0)) {
+                multiRunService.getThreadCount() > 0)) {
 
             multiRunService.startGroupVU(); // старт новой группы VU (если нужно)
         }
+        while (multiRunService.getThreadCount() > 0){} // ждем завершения работы заданий
         countDownLatch.countDown();
         LOG.info("Остановка потока {}", name);
     }

@@ -7,36 +7,35 @@ import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
-public class CallableVU implements Callable<List<Call>> {
-
-    private static final Logger LOG = LogManager.getLogger(CallableVU.class);
+public class RunnableVU implements Runnable {
+    private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
 
     private final String name;
     private ScriptRun baseScript;
-    private ExecutorService executorService;
+    private List<Call> callList;
     private MultiRunService multiRunService;
+    private ExecutorService executorService;
 
-    public CallableVU(
+    public RunnableVU(
             String name,
             ScriptRun baseScript,
-            ExecutorService executorService,
-            MultiRunService multiRunService
+            List<Call> callList,
+            MultiRunService multiRunService,
+            ExecutorService executorService
     ) {
         this.name = name;
         LOG.debug("Инициализация потока {}", name);
         this.baseScript = baseScript;
-        this.executorService = executorService;
+        this.callList = callList;
         this.multiRunService = multiRunService;
+        this.executorService = executorService;
     }
 
     @Override
-    public List<Call> call() throws Exception {
-        multiRunService.threadInc(); // счетчик активных потоков
-        List<Call> callListVU = new CopyOnWriteArrayList<>();
+    public void run() {
+        multiRunService.startThread(); // счетчик активных потоков
         LOG.info("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
@@ -44,15 +43,24 @@ public class CallableVU implements Callable<List<Call>> {
                 executorService.submit(new RunnableTaskVU(
                         name,
                         baseScript,
-                        callListVU,
+                        callList,
                         multiRunService));
             } else {
-                if (baseScript.start(multiRunService.getApiNum())) {
-                    callListVU.add(new Call(
-                            start,
-                            System.currentTimeMillis())); // фиксируем вызов
-                } else {
-                    callListVU.add(new Call(start)); // фиксируем вызов
+                if (multiRunService.isAsync()){ // асинхронный вызов, не ждем завершения выполнения
+                    callList.add(new Call(start)); // фиксируем вызов
+                    try {
+                        baseScript.start(multiRunService.getApiNum());
+                    } catch (Exception e) {
+                        multiRunService.errorListAdd(name, e);
+                    }
+                } else { // синхронный вызов, ждем завершения выполнения
+                    try {
+                        baseScript.start(multiRunService.getApiNum());
+                        callList.add(new Call(start, System.currentTimeMillis())); // фиксируем вызов
+                    } catch (Exception e) {
+                        callList.add(new Call(start)); // фиксируем вызов
+                        multiRunService.errorListAdd(name, e);
+                    }
                 }
             }
 
@@ -67,11 +75,10 @@ public class CallableVU implements Callable<List<Call>> {
                 }
             }
         }
-        multiRunService.threadDec();
+        multiRunService.stopThread();
         multiRunService.stopVU();
         multiRunService.vuListAdd();
         LOG.info("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
-        return callListVU;
     }
 
     /**

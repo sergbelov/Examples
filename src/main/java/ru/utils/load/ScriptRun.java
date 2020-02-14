@@ -1,5 +1,5 @@
 package ru.utils.load;
 
 public interface ScriptRun{
-    boolean start(int apiNum);
+    void start(int apiNum) throws Exception;
 }

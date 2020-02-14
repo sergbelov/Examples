@@ -6,20 +6,20 @@ import java.util.List;
  * Результат GROUP запроса из БД
  */
 public class DBResponse {
-    String sqlSelect;        // sql select
-    List<DBData> dbDataList; // список полученных значений
+    String sqlSelect; // sql select
+    List<DBMetric> dbMetricList; // список полученных значений
 
-    public DBResponse(String sqlSelect, List<DBData> dbDataList) {
+    public DBResponse(String sqlSelect, List<DBMetric> dbMetricList) {
         this.sqlSelect = sqlSelect;
-        this.dbDataList = dbDataList;
+        this.dbMetricList = dbMetricList;
     }
 
     public String getSqlSelect() {
         return sqlSelect;
     }
 
-    public List<DBData> getDbDataList() {
-        return dbDataList;
+    public List<DBMetric> getDbMetricList() {
+        return dbMetricList;
     }
 
 
@@ -31,7 +31,7 @@ public class DBResponse {
     }
     public double getValue(int num) {
         if (num == -1){ return 0;}
-        return dbDataList.get(num).getValue().doubleValue();
+        return dbMetricList.get(num).getValue().doubleValue();
     }
 
 
@@ -43,7 +43,7 @@ public class DBResponse {
     }
     public int getIntValue(int num) {
         if (num == -1){ return 0;}
-        return dbDataList.get(num).getValue().intValue();
+        return dbMetricList.get(num).getValue().intValue();
     }
 
 
@@ -55,7 +55,7 @@ public class DBResponse {
     }
     public long getLongValue(int num) {
         if (num == -1){ return 0;}
-        return dbDataList.get(num).getValue().longValue();
+        return dbMetricList.get(num).getValue().longValue();
     }
 
 
@@ -67,7 +67,7 @@ public class DBResponse {
     }
     public float getFloatValue(int num) {
         if (num == -1){ return 0;}
-        return dbDataList.get(num).getValue().floatValue();
+        return dbMetricList.get(num).getValue().floatValue();
     }
 
 
@@ -79,7 +79,7 @@ public class DBResponse {
     }
     public double getDoubleValue(int num) {
         if (num == -1){ return 0;}
-        return dbDataList.get(num).getValue().doubleValue();
+        return dbMetricList.get(num).getValue().doubleValue();
     }
 
     /**
@@ -89,8 +89,8 @@ public class DBResponse {
      */
     private int getNumberByName(String name){
         int res = -1;
-        for (int i = 0; i < dbDataList.size(); i++){
-            if (dbDataList.get(i).getName().equalsIgnoreCase(name)){
+        for (int i = 0; i < dbMetricList.size(); i++){
+            if (dbMetricList.get(i).getName().equalsIgnoreCase(name)){
                 res = i;
                 break;
             }

@@ -17,44 +17,44 @@ public class RunnableTaskVU implements Runnable {
 
     private final String name;
     private ScriptRun baseScript;
-    private List<Call> callListVU;
+    private List<Call> callList;
     private MultiRunService multiRunService;
 
     public RunnableTaskVU(
             String name,
             ScriptRun baseScript,
-            List<Call> callListVU,
+            List<Call> callList,
             MultiRunService multiRunService
     ) {
         this.name = name + "_Task";
         LOG.trace("Инициализация потока {}", name);
         this.baseScript = baseScript;
-        this.callListVU = callListVU;
+        this.callList = callList;
         this.multiRunService = multiRunService;
     }
 
     @Override
     public void run() {
-        LOG.trace("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
-        multiRunService.threadInc(); // счетчик активных потоков
+        LOG.debug("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
+        multiRunService.startThread(); // счетчик активных потоков
         long start = System.currentTimeMillis();
-        if (baseScript.start(multiRunService.getApiNum())) {
-            long stop = System.currentTimeMillis();
-            long curDur = stop - start;
-//            if (curDur > multiRunService.getPacing()) {
-//                LOG.warn("Длительность выполнения {} превышает pacing ({} > {})", name, curDur, multiRunService.getPacing());
-//            }
-            synchronized (callListVU) {
-                callListVU.add(new Call(
-                        start,
-                        stop)); // фиксируем вызов
+        if (multiRunService.isAsync()){ // асинхронный вызов, не ждем завершения выполнения
+            callList.add(new Call(start)); // фиксируем вызов
+            try {
+                baseScript.start(multiRunService.getApiNum());
+            } catch (Exception e) {
+                multiRunService.errorListAdd(name, e);
             }
-        } else {
-            synchronized (callListVU) {
-                callListVU.add(new Call(start)); // фиксируем вызов
+        } else { // синхронный вызов, ждем завершения выполнения
+            try {
+                baseScript.start(multiRunService.getApiNum());
+                callList.add(new Call(start, System.currentTimeMillis())); // фиксируем вызов
+            } catch (Exception e) {
+                callList.add(new Call(start)); // фиксируем вызов
+                multiRunService.errorListAdd(name, e);
             }
         }
-        multiRunService.threadDec();
-        LOG.trace("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
+        multiRunService.stopThread();
+        LOG.debug("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
     }
 }

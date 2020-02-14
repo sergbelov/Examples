@@ -3,6 +3,7 @@ package ru.utils.load.data.testplan;
 public class TestPlan {
     int apiNum;                // Порядковый номер сервиса внутри сценария (класса)
     String name;               // Наименование сервиса
+    boolean async;             // Асинхронный вызов
     int testDuration;          // Длительность теста в минутах
     int vuCountMin;            // Стартовое количество виртуальных пользователей
     int vuCountMax;            // Максимальное количество виртуальных пользователей
@@ -20,6 +21,7 @@ public class TestPlan {
     public TestPlan(
             int apiNum,
             String name,
+            boolean async,
             int testDuration,
             int vuCountMin,
             int vuCountMax,
@@ -32,6 +34,7 @@ public class TestPlan {
             String keyBpm) {
         this.apiNum = apiNum;
         this.name = name;
+        this.async = async;
         this.testDuration = testDuration;
         this.vuCountMin = vuCountMin;
         this.vuCountMax = vuCountMax;
@@ -49,6 +52,8 @@ public class TestPlan {
     public String getName() {
         return name;
     }
+
+    public boolean isAsync() { return async; }
 
     public int getTestDuration() {
         return testDuration;

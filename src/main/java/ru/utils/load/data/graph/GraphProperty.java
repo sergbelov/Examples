@@ -29,19 +29,20 @@ public class GraphProperty {
                 Arrays.asList(
                         new MetricView(VarInList.DurMin.getNum(), "минимальная длительность (мс)", "#00009f"),
                         new MetricView(VarInList.DurAvg.getNum(), "средняя длительность (мс)", "#9f9f00"),
-                        new MetricView(VarInList.Dur90.getNum(), "перцентиль 90% (мс)", "#009f00"),
+                        new MetricView(VarInList.Dur90.getNum(), "перцентиль 90 (мс)", "#009f00"),
                         new MetricView(VarInList.DurMax.getNum(), "максимальная длительность (мс)", "#ff0000"))));
         // 2 - TPS (в списке metricsList)
-        metricViewGroupList.add(new MetricViewGroup("Количество операций в секунду (TPS)",
+        metricViewGroupList.add(new MetricViewGroup("Количество запросов в секунду (tps)",
                 Arrays.asList(
-                        new MetricView(VarInList.Tps.getNum(), "TPS - отправлено", "#00009f"),
-                        new MetricView(VarInList.TpsRs.getNum(), "TPS - выполнено", "#00af00"))));
+                        new MetricView(VarInList.Tps.getNum(), "tps - отправлено", "#00009f"),
+                        new MetricView(VarInList.TpsRs.getNum(), "tps - выполнено", "#00af00"))));
         // 3 - Статистика из БД БПМ (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Статистика из БД БПМ",
                 Arrays.asList(
                         new MetricView(VarInList.CountCall.getNum(), "отправлено запросов", "#00009f"),
-                        new MetricView(VarInList.DbComplete.getNum(), "COMPLETE", "#009f00"),
-                        new MetricView(VarInList.DbRunning.getNum(), "RUNNING", "#ff9f00"))));
+                        new MetricView(VarInList.DbCompleted.getNum(), "COMPLETED", "#009f00"),
+                        new MetricView(VarInList.DbRunning.getNum(), "RUNNING", "#ff9f00"),
+                        new MetricView(VarInList.DbLost.getNum(), "потеряно", "#ff0000"))));
         // 4 - Ошибки (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Ошибки",
                 Arrays.asList(new MetricView(VarInList.Errors.getNum(), "", "#ff0000"))));

@@ -1,22 +1,38 @@
 package ru.utils.load.data.sql;
 
-/**
- * Значение поля из sql select
- */
 public class DBData {
-    String name;
-    Number value;
+    private long startTime;
+    private long stopTime;
+    private String processState;
 
-    public DBData(String name, Number value) {
-        this.name = name;
-        this.value = value;
+    public DBData(long startTime, long stopTime, String processState) {
+        this.startTime = startTime;
+        this.stopTime = stopTime;
+        this.processState = processState;
     }
 
-    public String getName() {
-        return name;
+    public DBData(long startTime, String processState) {
+        this.startTime = startTime;
+        this.stopTime = 0;
+        this.processState = processState;
     }
 
-    public Number getValue() {
-        return value;
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public long getStopTime() {
+        return stopTime;
+    }
+
+    public String getProcessState() {
+        return processState;
+    }
+
+    public long getDuration(){
+        if (stopTime > 0){
+            return stopTime - stopTime;
+        }
+        return 0;
     }
 }

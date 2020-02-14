@@ -8,10 +8,11 @@ package ru.utils.load.data.graph;
 4  - tps
 5  - tpsRs
 6  - countCall
-7  - countCallComplete
-8  - dbComplete
+7  - countCallRs
+8  - dbCompleted
 9  - dbRunning
-10 - errors
+10 - dbLost
+11 - errors
 */
 public enum VarInList {
 
@@ -50,12 +51,12 @@ public enum VarInList {
             return 6;
         }
     },
-    CountCallCompete {
+    CountCallRs {
         public int getNum() {
             return 7;
         }
     },
-    DbComplete {
+    DbCompleted {
         public int getNum() {
             return 8;
         }
@@ -65,9 +66,14 @@ public enum VarInList {
             return 9;
         }
     },
-    Errors {
+    DbLost {
         public int getNum() {
             return 10;
+        }
+    },
+    Errors {
+        public int getNum() {
+            return 11;
         }
     };
 

@@ -9,8 +9,6 @@ import org.apache.logging.log4j.Logger;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.graph.GraphProperty;
-import ru.utils.load.data.metrics.MetricView;
-import ru.utils.load.data.metrics.MetricViewGroup;
 import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
 import ru.utils.load.runnable.RunnableLoadAPI;
@@ -45,7 +43,6 @@ public class MultiRun {
 
     private List<TestPlans> testPlansList = new ArrayList<>();
     private List<MultiRunService> multiRunServiceList = new ArrayList<>();
-    private DataFromSQL dataFromSQL = new DataFromSQL(); // получение данных из БД БПМ
     private GraphProperty graphProperty = new GraphProperty();
     private final boolean STOP_TEST_ON_ERROR;
     private final int COUNT_ERROR_FOR_STOP_TEST;
@@ -56,7 +53,6 @@ public class MultiRun {
     private final String CSM_URL;
     private final String PATH_REPORT;
     private int apiMax = -1;
-
 
     public MultiRun() {
         propertiesService.readProperties(PROPERTIES_FILE);
@@ -69,13 +65,6 @@ public class MultiRun {
         SPLUNK_URL = propertiesService.getString("SPLUNK");
         CSM_URL = propertiesService.getString("CSM");
         PATH_REPORT = propertiesService.getString("PATH_REPORT");
-
-        if (!propertiesService.getString("DB_URL").isEmpty()) {
-            dataFromSQL.init( // подключаемся к БД
-                    propertiesService.getString("DB_URL"),
-                    propertiesService.getString("DB_USER_NAME"),
-                    propertiesService.getStringDecode("DB_USER_PASSWORD"));
-        }
 
         String fileNameLoadParameters = "TestPlans.json";
         Gson gson = new GsonBuilder() // с форматированием
@@ -93,9 +82,7 @@ public class MultiRun {
         }
     }
 
-    public void end(){
-        dataFromSQL.end();
-    }
+    public void end(){}
 
 
     /**
@@ -112,6 +99,7 @@ public class MultiRun {
                             this,
                             testPlan.getApiNum(),
                             testPlan.getName(),
+                            testPlan.isAsync(),
                             testPlan.getTestDuration(),
                             testPlan.getVuCountMin(),
                             testPlan.getVuCountMax(),
@@ -128,7 +116,9 @@ public class MultiRun {
                             GRAFANA_TRANSPORT_THREAD_POOLS,
                             SPLUNK_URL,
                             CSM_URL,
-                            dataFromSQL,
+                            propertiesService.getString("DB_URL"),
+                            propertiesService.getString("DB_USER_NAME"),
+                            propertiesService.getStringDecode("DB_USER_PASSWORD"),
                             testPlan.getKeyBpm(),
                             PATH_REPORT);
                 }
@@ -142,6 +132,12 @@ public class MultiRun {
     public GraphProperty getGraphProperty() { return graphProperty;}
 
     /**
+     * Список MultiRunService
+     * @return
+     */
+    public List<MultiRunService> getMultiRunServiceList() { return multiRunServiceList;}
+
+    /**
      * Сервис для API по номеру
      * @param apiNum
      * @return
@@ -151,6 +147,22 @@ public class MultiRun {
     }
 
     public void start(ScriptRun baseScript){
+/*
+        // отладка
+        final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        long startTime = 0L, stopTime = 0L;
+        try {
+            startTime= sdf2.parse("01-01-2020 00:00:00").getTime();
+            stopTime= sdf2.parse("10-02-2020 23:59:59").getTime();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        LOG.info("\n{}", dataFromSQL.getDoubleCheck(startTime, stopTime));
+        if (1==1) {
+            return;
+        }
+*/
+
         if (apiMax == -1) {
             LOG.error("Не задано количество тестируемых сервисов");
             return;

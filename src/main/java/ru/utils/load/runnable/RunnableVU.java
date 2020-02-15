@@ -71,7 +71,7 @@ public class RunnableVU implements Runnable {
                 if (multiRunService.getPacing() > curDur) {
                     sleep(multiRunService.getPacing() - curDur); // задержка перед запуском следующей итерации
 //                } else if (curDur > multiRunService.getPacing()) {
-//                    LOG.warn("Длительность выполнения {} превышает pacing ({} > {})", name, curDur, multiRunService.getPacing());
+//                    LOG.warn("Длительность выполнения API {} превышает pacing ({} > {})", name, curDur, multiRunService.getPacing());
                 }
             }
         }

@@ -24,12 +24,12 @@ public class GraphProperty {
         metricViewGroupList.add(new MetricViewGroup("Running Vusers",
                 Arrays.asList(new MetricView(0, "", "#0000ff"))));
 
-        // 1 - Длительность выполнения (в списке metricsList)
-        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения",
+        // 1 - Длительность выполнения API (в списке metricsList)
+        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения API",
                 Arrays.asList(
                         new MetricView(VarInList.DurMin.getNum(), "минимальная длительность (мс)", "#00009f"),
                         new MetricView(VarInList.DurAvg.getNum(), "средняя длительность (мс)", "#9f9f00"),
-                        new MetricView(VarInList.Dur90.getNum(), "перцентиль 90 (мс)", "#009f00"),
+                        new MetricView(VarInList.Dur90.getNum(), "90 перцентиль (мс)", "#009f00"),
                         new MetricView(VarInList.DurMax.getNum(), "максимальная длительность (мс)", "#ff0000"))));
         // 2 - TPS (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Количество запросов в секунду (tps)",

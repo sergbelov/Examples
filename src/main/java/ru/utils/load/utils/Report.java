@@ -60,7 +60,7 @@ public class Report {
 
         /* ==== графики
             0 - VU
-            1 - Длительность выполнения
+            1 - Длительность выполнения API
             2 - TPS
             3 - Статистика из БД БПМ
             4 - Ошибки
@@ -125,9 +125,9 @@ public class Report {
                         printMetrics))
                 .append("\t\t</div>\n");
 
-        // длительность выполнения
+        // длительность выполнения API
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine("Длительность выполнения",
+                .append(graph.getSvgGraphLine("Длительность выполнения API",
                         multiRunService,
                         multiRunService.getMetricsList(),
                         false,
@@ -137,11 +137,11 @@ public class Report {
         sbHtml.append("<!-- Статистика по длительности выполнения сервиса -->\n" +
                 "\t\t<div>\n<table><tbody>\n" +
                 "<tr><th rowspan=\"2\">Сервис</th>\n" +
-                "<th colspan=\"4\">Длительность выполнения (мс)</th>\n" +
+                "<th colspan=\"4\">Длительность выполнения API (мс)</th>\n" +
                 "<th colspan=\"3\">Количество запросов</th></tr>\n" +
                 "<tr><th>минимальная</th>\n" +
                 "<th>средняя</th>\n" +
-                "<th>перцентиль 90</th>\n" +
+                "<th>90 перцентиль</th>\n" +
                 "<th>максимальная</th>\n" +
                 "<th>общее</th>\n" +
                 "<th>с ответом</th>\n" +
@@ -258,7 +258,7 @@ public class Report {
                 "<th rowspan=\"2\">Отправлено<br>запросов</th>" +
                 "<th colspan=\"3\">Процессы в БД</th>" +
                 "<th rowspan=\"2\">tps max</th>" +
-                "<th rowspan=\"2\">Перцентиль<br>90</th>" +
+                "<th rowspan=\"2\">90<br>перцентиль</th>" +
                 "<th rowspan=\"2\">CPU<br>core max<br>(%)</th>" +
                 "<th rowspan=\"2\">Подробно</th></tr\n>" +
                 "<tr><th>в статусе<br>COMPETED</th>" +

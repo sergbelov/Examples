@@ -310,14 +310,14 @@ public class MultiRunService {
                 .append("<tr><td>Максимальное количество VU</td><td>")
                 .append(vuCountMax)
                 .append("</td></tr>\n")
-                .append("<tr><td>Периодичность снятия метрик (сек):</td><td>")
+                .append("<tr><td>Периодичность снятия метрик (сек)</td><td>")
                 .append(statisticsStepTime)
                 .append("</td></tr>\n")
-                .append("<tr><td>Прерывать тест при большом количестве ошибок:</td><td>")
+                .append("<tr><td>Прерывать тест при большом количестве ошибок</td><td>")
                 .append(stopTestOnError ? "Да" : "Нет")
                 .append("</td></tr>\n");
         if (stopTestOnError) {
-            res.append("<tr><td>Количество ошибок для прерывания теста:</td><td>")
+            res.append("<tr><td>Количество ошибок для прерывания теста</td><td>")
                     .append(countErrorForStopTest)
                     .append("</td></tr>\n");
         }

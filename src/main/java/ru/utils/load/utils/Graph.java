@@ -67,6 +67,7 @@ public class Graph {
         int xText = xSize / 500;
         int yText = xSize / 400;
         int fontSize = xSize / 120;
+        int fontSizeX = xSize / 156;
         int fontAxisSize = xSize / 110;
         int lineSize = Math.max(1, xSize / 5000);
         String background = "#f0f0f0"; //"#dfdfdf";
@@ -177,12 +178,18 @@ public class Graph {
                         "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n");
             }
             sbResult.append("\t\t\t\t<text " +
-                    "font-size=\"" + fontSize + "\" " +
+                    "font-size=\"");
+            if (!sdf5.format(xValueMem).equals(sdf5.format(xValue))) { // шрифт для полной даты
+                sbResult.append(fontSizeX);
+            } else {
+                sbResult.append(fontSizeX + fontSizeX/10);
+            }
+            sbResult.append("\" " +
+                    "font-family=\"Courier New\" " +
                     "letter-spacing=\"0\" " + // 0.5
                     "writing-mode=\"tb\" " +
                     "x=\"" + xCur + "\" " +
                     "y=\"" + (yMax + yText) + "\">");
-//                    datetimeFormat.format(xValue) + "</text>\n");
             if (!sdf5.format(xValueMem).equals(sdf5.format(xValue))){ // полную даты выводим 1 раз
                 sbResult.append(sdf1.format(xValue)).append("</text>\n");
                 xValueMem = xValue;

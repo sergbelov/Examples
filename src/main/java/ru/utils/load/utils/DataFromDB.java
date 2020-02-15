@@ -61,11 +61,15 @@ public class DataFromDB {
      * @return
      */
     public DBService getDbService(){
-        return new DBService.Builder()
-                .dbUrl(dbUrl)
-                .dbUserName(dbUser)
-                .dbPassword(dbPassword)
-                .build();
+        if (dbUrl != null && !dbUrl.isEmpty()) {
+            return new DBService.Builder()
+                    .dbUrl(dbUrl)
+                    .dbUserName(dbUser)
+                    .dbPassword(dbPassword)
+                    .build();
+        } else {
+            return null;
+        }
     }
 
     /**

@@ -3,11 +3,8 @@ package ru.utils.load.runnable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.db.DBService;
-import ru.utils.load.ScriptRun;
-import ru.utils.load.data.Call;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.utils.DataFromDB;
-import ru.utils.load.utils.MultiRunService;
 
 import java.sql.ResultSet;
 import java.text.DateFormat;
@@ -60,7 +57,7 @@ public class RunnableSelectDB implements Runnable {
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')";
 
         DBService dbService = dataFromDB.getDbService();
-        if (dbService.connect()) {
+        if (dbService != null && dbService.connect()) {
             try {
                 int row = 0;
                 LOG.debug("{}: Запрос данных из БД БПМ...\n{}", name, sql);
@@ -91,12 +88,12 @@ public class RunnableSelectDB implements Runnable {
                 }
                 LOG.info("{}: {} - {}", name, sdf1.format(System.currentTimeMillis()), row);
                 resultSet.close();
+                dbService.disconnect();
                 LOG.debug("{}: Обработка данных из БД БПМ завершена.", name);
             } catch (Exception e) {
                 LOG.error("{}\n", name, e);
             }
         }
-        dbService.disconnect();
         LOG.debug("Остановка потока {}", name);
         countDownLatch.countDown();
     }

@@ -10,7 +10,7 @@
         "vuCountMin": 5,
         "vuCountMax": 100,
         "vuStepTime": 5,
-        "vuStepTimeDelay": 0,
+        "vuStepTimeDelay": 100,
         "vuStepCount": 10,
         "pacing": 1000,
         "pacingType": 0,

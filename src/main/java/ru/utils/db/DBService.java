@@ -656,8 +656,8 @@ ResultSet.CONCUR_UPDATABLE
         disconnect(true);
     }
     public void disconnect(boolean shutdownForHSQLDB) {
-        LOG.info("SQL Disconnect: {}", dbUrl);
         if (isConnection()) {
+            LOG.info("SQL Disconnect: {}", dbUrl);
             try {
                 if (dbType == DBType.HSQLDB && shutdownForHSQLDB) {
                     execute("SHUTDOWN");

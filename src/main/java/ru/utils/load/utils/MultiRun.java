@@ -38,6 +38,8 @@ public class MultiRun {
         put("GRAFANA_TRANSPORT_THREAD_POOLS", "");
         put("SPLUNK", "");
         put("CSM", "");
+
+        put("FILE_TEST_PLAN", "TestPlans.json");
         put("PATH_REPORT", "Reports/");
     }});
 
@@ -51,6 +53,7 @@ public class MultiRun {
     private final String GRAFANA_TRANSPORT_THREAD_POOLS;
     private final String SPLUNK_URL;
     private final String CSM_URL;
+    private final String FILE_TEST_PLAN;
     private final String PATH_REPORT;
     private int apiMax = -1;
 
@@ -64,25 +67,29 @@ public class MultiRun {
         GRAFANA_TRANSPORT_THREAD_POOLS = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS");
         SPLUNK_URL = propertiesService.getString("SPLUNK");
         CSM_URL = propertiesService.getString("CSM");
+        FILE_TEST_PLAN = propertiesService.getString("FILE_TEST_PLAN");
         PATH_REPORT = propertiesService.getString("PATH_REPORT");
 
-        String fileNameLoadParameters = "TestPlans.json";
         Gson gson = new GsonBuilder() // с форматированием
                 .setPrettyPrinting()
                 .create();
         try(
                 JsonReader reader = new JsonReader(new InputStreamReader(
-                        new FileInputStream(fileNameLoadParameters),
+                        new FileInputStream(FILE_TEST_PLAN),
                         "UTF-8"));
         )
         {
             testPlansList = gson.fromJson(reader, new TypeToken<List<TestPlans>>(){}.getType());
         } catch (Exception e) {
-            LOG.error("Ошибка при чтении данных из файла {}\n", fileNameLoadParameters, e);
+            LOG.error("Ошибка при чтении данных из файла {}\n", FILE_TEST_PLAN, e);
         }
     }
 
-    public void end(){}
+    public void end(){
+        for (MultiRunService multiRunService: multiRunServiceList){
+            multiRunService.end();
+        }
+    }
 
 
     /**

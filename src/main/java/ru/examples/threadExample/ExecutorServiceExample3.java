@@ -10,30 +10,27 @@ public class ExecutorServiceExample3 {
     private int threadCount = 10;
     private AtomicInteger atomicInteger = new AtomicInteger(0);
 
-    public AtomicInteger getAtomicInteger() {
-        return atomicInteger;
+    public int getAtomicInteger() {
+        return atomicInteger.get();
     }
 
-    public void inc(){
-        atomicInteger.incrementAndGet();
+    public int inc() {
+        return atomicInteger.incrementAndGet();
     }
 
-    public void dec(){
-        atomicInteger.decrementAndGet();
+    public int dec() {
+        return atomicInteger.decrementAndGet();
     }
 
-    public void run(){
+    public void run() {
         CountDownLatch countDownLatch = new CountDownLatch(threadCount * 2);
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(new RunnableInc(i, countDownLatch, this));
             executorService.submit(new RunnableDec(i, countDownLatch, this));
-
-//            executorService.submit(new RunnableInc(i, atomicInteger, countDownLatch));
-//            executorService.submit(new RunnableDec(i, atomicInteger, countDownLatch));
         }
         try {
-            countDownLatch.await();
+            countDownLatch.await(); // ждем завершения работы всех потоков
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -41,70 +38,6 @@ public class ExecutorServiceExample3 {
         System.out.println(atomicInteger.get());
     }
 
-    class RunnableInc implements Runnable {
-
-        final String name;
-        //    AtomicInteger atomicInteger;
-        CountDownLatch countDownLatch;
-        ExecutorServiceExample3 executorServiceExample3;
-
-        //    public RunnableInc(int i, AtomicInteger atomicInteger, CountDownLatch countDownLatch) {
-        public RunnableInc(int i, CountDownLatch countDownLatch, ExecutorServiceExample3 executorServiceExample3) {
-            this.name = "RunnableInc" + i;
-//        this.atomicInteger = atomicInteger;
-            this.countDownLatch = countDownLatch;
-            this.executorServiceExample3 = executorServiceExample3;
-        }
-
-        @Override
-        public void run() {
-            for (int i = 0; i < 100; i++) {
-//                atomicInteger.incrementAndGet();
-//                System.out.println(name + " " + atomicInteger.get());
-                executorServiceExample3.inc();
-                System.out.println(name + " " + executorServiceExample3.getAtomicInteger());
-
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            countDownLatch.countDown();
-        }
-    }
-
-    class RunnableDec implements Runnable {
-
-        final String name;
-        //    AtomicInteger atomicInteger;
-        CountDownLatch countDownLatch;
-        ExecutorServiceExample3 executorServiceExample3;
-
-        //    public RunnableDec(int i, AtomicInteger atomicInteger, CountDownLatch countDownLatch) {
-        public RunnableDec(int i, CountDownLatch countDownLatch, ExecutorServiceExample3 executorServiceExample3) {
-            this.name = "RunnableDec" + i;
-//        this.atomicInteger = atomicInteger;
-            this.countDownLatch = countDownLatch;
-            this.executorServiceExample3 = executorServiceExample3;
-        }
-
-        @Override
-        public void run() {
-            for (int i = 0; i < 50; i++) {
-//                atomicInteger.decrementAndGet();
-//                System.out.println(name + " " + atomicInteger.get());
-                executorServiceExample3.dec();
-                System.out.println(name + " " + executorServiceExample3.getAtomicInteger());
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            countDownLatch.countDown();
-        }
-    }
 
 
     public static void main(String[] args) {
@@ -113,3 +46,73 @@ public class ExecutorServiceExample3 {
     }
 
 }
+
+
+
+
+class RunnableInc implements Runnable {
+    final String name;
+    CountDownLatch countDownLatch;
+    ExecutorServiceExample3 executorServiceExample3;
+
+    public RunnableInc(
+            int i,
+            CountDownLatch countDownLatch,
+            ExecutorServiceExample3 executorServiceExample3) {
+        this.name = "RunnableInc" + i;
+        this.countDownLatch = countDownLatch;
+        this.executorServiceExample3 = executorServiceExample3;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 100; i++) {
+            int atomicIntegerValue = executorServiceExample3.inc();
+            int atomicIntegerGetValue = executorServiceExample3.getAtomicInteger();
+            System.out.println(name + " " +
+                    atomicIntegerValue + " " +
+                    atomicIntegerGetValue + " " +
+                    (atomicIntegerValue != atomicIntegerGetValue ? " !!!" : ""));
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        countDownLatch.countDown();
+    }
+}
+
+class RunnableDec implements Runnable {
+    final String name;
+    CountDownLatch countDownLatch;
+    ExecutorServiceExample3 executorServiceExample3;
+
+    public RunnableDec(
+            int i,
+            CountDownLatch countDownLatch,
+            ExecutorServiceExample3 executorServiceExample3) {
+        this.name = "RunnableDec" + i;
+        this.countDownLatch = countDownLatch;
+        this.executorServiceExample3 = executorServiceExample3;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 50; i++) {
+            int atomicIntegerValue = executorServiceExample3.dec();
+            int atomicIntegerGetValue = executorServiceExample3.getAtomicInteger();
+            System.out.println(name + " " +
+                    atomicIntegerValue + " " +
+                    atomicIntegerGetValue + " " +
+                    (atomicIntegerValue != atomicIntegerGetValue ? " !!!" : ""));
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        countDownLatch.countDown();
+    }
+}
+

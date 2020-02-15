@@ -35,8 +35,8 @@ public class RunnableVU implements Runnable {
 
     @Override
     public void run() {
-        multiRunService.startThread(); // счетчик активных потоков
-        LOG.info("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
+        int threadNum = multiRunService.startThread(); // счетчик активных потоков
+        LOG.info("Старт потока {}, Threads: {}", name, threadNum);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
@@ -75,10 +75,11 @@ public class RunnableVU implements Runnable {
                 }
             }
         }
-        multiRunService.stopThread();
+        threadNum = multiRunService.stopThread();
         multiRunService.stopVU();
         multiRunService.vuListAdd();
-        LOG.info("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
+        LOG.info("Остановка потока {}, Threads: {}", name, threadNum);
+
     }
 
     /**

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultiRunService {
@@ -56,6 +57,9 @@ public class MultiRunService {
     private AtomicInteger threadCount; // // счетчик потоков
     private AtomicInteger vuCount; // текущее количество VU
 
+    private AtomicBoolean running = new AtomicBoolean(true); // тест продолжается
+    private AtomicBoolean warming = new AtomicBoolean(true); // прогрев
+
     private MultiRun multiRun;
     private int apiNum;
     private String name;
@@ -92,9 +96,6 @@ public class MultiRunService {
     private String keyBpm;
 
     private String pathReport;
-
-    Boolean running = true; // тест продолжается
-    boolean warming = true; // прогрев
 
     private String sqlSelect = null;
     private DataFromDB dataFromDB = new DataFromDB(); // получение данных из БД БПМ
@@ -166,9 +167,7 @@ public class MultiRunService {
 
     }
 
-    public void end() {
-        dataFromDB.end();
-    }
+    public void end() { dataFromDB.end(); }
 
     public MultiRunService() {
     }
@@ -259,27 +258,21 @@ public class MultiRunService {
      * Количество активных потоков
      */
     public int getThreadCount() {
-//        synchronized (threadCount) {
-            return threadCount.get();
-//        }
+        return threadCount.get();
     }
 
     /**
      * Новый поток
      */
-    public void startThread() {
-//        synchronized (threadCount) {
-            threadCount.incrementAndGet();
-//        }
+    public int startThread() {
+        return threadCount.incrementAndGet();
     }
 
     /**
      * Завершен поток
      */
-    public void stopThread() {
-//        synchronized (threadCount) {
-            threadCount.decrementAndGet();
-//        }
+    public int stopThread() {
+        return threadCount.decrementAndGet();
     }
 
     /**
@@ -355,9 +348,7 @@ public class MultiRunService {
      * @param count
      */
     public void vuListAdd(long time, int count) {
-//        synchronized (vuList) {
-            vuList.add(new DateTimeValue(time, count));
-//        }
+        vuList.add(new DateTimeValue(time, count));
     }
 
 
@@ -367,12 +358,10 @@ public class MultiRunService {
      * @param error
      */
     public void errorListAdd(String name, Exception error){
-        if (!warming) { // при прогреве ошибки не фиксируем
+        if (!warming.get()) { // при прогреве ошибки не фиксируем
             long time = System.currentTimeMillis();
             LOG.error("{}\n", name, error);
-//            synchronized (errorList) {
-                errorList.add(new ErrorRs(time, error.getMessage()));
-//            }
+            errorList.add(new ErrorRs(time, error.getMessage()));
             if (isStopTestOnError() && getErrorCount() > getCountErrorForStopTest()) { //ToDo
                 stop();
             }
@@ -403,9 +392,7 @@ public class MultiRunService {
      * @return
      */
     public int getVuCount() {
-//        synchronized (vuCount) {
-            return vuCount.get();
-//        }
+        return vuCount.get();
     }
 
     /**
@@ -414,9 +401,7 @@ public class MultiRunService {
     public boolean startVU() {
         boolean r = false;
         if (vuCount.get() < vuCountMax) {
-//            synchronized (vuCount) {
-                vuCount.incrementAndGet();
-//            }
+            vuCount.incrementAndGet();
             r = true;
         }
         return r;
@@ -425,10 +410,8 @@ public class MultiRunService {
     /**
      * Остановка VU
      */
-    public void stopVU() {
-//        synchronized (vuCount) {
-            vuCount.decrementAndGet();
-//        }
+    public int stopVU() {
+        return vuCount.decrementAndGet();
     }
 
 
@@ -528,13 +511,11 @@ public class MultiRunService {
      * Перестаем подавать новую нагрузку
      */
     public void stop() {
-        if (!warming) { // при прогреве тест не прерываем
-            if (running) {
+        if (!warming.get()) { // при прогреве тест не прерываем
+            if (running.get()) {
                 LOG.warn("{}: прерываем подачу нагрузки...", name);
             }
-//            synchronized (running) {
-                running = false;
-//            }
+            running.set(false);
         }
     }
 
@@ -544,7 +525,7 @@ public class MultiRunService {
      * @return
      */
     public boolean isWarming() {
-        return warming;
+        return warming.get();
     }
 
     /**
@@ -553,7 +534,7 @@ public class MultiRunService {
      * @return
      */
     public boolean isRunning() {
-        return running;
+        return running.get();
     }
 
     /**
@@ -634,8 +615,8 @@ public class MultiRunService {
      * @param warming
      */
     public void start(boolean warming) {
-        this.running = true;
-        this.warming = warming;
+        this.running.set(true);
+        this.warming.set(warming);
         vuList.clear();
         errorList.clear();
         threadCount = new AtomicInteger(0);
@@ -672,11 +653,12 @@ public class MultiRunService {
         }
         nextTimeAddVU = testStartTime + vuStepTime * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
 
-        LOG.info("##### {}" +
+        LOG.info("##### {}{}" +
                         "\ntestStartTime: {}" +
                         "\ntestStopTime: {}" +
                         "\nnextTimeAddVU: {}",
                 name,
+                (isWarming() ? " (Прогрев)" : ""),
                 sdf1.format(testStartTime),
                 sdf1.format(testStopTime),
                 sdf1.format(nextTimeAddVU));
@@ -697,7 +679,7 @@ public class MultiRunService {
             vuCountMin = vuCountMinMem;
             vuCountMax = vuCountMaxMem;
             LOG.info("{}: Прогрев завершен...", name);
-            this.warming = false;
+            this.warming.set(false);
         } else {
             LOG.info("{}: Пауза...", name);
             try { // даем время завершиться начатым заданиям

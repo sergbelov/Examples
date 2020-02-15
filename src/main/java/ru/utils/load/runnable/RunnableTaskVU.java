@@ -35,8 +35,8 @@ public class RunnableTaskVU implements Runnable {
 
     @Override
     public void run() {
-        LOG.debug("Старт потока {}, всего потоков {}", name, multiRunService.getThreadCount());
-        multiRunService.startThread(); // счетчик активных потоков
+        int threadNum = multiRunService.startThread(); // счетчик активных потоков
+        LOG.debug("Старт потока {}, всего потоков {}", name, threadNum);
         long start = System.currentTimeMillis();
         if (multiRunService.isAsync()){ // асинхронный вызов, не ждем завершения выполнения
             callList.add(new Call(start)); // фиксируем вызов
@@ -54,7 +54,7 @@ public class RunnableTaskVU implements Runnable {
                 multiRunService.errorListAdd(name, e);
             }
         }
-        multiRunService.stopThread();
-        LOG.debug("Остановка потока {}, осталось {}", name, multiRunService.getThreadCount());
+        threadNum = multiRunService.stopThread();
+        LOG.debug("Остановка потока {}, осталось {}", name, threadNum);
     }
 }

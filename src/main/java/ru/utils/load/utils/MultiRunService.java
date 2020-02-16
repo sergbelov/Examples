@@ -8,6 +8,7 @@ import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.load.data.graph.VarInList;
 import ru.utils.load.data.metrics.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
@@ -628,9 +629,9 @@ public class MultiRunService {
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
 
         if (!warming) { // После прогрева нагрузка сервисов должна начаться одновременно
-            if (!multiRun.isWarmingComplete()) {
+            if (!multiRun.isWarmingCompleted()) {
                 LOG.info("{}: Ожидание завершения прогрева всех сервисов...", name);
-                while (!multiRun.isWarmingComplete()) { // ждем завершения прогрева всех сервисов
+                while (!multiRun.isWarmingCompleted()) { // ждем завершения прогрева всех сервисов
                 }
             }
         }
@@ -788,14 +789,14 @@ public class MultiRunService {
                         callMetrics.getCountCall(),
                         callMetrics.getCountCallRs(),
 
-                        dbResponse.getIntValue("COMPLETED"),
-                        dbResponse.getIntValue("RUNNING"),
-                        callMetrics.getCountCall() - (dbResponse.getIntValue("COMPLETED") + dbResponse.getIntValue("RUNNING")),
+                        dbResponse.getIntValue(VarInList.DbCompleted),
+                        dbResponse.getIntValue(VarInList.DbRunning),
+                        callMetrics.getCountCall() - (dbResponse.getIntValue(VarInList.DbCompleted) + dbResponse.getIntValue(VarInList.DbRunning)),
 
-                        dbResponse.getIntValue("DurMin"),
-                        dbResponse.getIntValue("DurAvg"),
-                        dbResponse.getIntValue("Dur90"),
-                        dbResponse.getIntValue("DurMax"),
+                        dbResponse.getIntValue(VarInList.DbDurMin),
+                        dbResponse.getIntValue(VarInList.DurAvg),
+                        dbResponse.getIntValue(VarInList.Dur90),
+                        dbResponse.getIntValue(VarInList.DurMax),
 
                         countError)));
 

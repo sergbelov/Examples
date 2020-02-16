@@ -1,6 +1,7 @@
 package ru.utils.load.utils;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import ru.utils.load.data.graph.VarInList;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;
@@ -201,64 +202,12 @@ public class DataFromDB {
         }
         
         List<DBMetric> dbMetricList = new ArrayList<>();
-        dbMetricList.add(new DBMetric("COMPLETED", count[0]));
-        dbMetricList.add(new DBMetric("RUNNING", count[1]));
-        dbMetricList.add(new DBMetric("DurMin", dur[0]));
-        dbMetricList.add(new DBMetric("DurAvg", dur[1]));
-        dbMetricList.add(new DBMetric("Dur90", dur[2]));
-        dbMetricList.add(new DBMetric("DurMax", dur[3]));
-        return new DBResponse(sql, dbMetricList);
-    }
-
-    /**
-     * Сбор статистики по выполнению процессов в БПМ
-     * Запрос в БД БПМ (select)
-     * @param key
-     * @param startTime
-     * @param stopTime
-     * @return
-     */
-    public DBResponse getStatisticsFromDb(
-            String key,
-            long startTime,
-            long stopTime,
-            int sent // для демо,  при отсутсвии БД
-    ) {
-        LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
-        List<DBMetric> dbMetricList = new ArrayList<>();
-        // запрос к БД БПМ для получения статистики
-        String[] sql = {
-                "select 1",
-                "select 2"
-        };
-
-        if (dbServiceCommon != null && dbServiceCommon.isConnection()) {
-            try {
-                LOG.debug("Обработка данных из БД БПМ...\n{}", sql[0]);
-                ResultSet resultSet = dbServiceCommon.executeQuery(sql[0]);
-                while (resultSet.next()) {
-                    LOG.trace("{} = {}",
-                            resultSet.getString(1),
-                            resultSet.getInt(2));
-
-                    dbMetricList.add(new DBMetric(
-                            resultSet.getString(1),
-                            resultSet.getInt(2)));
-                }
-                resultSet.close();
-                LOG.debug("Обработка данных из БД БПМ завершена.");
-            } catch (Exception e) {
-                LOG.error("", e);
-            }
-
-        } else { // нет подключения к БД (нагенерим случайных значений)
-
-            int completed = (int) (Math.random() * sent);
-            int running = (int) (Math.random() * (completed));
-            dbMetricList.add(new DBMetric("COMPLETED", completed));
-            dbMetricList.add(new DBMetric("RUNNING", running));
-        }
-
+        dbMetricList.add(new DBMetric(VarInList.DbCompleted, count[0]));
+        dbMetricList.add(new DBMetric(VarInList.DbRunning, count[1]));
+        dbMetricList.add(new DBMetric(VarInList.DurMin, dur[0]));
+        dbMetricList.add(new DBMetric(VarInList.DurAvg, dur[1]));
+        dbMetricList.add(new DBMetric(VarInList.Dur90, dur[2]));
+        dbMetricList.add(new DBMetric(VarInList.DurMax, dur[3]));
         return new DBResponse(sql, dbMetricList);
     }
 

@@ -1,5 +1,7 @@
 package ru.utils.load.data;
 
+import ru.utils.load.data.graph.VarInList;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,9 +9,9 @@ import java.util.List;
  * Метрика на момент времени
  */
 public class DateTimeValue {
-    long periodBegin;
-    long periodEnd;
-    List<Number> valueList = new ArrayList<>();
+    private long periodBegin;
+    private long periodEnd;
+    private List<Number> valueList = new ArrayList<>();
 
     public DateTimeValue(long time, List<Number> valueList) {
         this.periodBegin = time;
@@ -24,7 +26,7 @@ public class DateTimeValue {
     }
 
     public DateTimeValue(long periodEnd, Number value) {
-        this.periodBegin = periodBegin;
+//        this.periodBegin = periodBegin;
         this.periodEnd = periodEnd;
         this.valueList.add(value);
     }
@@ -64,43 +66,23 @@ public class DateTimeValue {
         return periodEnd;
     }
 
-    public double getValue() {
-        return getValue(0);
-    }
+    public double getValue() { return getValue(0); }
+    public double getValue(VarInList varInList) { return getValue(varInList.getIndex()); }
+    public double getValue(int num) { return valueList.get(num).doubleValue(); }
 
-    public double getValue(int num) {
-        return valueList.get(num).doubleValue();
-    }
+    public int getIntValue() { return getIntValue(0); }
+    public int getIntValue(VarInList varInList) { return getIntValue(varInList.getIndex()); }
+    public int getIntValue(int num) { return valueList.get(num).intValue(); }
 
-    public int getIntValue() {
-        return getIntValue(0);
-    }
+    public long getLongValue() { return getLongValue(0); }
+    public long getLongValue(VarInList varInList) { return getLongValue(varInList.getIndex()); }
+    public long getLongValue(int num) { return valueList.get(num).longValue(); }
 
-    public int getIntValue(int num) {
-        return valueList.get(num).intValue();
-    }
+    public float getFloatValue() { return getFloatValue(0); }
+    public float getFloatValue(VarInList varInList) { return getFloatValue(varInList.getIndex()); }
+    public float getFloatValue(int num) { return valueList.get(num).floatValue(); }
 
-    public long getLongValue() {
-        return getLongValue(0);
-    }
-
-    public long getLongValue(int num) {
-        return valueList.get(num).longValue();
-    }
-
-    public float getFloatValue() {
-        return getFloatValue(0);
-    }
-
-    public float getFloatValue(int num) {
-        return valueList.get(num).floatValue();
-    }
-
-    public double getDoubleValue() {
-        return getDoubleValue(0);
-    }
-
-    public double getDoubleValue(int num) {
-        return valueList.get(num).doubleValue();
-    }
+    public double getDoubleValue() { return getDoubleValue(0); }
+    public double getDoubleValue(VarInList varInList) { return getDoubleValue(varInList.getIndex()); }
+    public double getDoubleValue(int num) { return valueList.get(num).doubleValue(); }
 }

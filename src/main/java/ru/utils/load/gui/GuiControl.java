@@ -13,8 +13,8 @@ import java.awt.event.ActionListener;
 public class GuiControl extends JFrame {
     private static final Logger LOG = LogManager.getLogger(GuiControl.class);
 
-    MultiRun multiRun;
-    JButton bStopButton;
+    private MultiRun multiRun;
+    private JButton bStopButton;
 
     public GuiControl(MultiRun multiRun) {
         this.multiRun = multiRun;
@@ -57,7 +57,7 @@ public class GuiControl extends JFrame {
                         options,
                         options[0]) == 0) {
 
-                    if (multiRun.isWarmingComplete()) {
+                    if (multiRun.isWarmingCompleted()) {
                         bStopButton.setEnabled(false);
                         bStopButton.setText("Остановка нагрузки...");
                         for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {

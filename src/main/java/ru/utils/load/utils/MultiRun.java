@@ -193,7 +193,7 @@ public class MultiRun {
         executorService.shutdown();
     }
 
-    public boolean isWarmingComplete(){
+    public boolean isWarmingCompleted(){
         for (MultiRunService multiRunService: multiRunServiceList){
             if (multiRunService.isWarming()){
                 return false;

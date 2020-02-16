@@ -21,85 +21,85 @@ package ru.utils.load.data.graph;
 public enum VarInList {
 
     DurMin {
-        public int getNum() {
+        public int getIndex() {
             return 0;
         }
     },
     DurAvg {
-        public int getNum() {
+        public int getIndex() {
             return 1;
         }
     },
     Dur90 {
-        public int getNum() {
+        public int getIndex() {
             return 2;
         }
     },
     DurMax {
-        public int getNum() {
+        public int getIndex() {
             return 3;
         }
     },
     Tps {
-        public int getNum() {
+        public int getIndex() {
             return 4;
         }
     },
     TpsRs {
-        public int getNum() {
+        public int getIndex() {
             return 5;
         }
     },
     CountCall {
-        public int getNum() {
+        public int getIndex() {
             return 6;
         }
     },
     CountCallRs {
-        public int getNum() {
+        public int getIndex() {
             return 7;
         }
     },
     DbCompleted {
-        public int getNum() {
+        public int getIndex() {
             return 8;
         }
     },
     DbRunning {
-        public int getNum() {
+        public int getIndex() {
             return 9;
         }
     },
     DbLost {
-        public int getNum() {
+        public int getIndex() {
             return 10;
         }
     },
     DbDurMin {
-        public int getNum() {
+        public int getIndex() {
             return 11;
         }
     },
     DbDurAvg {
-        public int getNum() {
+        public int getIndex() {
             return 12;
         }
     },
     DbDur90 {
-        public int getNum() {
+        public int getIndex() {
             return 13;
         }
     },
     DbDurMax {
-        public int getNum() {
+        public int getIndex() {
             return 14;
         }
     },
     Errors {
-        public int getNum() {
+        public int getIndex() {
             return 15;
         }
     };
 
-    public abstract int getNum();
+    public abstract int getIndex();
 }

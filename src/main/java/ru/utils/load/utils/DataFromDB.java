@@ -1,5 +1,7 @@
 package ru.utils.load.utils;
 
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import ru.utils.load.data.Call;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;
@@ -89,7 +91,7 @@ public class DataFromDB {
      * @param startTime
      * @param stopTime
      */
-    public void getDataFromDbBpm(
+    public void getDataFromDbSelect(
             String key,
             long startTime,
             long stopTime
@@ -144,7 +146,7 @@ public class DataFromDB {
      * @param stopTime
      * @return
      */
-    public DBResponse getStatisticsFromDbBpm(
+    public DBResponse getStatisticsFromDb(
             String key,
             long startTime,
             long stopTime
@@ -157,11 +159,21 @@ public class DataFromDB {
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "group by hpi.processstate";
 
-        int[] count = {0, 0};
+        int[] count = {0, 0, 0, 0};
+        long[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
+        
         dbDataList
                 .stream()
                 .filter(x -> (x.getStartTime() >= startTime && x.getStartTime() <= stopTime))
                 .forEach(x -> {
+                    count[2]++;
+                    if (x.getDuration() > 0) {
+                        count[3]++;
+                        dur[0] = Math.min(dur[0], x.getDuration()); // min
+                        dur[1] = dur[1] + x.getDuration();          // avg
+                        dur[3] = Math.max(dur[3], x.getDuration()); // max
+                    }
+                    
                     switch (x.getProcessState()){
                         case "COMPLETED":
                             count[0]++;
@@ -174,6 +186,23 @@ public class DataFromDB {
                     }
                 });
 
+        if (dur[0] == 999999999999999999L) {
+            dur[0] = 0L;
+        }
+
+        if (count[3] > 0) {
+            dur[1] = dur[1] / count[3]; // avg
+            Percentile percentile90 = new Percentile();
+            dur[2] = (long) percentile90.evaluate(
+                    dbDataList
+                            .stream()
+                            .filter(x -> (x.getDuration() > 0 & x.getStartTime() >= startTime && x.getStopTime() <= stopTime))
+                            .mapToDouble(DBData::getDuration)
+                            .toArray(), 90);
+        } else {
+            dur[1] = 0; // avg
+        }
+        
         List<DBMetric> dbMetricList = new ArrayList<>();
         dbMetricList.add(new DBMetric("COMPLETED", count[0]));
         dbMetricList.add(new DBMetric("RUNNING", count[1]));
@@ -188,7 +217,7 @@ public class DataFromDB {
      * @param stopTime
      * @return
      */
-    public DBResponse getStatisticsFromDbBpm(
+    public DBResponse getStatisticsFromDb(
             String key,
             long startTime,
             long stopTime,

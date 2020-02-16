@@ -701,7 +701,7 @@ public class MultiRunService {
             long stopTime = testStopTime; // + statisticsStepTime * 1000L;
 
             // данные из БД БПМ за период
-            getDataFromDB().getDataFromDbBpm(keyBpm, startTime, stopTime);
+            getDataFromDB().getDataFromDbSelect(keyBpm, startTime, stopTime);
             // статистику за весь период сохраним нулевым элементом
             getStatistics(startTime, stopTime);
 
@@ -734,7 +734,7 @@ public class MultiRunService {
         Metrics metrics = getMetricsForPeriod(startTime, stopTime);
 
         // статистика выполнения процессов в БПМ
-        DBResponse dbResponse = dataFromDB.getStatisticsFromDbBpm(
+        DBResponse dbResponse = dataFromDB.getStatisticsFromDb(
                 keyBpm,
                 startTime,
                 stopTime);

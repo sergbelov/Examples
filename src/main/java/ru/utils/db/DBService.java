@@ -1,11 +1,14 @@
 package ru.utils.db;
 
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
+import java.beans.PropertyVetoException;
 import java.sql.*;
+import java.util.Properties;
 
 public class DBService {
 
@@ -73,6 +76,7 @@ public class DBService {
         public abstract String getUrl(String dbHost, String dbBase, int dbPort);
     }
 
+    private ComboPooledDataSource comboPooledDataSource = null; //new ComboPooledDataSource();
     private Connection connection = null;
     private Statement statement = null;
 
@@ -150,6 +154,7 @@ public class DBService {
 
     /**
      * Инициализация с использованием Builder()
+     *
      * @param builder
      */
     private DBService(Builder builder) {
@@ -209,6 +214,7 @@ public class DBService {
                 dbUserName,
                 dbPassword);
     }
+
     /**
      * Инициализация с параметрами
      *
@@ -257,6 +263,7 @@ public class DBService {
                 dbUserName,
                 dbPassword);
     }
+
     /**
      * Инициализация с параметрами
      *
@@ -314,6 +321,7 @@ public class DBService {
                 dbUserName,
                 dbPassword);
     }
+
     /**
      * Инициализация с параметрами
      *
@@ -344,6 +352,155 @@ public class DBService {
                 dbPassword);
     }
 
+
+    /**
+     * Инициализация пула подключений к БД
+     */
+    public void initPoolConnect() {
+        initPoolConnect(
+                50,
+                50,
+                2,
+                10,
+                2,
+                30);
+    }
+
+    /**
+     * Инициализация пула подключений к БД
+     *
+     * @param maxStatements
+     * @param maxStatementsPerConnection
+     * @param minPoolSize
+     * @param maxPoolSize
+     * @param acquireIncrement
+     * @param maxIdleTime
+     */
+    public void initPoolConnect(
+            int maxStatements,
+            int maxStatementsPerConnection,
+            int minPoolSize,
+            int maxPoolSize,
+            int acquireIncrement,
+            int maxIdleTime
+    ) {
+        try {
+            if (comboPooledDataSource == null) {
+                LOG.debug("Инициализация пула подключений...");
+                comboPooledDataSource = new ComboPooledDataSource();
+                comboPooledDataSource.setDriverClass(dbType.getDriver());
+                comboPooledDataSource.setJdbcUrl(dbUrl);
+                comboPooledDataSource.setUser(dbUserName);
+                comboPooledDataSource.setPassword(dbPassword);
+
+                Properties properties = new Properties();
+                properties.setProperty("user", dbUserName);
+                properties.setProperty("password", dbPassword);
+                properties.setProperty("useUnicode", "true");
+                properties.setProperty("characterEncoding", "UTF8");
+                comboPooledDataSource.setProperties(properties);
+
+                // set options
+                comboPooledDataSource.setMaxStatements(maxStatements);
+                comboPooledDataSource.setMaxStatementsPerConnection(maxStatementsPerConnection);
+                comboPooledDataSource.setMinPoolSize(minPoolSize);
+                comboPooledDataSource.setMaxPoolSize(maxPoolSize);
+                comboPooledDataSource.setAcquireIncrement(acquireIncrement);
+                comboPooledDataSource.setMaxIdleTime(maxIdleTime);
+                LOG.debug("Пул подключений инициализирован");
+            } else {
+                LOG.warn("Пул подключений уже инициализирован...");
+            }
+        } catch (PropertyVetoException e) {
+            LOG.error("Ошибка при инициализацити пула подключений к БД\n", e);
+        }
+    }
+
+    /**
+     * Получить Connection из пула
+     *
+     * @return
+     */
+    public Connection createConnectionFromPool() {
+        Connection connection = null;
+        try {
+            connection = comboPooledDataSource.getConnection();
+            LOG.debug("Создание Connection и пула: idleConnections = {}; busyConnections = {}",
+                    comboPooledDataSource.getNumIdleConnections(),
+                    comboPooledDataSource.getNumBusyConnections());
+        } catch (Exception e) {
+            LOG.error("Ошибка при создании Connection из пула\n", e);
+        }
+        return connection;
+    }
+
+
+    public Statement createStatement(Connection connection){
+        return createStatement(
+                connection,
+                ResultSet.TYPE_SCROLL_INSENSITIVE,
+                ResultSet.CONCUR_READ_ONLY);
+    }
+
+    /**
+     * Создание Statement
+     * ResultSet.TYPE_FORWARD_ONLY
+     * Указатель двигается только вперёд по множеству полученных результатов.
+     * ResultSet.TYPE_SCROLL_INTENSIVE
+     * Указатель может двигаться вперёд и назад и не чуствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
+     * ResultSet.TYPE_SCROLL_SENSITIVE
+     * Указатель может двигаться вперёд и назад и чувствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
+     * -------------------------------------------------------------------------------------
+     * ResultSet.CONCUR_READ_ONLY
+     * Создаёт экземпляр ResultSet только для чтения. Устанавливается по умолчанию.
+     * ResultSet.CONCUR_UPDATABLE
+     * Создаёт экземпляр ResultSet, который может изменять данные.
+     *
+     * @return
+     */
+    public Statement createStatement(
+            Connection connection,
+            int resultSetType,
+            int resultSetConcurrency
+    ) {
+        Statement statement = null;
+        if (connection != null) {
+            try {
+                statement = connection.createStatement(resultSetType, resultSetConcurrency);
+            } catch (SQLException e) {
+                LOG.error("Ошибка при создании Statement\n", e);
+            }
+        } else {
+            LOG.error("SQL Отсутствует подключение к базе данных");
+        }
+        return statement;
+    }
+
+    /**
+     * Закрытие Connection из пула
+     * @param connection
+     */
+    public void closeConnectionFromPool(Connection connection) {
+        if (connection != null) {
+            try {
+                connection.close();
+                if (comboPooledDataSource != null) {
+                    LOG.debug("Закрытие Connection из пула: idleConnections = {}; busyConnections = {}",
+                            comboPooledDataSource.getNumIdleConnections(),
+                            comboPooledDataSource.getNumBusyConnections());
+                }
+            } catch (SQLException e) {
+                LOG.error("Ошибка при закрытии Connection из пула\n", e);
+            }
+        }
+    }
+
+    /**
+     * Закрываем пул подлключений к БД
+     */
+    public void closePoolConnect() {
+        comboPooledDataSource.close();
+    }
 
     /**
      * Установка параметов для подключения к БД
@@ -439,6 +596,7 @@ public class DBService {
 
     /**
      * Определение типа БД по URL
+     *
      * @param dbUrl
      */
     private void setDbTypeFromUrl(String dbUrl) {
@@ -460,6 +618,7 @@ public class DBService {
 
     /**
      * Определение типа БД по драйверу
+     *
      * @param dbDriver
      */
     private void setDbTypeFromDriver(String dbDriver) {
@@ -477,6 +636,7 @@ public class DBService {
 
     /**
      * Текущий тип соедиенния
+     *
      * @return
      */
     public DBType getDbType() {
@@ -485,12 +645,16 @@ public class DBService {
 
     /**
      * Текущий dbUrl
+     *
      * @return
      */
-    public String getDbUrl() { return dbUrl; }
+    public String getDbUrl() {
+        return dbUrl;
+    }
 
     /**
      * Установка уровня логирования
+     *
      * @param loggerLevel
      */
     public void setLoggerLevel(Level loggerLevel) {
@@ -499,6 +663,7 @@ public class DBService {
 
     /**
      * Проверка активности соединения
+     *
      * @return true or false
      */
     public boolean isConnection() {
@@ -507,6 +672,7 @@ public class DBService {
 
     /**
      * Текущее соедиенние
+     *
      * @return Connection
      */
     public Connection connection() {
@@ -515,6 +681,7 @@ public class DBService {
 
     /**
      * Ддрайвер для работы с БД
+     *
      * @return true or false
      */
     private boolean loadDriver() {
@@ -557,7 +724,9 @@ public class DBService {
             String dbUserName,
             String dbPassword) {
 
-        if (isConnection()) { disconnect(); }
+        if (isConnection()) {
+            disconnect();
+        }
 
         setParamsForConnect(
                 null,
@@ -585,7 +754,9 @@ public class DBService {
             String dbUserName,
             String dbPassword) {
 
-        if (isConnection()) { disconnect(); }
+        if (isConnection()) {
+            disconnect();
+        }
 
         setParamsForConnect(
                 null,
@@ -600,10 +771,10 @@ public class DBService {
     /**
      * Подключение к БД
      * используем заданные ранее параметры
+     *
      * @return true or false
      */
     public boolean connect() {
-
         if (isConnection()) {
             LOG.trace("SQL Подключение активно, используем: {}", getConnectInfo());
             return true;
@@ -620,29 +791,25 @@ public class DBService {
 /*
 ResultSet.TYPE_FORWARD_ONLY
 Указатель двигается только вперёд по множеству полученных результатов.
-
 ResultSet.TYPE_SCROLL_INTENSIVE
 Указатель может двигаться вперёд и назад и не чуствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
-
 ResultSet.TYPE_SCROLL_SENSITIVE
 Указатель может двигаться вперёд и назад и чувствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
-
 -------------------------------------------------------------------------------------
-
 ResultSet.CONCUR_READ_ONLY
 Создаёт экземпляр ResultSet только для чтения. Устанавливается по умолчанию.
-
 ResultSet.CONCUR_UPDATABLE
 Создаёт экземпляр ResultSet, который может изменять данные.
 */
 
+/*
 //            statement = connection.createStatement();
             statement = connection.createStatement(
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_READ_ONLY);
-
+*/
+            statement = createStatement(connection);
             LOG.debug("SQL Connected: {}", getConnectInfo());
-
         } catch (SQLException e) {
             LOG.error("SQL Ошибка при подключении к базе данных {}\n", dbUrl, e);
             return false;
@@ -657,6 +824,7 @@ ResultSet.CONCUR_UPDATABLE
     public void disconnect() {
         disconnect(true);
     }
+
     public void disconnect(boolean shutdownForHSQLDB) {
         if (isConnection()) {
             LOG.info("SQL Disconnect: {}", dbUrl);
@@ -680,6 +848,7 @@ ResultSet.CONCUR_UPDATABLE
 
     /**
      * Информация по текущему соединению с БД
+     *
      * @return
      */
     public String getConnectInfo() {
@@ -688,13 +857,13 @@ ResultSet.CONCUR_UPDATABLE
             try {
                 connectInfo = String.format(
                         "\n\tDB Url:     %s" +
-                        "\n\tDB Host:    %s" +
-                        "\n\tDB Base:    %s" +
-                        "\n\tDB Port:    %s" +
-                        "\n\tDB Driver:  %s" +
-                        "\n\tDB Name:    %s" +
-                        "\n\tDB Version: %s" +
-                        "\n\tAutocommit: %s",
+                                "\n\tDB Host:    %s" +
+                                "\n\tDB Base:    %s" +
+                                "\n\tDB Port:    %s" +
+                                "\n\tDB Driver:  %s" +
+                                "\n\tDB Name:    %s" +
+                                "\n\tDB Version: %s" +
+                                "\n\tAutocommit: %s",
 
                         dbUrl,
                         dbHost != null ? dbHost : "",
@@ -715,6 +884,10 @@ ResultSet.CONCUR_UPDATABLE
         return connectInfo;
     }
 
+    public boolean execute(String sql) {
+        return execute(statement, sql);
+    }
+
     /**
      * Executes the given SQL statement, which may return multiple results.
      * In some (uncommon) situations, a single SQL statement may return
@@ -722,99 +895,110 @@ ResultSet.CONCUR_UPDATABLE
      * this unless you are (1) executing a stored procedure that you know may
      * return multiple results or (2) you are dynamically executing an
      * unknown SQL string.
-     * <P>
+     * <p>
      * The <code>execute</code> method executes an SQL statement and indicates the
      * form of the first result.  You must then use the methods
      * <code>getResultSet</code> or <code>getUpdateCount</code>
      * to retrieve the result, and <code>getMoreResults</code> to
      * move to any subsequent result(s).
      * <p>
-     *<strong>Note:</strong>This method cannot be called on a
+     * <strong>Note:</strong>This method cannot be called on a
      * <code>PreparedStatement</code> or <code>CallableStatement</code>.
      *
-     * @param sql any SQL statement
+     * @param statement
+     * @param sql       any SQL statement
      * @return <code>true</code> if the first result is a <code>ResultSet</code>
-     *         object; <code>false</code> if it is an update count or there are
-     *         no results
-     *
+     * object; <code>false</code> if it is an update count or there are
+     * no results
      */
-    public boolean execute(String sql) {
+    public boolean execute(Statement statement, String sql) {
         boolean res = false;
-        if (isConnection()) {
-            try {
+        try {
+            if (!statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
-                statement.execute(sql);;
+                statement.execute(sql);
+                ;
                 res = true;
-            } catch (SQLException e) {
-                LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
+            } else {
+                LOG.error("SQL Отсутствует подключение к базе данных");
             }
-        } else {
-            LOG.error("SQL Отсутствует подключение к базе данных");
+        } catch (SQLException e) {
+            LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
         }
         return res;
+    }
+
+    public int executeUpdate(String sql) {
+        return executeUpdate(statement, sql);
     }
 
     /**
      * Executes the given SQL statement, which may be an <code>INSERT</code>,
      * <code>UPDATE</code>, or <code>DELETE</code> statement or an
      * SQL statement that returns nothing, such as an SQL DDL statement.
-     *<p>
+     * <p>
      * <strong>Note:</strong>This method cannot be called on a
      * <code>PreparedStatement</code> or <code>CallableStatement</code>.
      *
-     * @param sql an SQL Data Manipulation Language (DML) statement, such as <code>INSERT</code>, <code>UPDATE</code> or
-     * <code>DELETE</code>; or an SQL statement that returns nothing,
-     * such as a DDL statement.
-     *
+     * @param statement
+     * @param sql       an SQL Data Manipulation Language (DML) statement, such as <code>INSERT</code>, <code>UPDATE</code> or
+     *                  <code>DELETE</code>; or an SQL statement that returns nothing,
+     *                  such as a DDL statement.
      * @return either (1) the row count for SQL Data Manipulation Language (DML) statements
-     *         or (2) 0 for SQL statements that return nothing
-     *
+     * or (2) 0 for SQL statements that return nothing
      */
-    public int executeUpdate(String sql) {
+    public int executeUpdate(Statement statement, String sql) {
         int res = 0;
-        if (isConnection()) {
-            try {
+        try {
+            if (!statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
-                res =  statement.executeUpdate(sql);;
-            } catch (SQLException e) {
-                LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
+                res = statement.executeUpdate(sql);
+                ;
+            } else {
+                LOG.error("SQL Отсутствует подключение к базе данных");
             }
-        } else {
-            LOG.error("SQL Отсутствует подключение к базе данных");
+        } catch (SQLException e) {
+            LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
         }
         return res;
+    }
+
+
+    public ResultSet executeQuery(String sql) {
+        return executeQuery(statement, sql);
     }
 
     /**
      * Executes the given SQL statement, which returns a single
      * <code>ResultSet</code> object.
-     *<p>
+     * <p>
      * <strong>Note:</strong>This method cannot be called on a
      * <code>PreparedStatement</code> or <code>CallableStatement</code>.
      *
-     * @param sql an SQL statement to be sent to the database, typically a
-     *        static SQL <code>SELECT</code> statement
+     * @param statement
+     * @param sql       an SQL statement to be sent to the database, typically a
+     *                  static SQL <code>SELECT</code> statement
      * @return a <code>ResultSet</code> object that contains the data produced
-     *         by the given query; never <code>null</code>
-     *
+     * by the given query; never <code>null</code>
      */
-    public ResultSet executeQuery(String sql) {
+    public ResultSet executeQuery(Statement statement, String sql) {
         ResultSet resultSet = null;
-        if (isConnection()) {
-            try {
+        try {
+            if (!statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
                 resultSet = statement.executeQuery(sql);
-            } catch (SQLException e) {
-                LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
+            } else {
+                LOG.error("SQL Отсутствует подключение к базе данных");
             }
-        } else {
-            LOG.error("SQL Отсутствует подключение к базе данных");
+        } catch (SQLException e) {
+            LOG.error("Ошибка при выполнении запроса\n{}\n", sql, e);
         }
         return resultSet;
     }
 
     /**
      * Количество записей в ResultSet
+     *
      * @param resultSet
      * @return
      */

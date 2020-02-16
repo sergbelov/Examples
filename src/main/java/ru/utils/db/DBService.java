@@ -12,6 +12,8 @@ public class DBService {
     private static final Logger LOG = LogManager.getLogger();
 
     public enum DBType {
+//        com.mysql.jdbc.Driver
+
         HSQLDB {
             public String getDriver() {
                 return "org.hsqldb.jdbcDriver";

@@ -7,7 +7,7 @@ import ru.utils.load.utils.MultiRunService;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by SBT-Belov-SeA on 24.01.2020
+ * Created by Belov Sergey
  * Проверяем наличие не выполненных задач
  * Добавленние новой группы VU
  */

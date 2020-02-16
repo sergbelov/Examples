@@ -60,7 +60,7 @@ public class Report {
 
         /* ==== графики
             0 - VU
-            1 - Длительность выполнения API
+            1 - Response time
             2 - TPS
             3 - Статистика из БД БПМ
             4 - Ошибки
@@ -125,9 +125,9 @@ public class Report {
                         printMetrics))
                 .append("\t\t</div>\n");
 
-        // длительность выполнения API
+        // Response time
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine("Длительность выполнения API",
+                .append(graph.getSvgGraphLine("Response time",
                         multiRunService,
                         multiRunService.getMetricsList(),
                         false,
@@ -137,7 +137,7 @@ public class Report {
         sbHtml.append("<!-- Статистика по длительности выполнения сервиса -->\n" +
                 "\t\t<div>\n<table><tbody>\n" +
                 "<tr><th rowspan=\"2\">Сервис</th>\n" +
-                "<th colspan=\"4\">Длительность выполнения API (мс)</th>\n" +
+                "<th colspan=\"4\">Response time (мс)</th>\n" +
                 "<th colspan=\"3\">Количество запросов</th></tr>\n" +
                 "<tr><th>минимальная</th>\n" +
                 "<th>средняя</th>\n" +

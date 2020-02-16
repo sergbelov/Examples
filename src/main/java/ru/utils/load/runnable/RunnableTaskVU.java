@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.List;
 
 /**
- * Created by SBT-Belov-SeA on 24.01.2020
+ * Created by Belov Sergey
  */
 public class RunnableTaskVU implements Runnable {
 

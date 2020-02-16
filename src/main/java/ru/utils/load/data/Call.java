@@ -6,7 +6,7 @@ package ru.utils.load.data;
 public class Call {
     String rqUid;    // идентификатор
     long timeBegin;  // время вызова API
-    long timeEnd;    // длительность выполнения API
+    long timeEnd;    // время отклика
 
     public Call(long timeBegin) {
         this.timeBegin = timeBegin;

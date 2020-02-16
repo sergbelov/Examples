@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by SBT-Belov-SeA on 14.02.2020
+ * Created by Belov Sergey
  * Поток для получения данных из БД БПМ
  */
 public class RunnableSelectDB implements Runnable {

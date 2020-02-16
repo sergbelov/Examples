@@ -24,8 +24,8 @@ public class GraphProperty {
         metricViewGroupList.add(new MetricViewGroup("Running Vusers",
                 Arrays.asList(new MetricView(0, "", "#0000ff"))));
 
-        // 1 - Длительность выполнения API (в списке metricsList)
-        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения API",
+        // 1 - Response time (в списке metricsList)
+        metricViewGroupList.add(new MetricViewGroup("Response time",
                 Arrays.asList(
                         new MetricView(VarInList.DurMin.getNum(), "минимальная длительность (мс)", "#00009f"),
                         new MetricView(VarInList.DurAvg.getNum(), "средняя длительность (мс)", "#9f9f00"),

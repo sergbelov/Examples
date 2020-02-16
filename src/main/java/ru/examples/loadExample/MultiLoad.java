@@ -18,7 +18,7 @@ import java.io.IOException;
  * !!! не запускать из PC
  * -Dltf.logger.level=info
  *
- * @author sbt-belov-sea
+ * @author Belov Sergey
  */
 public class MultiLoad implements ScriptRun {
     private static final Logger LOG = LogManager.getLogger(MultiLoad.class);

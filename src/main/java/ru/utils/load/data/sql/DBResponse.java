@@ -3,19 +3,22 @@ package ru.utils.load.data.sql;
 import java.util.List;
 
 /**
- * Результат GROUP запроса из БД
+ * Результат запроса из БД
  */
 public class DBResponse {
-    String sqlSelect; // sql select
+    String[] sqlSelect; // sql select
     List<DBMetric> dbMetricList; // список полученных значений
 
-    public DBResponse(String sqlSelect, List<DBMetric> dbMetricList) {
+    public DBResponse(String[] sqlSelect, List<DBMetric> dbMetricList) {
         this.sqlSelect = sqlSelect;
         this.dbMetricList = dbMetricList;
     }
 
-    public String getSqlSelect() {
+    public String[] getSqlSelect() {
         return sqlSelect;
+    }
+    public String getSqlSelect(int num) {
+        return sqlSelect[num];
     }
 
     public List<DBMetric> getDbMetricList() {

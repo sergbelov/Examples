@@ -29,10 +29,7 @@ public class DBData {
         return processState;
     }
 
-    public long getDuration(){
-        if (stopTime > 0){
-            return stopTime - stopTime;
-        }
-        return 0;
+    public Long getDuration(){
+        return stopTime > 0 ? stopTime - startTime : null;
     }
 }

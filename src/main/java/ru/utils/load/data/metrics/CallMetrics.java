@@ -1,6 +1,6 @@
 package ru.utils.load.data.metrics;
 
-public class Metrics {
+public class CallMetrics {
     /*
         0  - durMin
         1  - durAvg
@@ -23,7 +23,7 @@ public class Metrics {
     int countCall;
     int countCallRs;
 
-    public Metrics(
+    public CallMetrics(
             long durMin,
             long durAvg,
             long dur90,
@@ -63,9 +63,7 @@ public class Metrics {
         return tps;
     }
 
-    public double getTpsRs() {
-        return tpsRs;
-    }
+    public double getTpsRs() { return tpsRs; }
 
     public int getCountCall() {
         return countCall;

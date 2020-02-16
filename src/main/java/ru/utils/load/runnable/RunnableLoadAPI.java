@@ -3,11 +3,8 @@ package ru.utils.load.runnable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.load.ScriptRun;
-import ru.utils.load.data.Call;
-import ru.utils.load.utils.MultiRun;
 import ru.utils.load.utils.MultiRunService;
 
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**

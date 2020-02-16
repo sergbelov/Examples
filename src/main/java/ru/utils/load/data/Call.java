@@ -5,32 +5,32 @@ package ru.utils.load.data;
  */
 public class Call {
     String rqUid;    // идентификатор
-    long timeBegin;  // время вызова API
-    long timeEnd;    // время отклика
+    long startTime;  // время вызова API
+    long stopTime;    // время отклика
 
-    public Call(long timeBegin) {
-        this.timeBegin = timeBegin;
-        this.timeEnd = 0;
+    public Call(long startTime) {
+        this.startTime = startTime;
+        this.stopTime = 0;
     }
 
-    public Call(long timeBegin, long timeEnd) {
-        this.timeBegin = timeBegin;
-        this.timeEnd = timeEnd;
+    public Call(long startTime, long stopTime) {
+        this.startTime = startTime;
+        this.stopTime = stopTime;
     }
 
-    public long getTimeBegin() {
-        return timeBegin;
+    public long getStartTime() {
+        return startTime;
     }
 
-    public long getTimeEnd() {
-        return timeEnd;
+    public long getStopTime() {
+        return stopTime;
     }
 
-    public long getDuration() {
-        return timeEnd > 0 ? timeEnd - timeBegin : 0;
+    public Long getDuration() {
+        return stopTime > 0 ? stopTime - startTime : null;
     }
 
-    public void setTimeEnd(long timeEnd) {
-        this.timeEnd = timeEnd;
+    public void setStopTime(long stopTime) {
+        this.stopTime = stopTime;
     }
 }

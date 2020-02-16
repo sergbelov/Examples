@@ -1,18 +1,22 @@
 package ru.utils.load.data.graph;
 
 /*  список метрик:
-0  - durMin
-1  - durAvg
-2  - dur90
-3  - durMax
-4  - tps
-5  - tpsRs
-6  - countCall
-7  - countCallRs
-8  - dbCompleted
-9  - dbRunning
-10 - dbLost
-11 - errors
+    0  - durMin
+    1  - durAvg
+    2  - dur90
+    3  - durMax
+    4  - tps
+    5  - tpsRs
+    6  - countCall
+    7  - countCallRs
+    8  - dbCompleted
+    9  - dbRunning
+    10 - dbLost
+    11 - dbDurMin
+    12 - dbDurAvg
+    13 - dbDur90
+    14 - dbDurMax
+    15 - errors
 */
 public enum VarInList {
 
@@ -71,9 +75,29 @@ public enum VarInList {
             return 10;
         }
     },
-    Errors {
+    DbDurMin {
         public int getNum() {
             return 11;
+        }
+    },
+    DbDurAvg {
+        public int getNum() {
+            return 12;
+        }
+    },
+    DbDur90 {
+        public int getNum() {
+            return 13;
+        }
+    },
+    DbDurMax {
+        public int getNum() {
+            return 14;
+        }
+    },
+    Errors {
+        public int getNum() {
+            return 15;
         }
     };
 

@@ -10,7 +10,7 @@ import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
 import ru.utils.load.data.graph.VarInList;
-import ru.utils.load.data.metrics.Metrics;
+import ru.utils.load.data.metrics.CallMetrics;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -78,7 +78,11 @@ public class Report {
             8  - dbCompleted
             9  - dbRunning
             10 - dbLost
-            11 - errors
+            11 - dbDurMin
+            12 - dbDurAvg
+            13 - dbDur90
+            14 - dbDurMax
+            15 - errors
          */
         LOG.info("{}: Формирование отчета...", multiRunService.getName());
 
@@ -188,7 +192,7 @@ public class Report {
         sbHtml.append("<!-- Статистика из БД БПМ  -->\n")
 //                .append(multiRunService.getSqlSelect())
                 .append("\t\t<div>\n<table><caption>Статистика из БД БПМ<br>\n" +
-                        multiRunService.getSqlSelect() +
+                        multiRunService.getSqlSelect(0) +
                         "</caption><tbody>\n" +
                         "<tr><th>Сервис</th>\n" +
                         "<th>Отправлено</th>\n" +
@@ -356,11 +360,11 @@ public class Report {
         StringBuilder res = new StringBuilder();
         int cnt = 0;
         for (int i = 0; i < callList.size(); i++) {
-            if (callList.get(i).getDuration() == 0) {
+            if (callList.get(i).getDuration() == null) {
                 res.append("<tr><td>")
                         .append(++cnt)
                         .append("</td><td>")
-                        .append(sdf1.format(callList.get(i).getTimeBegin()))
+                        .append(sdf1.format(callList.get(i).getStartTime()))
                         .append("</td></tr>\n");
             }
         }
@@ -623,13 +627,13 @@ public class Report {
                     double tpsCur = 0, tpsCurRs = 0;
                     if ((stopTime - startTime) > step) {
                         // нужно найти стабильный максимум
-                        Metrics metrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
-                        tpsCur = metrics.getTps();
-                        tpsCurRs = metrics.getTpsRs();
+                        CallMetrics callMetrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
+                        tpsCur = callMetrics.getTps();
+                        tpsCurRs = callMetrics.getTpsRs();
                     } else {
-                        Metrics metrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
-                        tpsCur = metrics.getTps();
-                        tpsCurRs = metrics.getTpsRs();
+                        CallMetrics callMetrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
+                        tpsCur = callMetrics.getTps();
+                        tpsCurRs = callMetrics.getTpsRs();
                     }
 
                     if (tpsCur > tps) {

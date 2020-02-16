@@ -8,7 +8,7 @@ import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.metrics.Metrics;
+import ru.utils.load.data.metrics.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
 import ru.utils.load.runnable.RunnableVU;
@@ -30,7 +30,6 @@ public class MultiRunService {
 
     private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов сервиса
-//    private List<Call> callList = new ArrayList<>(); // список вызовов сервиса
 
     /*  список метрик:
         0  - durMin
@@ -44,7 +43,11 @@ public class MultiRunService {
         8  - dbCompleted
         9  - dbRunning
         10 - dbLost
-        11 - errors
+        11 - dbDurMin
+        12 - dbDurAvg
+        13 - dbDur90
+        14 - dbDurMax
+        15 - errors
     */
     private List<DateTimeValue> metricsList = new ArrayList<>();
 
@@ -97,7 +100,7 @@ public class MultiRunService {
 
     private String pathReport;
 
-    private String sqlSelect = null;
+    private String[] sqlSelect = null;
     private DataFromDB dataFromDB = new DataFromDB(); // получение данных из БД БПМ
     private Report report = new Report();
 
@@ -250,9 +253,7 @@ public class MultiRunService {
         return csmUrl;
     }
 
-    public String getSqlSelect() {
-        return sqlSelect;
-    }
+    public String getSqlSelect(int num) { return sqlSelect[num]; }
 
     /**
      * Количество активных потоков
@@ -731,7 +732,7 @@ public class MultiRunService {
                 sdf1.format(startTime),
                 sdf1.format(stopTime));
 
-        Metrics metrics = getMetricsForPeriod(startTime, stopTime);
+        CallMetrics callMetrics = getMetricsForPeriod(startTime, stopTime);
 
         // статистика выполнения процессов в БПМ
         DBResponse dbResponse = dataFromDB.getStatisticsFromDb(
@@ -767,25 +768,34 @@ public class MultiRunService {
             8  - dbCompleted
             9  - dbRunning
             10 - dbLost
-            11 - errors
+            11 - dbDurMin
+            12 - dbDurAvg
+            13 - dbDur90
+            14 - dbDurMax
+            15 - errors
         */
         metricsList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
-                        (int) metrics.getDurMin(),
-                        (int) metrics.getDurAvg(),
-                        (int) metrics.getDur90(),
-                        (int) metrics.getDurMax(),
+                        (int) callMetrics.getDurMin(),
+                        (int) callMetrics.getDurAvg(),
+                        (int) callMetrics.getDur90(),
+                        (int) callMetrics.getDurMax(),
 
-                        metrics.getTps(),
-                        metrics.getTpsRs(),
+                        callMetrics.getTps(),
+                        callMetrics.getTpsRs(),
 
-                        metrics.getCountCall(),
-                        metrics.getCountCallRs(),
+                        callMetrics.getCountCall(),
+                        callMetrics.getCountCallRs(),
 
                         dbResponse.getIntValue("COMPLETED"),
                         dbResponse.getIntValue("RUNNING"),
-                        metrics.getCountCall() - (dbResponse.getIntValue("COMPLETED") + dbResponse.getIntValue("RUNNING")),
+                        callMetrics.getCountCall() - (dbResponse.getIntValue("COMPLETED") + dbResponse.getIntValue("RUNNING")),
+
+                        dbResponse.getIntValue("DurMin"),
+                        dbResponse.getIntValue("DurAvg"),
+                        dbResponse.getIntValue("Dur90"),
+                        dbResponse.getIntValue("DurMax"),
 
                         countError)));
 
@@ -798,16 +808,16 @@ public class MultiRunService {
      * @param startTime
      * @param stopTime
      */
-    public Metrics getMetricsForPeriod(long startTime, long stopTime) {
+    public CallMetrics getMetricsForPeriod(long startTime, long stopTime) {
         LOG.debug("{}: метрики {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
         int[] countCall = {0, 0};                       // 0-all, 1-Rs
         long[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
         double[] tps = {0.00, 0.00};                    // 0-tps, 1-tpsRs
         callList.stream()
-                .filter(e -> (e.getTimeBegin() >= startTime && e.getTimeBegin() <= stopTime))
+                .filter(e -> (e.getStartTime() >= startTime && e.getStartTime() <= stopTime))
                 .forEach(x -> {
                     countCall[0]++;
-                    if (x.getDuration() > 0) {
+                    if (x.getDuration() != null) {
                         countCall[1]++;
                         dur[0] = Math.min(dur[0], x.getDuration()); // min
                         dur[1] = dur[1] + x.getDuration();          // avg
@@ -825,7 +835,7 @@ public class MultiRunService {
             dur[2] = (long) percentile90.evaluate(
                     callList
                             .stream()
-                            .filter(x -> (x.getDuration() > 0 & x.getTimeBegin() >= startTime && x.getTimeBegin() <= stopTime))
+                            .filter(x -> (x.getDuration() != null & x.getStartTime() >= startTime && x.getStartTime() <= stopTime))
                             .mapToDouble(Call::getDuration)
                             .toArray(), 90);
         } else {
@@ -857,7 +867,7 @@ public class MultiRunService {
         7  - countCallRs
      */
 
-        return new Metrics(
+        return new CallMetrics(
                 dur[0],
                 dur[1],
                 dur[2],

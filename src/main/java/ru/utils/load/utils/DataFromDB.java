@@ -1,14 +1,12 @@
 package ru.utils.load.utils;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
-import ru.utils.load.data.Call;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.db.DBService;
-import ru.utils.load.runnable.RunnableLoadAPI;
 import ru.utils.load.runnable.RunnableSelectDB;
 
 import java.sql.ResultSet;
@@ -152,12 +150,11 @@ public class DataFromDB {
             long stopTime
     ) {
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
-        String sql = "select hpi.processstate, count(1) as cnt " +
+        String[] sql = {
+                "select 1",
 
-
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "group by hpi.processstate";
+                "select2"
+        };
 
         int[] count = {0, 0, 0, 0};
         long[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
@@ -167,7 +164,7 @@ public class DataFromDB {
                 .filter(x -> (x.getStartTime() >= startTime && x.getStartTime() <= stopTime))
                 .forEach(x -> {
                     count[2]++;
-                    if (x.getDuration() > 0) {
+                    if (x.getDuration() != null) {
                         count[3]++;
                         dur[0] = Math.min(dur[0], x.getDuration()); // min
                         dur[1] = dur[1] + x.getDuration();          // avg
@@ -196,7 +193,7 @@ public class DataFromDB {
             dur[2] = (long) percentile90.evaluate(
                     dbDataList
                             .stream()
-                            .filter(x -> (x.getDuration() > 0 & x.getStartTime() >= startTime && x.getStopTime() <= stopTime))
+                            .filter(x -> (x.getDuration() != null & x.getStartTime() >= startTime && x.getStopTime() <= stopTime))
                             .mapToDouble(DBData::getDuration)
                             .toArray(), 90);
         } else {
@@ -206,6 +203,10 @@ public class DataFromDB {
         List<DBMetric> dbMetricList = new ArrayList<>();
         dbMetricList.add(new DBMetric("COMPLETED", count[0]));
         dbMetricList.add(new DBMetric("RUNNING", count[1]));
+        dbMetricList.add(new DBMetric("DurMin", dur[0]));
+        dbMetricList.add(new DBMetric("DurAvg", dur[1]));
+        dbMetricList.add(new DBMetric("Dur90", dur[2]));
+        dbMetricList.add(new DBMetric("DurMax", dur[3]));
         return new DBResponse(sql, dbMetricList);
     }
 
@@ -226,17 +227,15 @@ public class DataFromDB {
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
         List<DBMetric> dbMetricList = new ArrayList<>();
         // запрос к БД БПМ для получения статистики
-        String sql = "select hpi.processstate, count(1) as cnt\n" +
-
-
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "group by hpi.processstate";
+        String[] sql = {
+                "select 1",
+                "select 2"
+        };
 
         if (dbServiceCommon != null && dbServiceCommon.isConnection()) {
             try {
-                LOG.debug("Обработка данных из БД БПМ...\n{}", sql);
-                ResultSet resultSet = dbServiceCommon.executeQuery(sql);
+                LOG.debug("Обработка данных из БД БПМ...\n{}", sql[0]);
+                ResultSet resultSet = dbServiceCommon.executeQuery(sql[0]);
                 while (resultSet.next()) {
                     LOG.trace("{} = {}",
                             resultSet.getString(1),

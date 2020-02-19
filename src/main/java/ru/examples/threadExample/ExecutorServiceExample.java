@@ -1,6 +1,7 @@
 package ru.examples.threadExample;
 
 import ru.utils.db.DBService;
+import ru.utils.db.DBType;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,7 +15,7 @@ public class ExecutorServiceExample {
     public static void main(String[] args) throws InterruptedException, SQLException {
 
         DBService dbService = new DBService.Builder()
-                .dbType(DBService.DBType.HSQLDB)
+                .dbType(DBType.HSQLDB)
                 .dbHost("STORE")
                 .dbBase("db_store")
                 .dbUserName("admin")
@@ -81,7 +82,7 @@ public class ExecutorServiceExample {
             sale = resultSet.getInt(1);
         }
 
-        dbService.disconnect();
+        dbService.close();
         System.out.println("Работа всех потоков завершена.");
         System.out.println("productCount.get() = " + productCount.get());
         System.out.println("SQL (buy - sale): " + (buy - sale - (buyS - saleS)));

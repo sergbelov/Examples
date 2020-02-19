@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import ru.utils.db.DBService;
+import ru.utils.db.DBType;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -27,7 +28,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
     private Level loggerLevel = null;
     private boolean dbServiceIn = false;
     private DBService dbService = null;
-    private DBService.DBType dbType = null;
+    private DBType dbType = null;
     private String dbHost;
     private String dbBase;
     private int dbPort = 1521;
@@ -92,7 +93,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
     public static class Builder {
         private Level loggerLevel = null;
         private DBService dbService = null;
-        private DBService.DBType dbType = null;
+        private DBType dbType = null;
         private String dbHost;
         private String dbBase;
         private int dbPort = 1521;
@@ -109,7 +110,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
             return this;
         }
 
-        public Builder dbType(DBService.DBType val) {
+        public Builder dbType(DBType val) {
             dbType = val;
             return this;
         }
@@ -158,7 +159,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
             this.dbServiceIn = true;
 
             if (dbType == null) {
-                dbType = DBService.DBType.HSQLDB;
+                dbType = DBType.HSQLDB;
             }
             if (dbHost == null) {
                 dbHost = "hsqlUsers";
@@ -219,7 +220,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
     public void disconnect() {
         if (dbService != null && dbServiceIn) {
             LOG.debug("SQL Disconnect");
-            dbService.disconnect();
+            dbService.close();
             dbService = null;
         }
     }

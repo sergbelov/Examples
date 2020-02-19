@@ -88,7 +88,7 @@ public class RunnableSelectDB implements Runnable {
                 }
                 LOG.info("{}: {} - {}", name, sdf1.format(System.currentTimeMillis()), row);
                 resultSet.close();
-                dbService.disconnect();
+                dbService.close();
                 LOG.debug("{}: Обработка данных из БД БПМ завершена.", name);
             } catch (Exception e) {
                 LOG.error("{}\n", name, e);

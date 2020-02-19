@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.authorization.UserAuthorizationService;
 import ru.utils.db.DBService;
+import ru.utils.db.DBType;
 
 import java.sql.*;
 import java.text.DateFormat;
@@ -44,7 +45,7 @@ public class SQLExample3 {
 // DBService создается внутри
 
         UserAuthorizationService userAuthorizationService = new UserAuthorizationService.Builder()
-                .dbType(DBService.DBType.HSQLDB)
+                .dbType(DBType.HSQLDB)
                 .dbHost("myhsqldbTest")
                 .dbBase("dbTest")
                 .dbUserName("admin")

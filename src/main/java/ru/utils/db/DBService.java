@@ -14,68 +14,6 @@ public class DBService {
 
     private static final Logger LOG = LogManager.getLogger();
 
-    public enum DBType {
-//        com.mysql.jdbc.Driver
-
-        HSQLDB {
-            public String getDriver() {
-                return "org.hsqldb.jdbcDriver";
-            }
-
-            public String getUrl(
-                    String dbHost,
-                    String dbBase,
-                    int dbPort) {
-
-                return "jdbc:hsqldb:file:" +
-                        dbHost +
-                        "/" +
-                        dbBase +
-                        ";hsqldb.lock_file=false";
-            }
-        },
-
-        ORACLE {
-            public String getDriver() {
-                return "oracle.jdbc.driver.OracleDriver";
-            }
-
-            public String getUrl(
-                    String dbHost,
-                    String dbBase,
-                    int dbPort) {
-
-                return "jdbc:oracle:thin:@//" +
-                        dbHost +
-                        ":" +
-                        dbPort +
-                        "/" +
-                        dbBase;
-            }
-        },
-
-        SQLSERVER {
-            public String getDriver() {
-                return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-            }
-
-            public String getUrl(
-                    String dbHost,
-                    String dbBase,
-                    int dbPort) {
-
-                return "jdbc:sqlserver://" +
-                        dbHost +
-                        ";databaseName=" +
-                        dbBase;
-            }
-        };
-
-        public abstract String getDriver();
-
-        public abstract String getUrl(String dbHost, String dbBase, int dbPort);
-    }
-
     private ComboPooledDataSource comboPooledDataSource = null; //new ComboPooledDataSource();
     private Connection connection = null;
     private Statement statement = null;
@@ -356,8 +294,8 @@ public class DBService {
     /**
      * Инициализация пула подключений к БД
      */
-    public void initPoolConnect() {
-        initPoolConnect(
+    public void initPooledDataSource() {
+        initPooledDataSource(
                 50,
                 50,
                 2,
@@ -376,7 +314,7 @@ public class DBService {
      * @param acquireIncrement
      * @param maxIdleTime
      */
-    public void initPoolConnect(
+    public void initPooledDataSource(
             int maxStatements,
             int maxStatementsPerConnection,
             int minPoolSize,
@@ -386,7 +324,7 @@ public class DBService {
     ) {
         try {
             if (comboPooledDataSource == null) {
-                LOG.debug("Инициализация пула подключений...");
+                LOG.info("Инициализация пула подключений {}...", dbUrl);
                 comboPooledDataSource = new ComboPooledDataSource();
                 comboPooledDataSource.setDriverClass(dbType.getDriver());
                 comboPooledDataSource.setJdbcUrl(dbUrl);
@@ -407,12 +345,12 @@ public class DBService {
                 comboPooledDataSource.setMaxPoolSize(maxPoolSize);
                 comboPooledDataSource.setAcquireIncrement(acquireIncrement);
                 comboPooledDataSource.setMaxIdleTime(maxIdleTime);
-                LOG.debug("Пул подключений инициализирован");
+                LOG.debug("Пул подключений {} инициализирован", dbUrl);
             } else {
-                LOG.warn("Пул подключений уже инициализирован...");
+                LOG.warn("Пул подключений {} уже инициализирован...", dbUrl);
             }
         } catch (PropertyVetoException e) {
-            LOG.error("Ошибка при инициализацити пула подключений к БД\n", e);
+            LOG.error("Ошибка при инициализации пула подключений {}\n", dbUrl, e);
         }
     }
 
@@ -421,17 +359,21 @@ public class DBService {
      *
      * @return
      */
-    public Connection createConnectionFromPool() {
-        Connection connection = null;
-        try {
-            connection = comboPooledDataSource.getConnection();
-            LOG.debug("Создание Connection и пула: idleConnections = {}; busyConnections = {}",
-                    comboPooledDataSource.getNumIdleConnections(),
-                    comboPooledDataSource.getNumBusyConnections());
-        } catch (Exception e) {
-            LOG.error("Ошибка при создании Connection из пула\n", e);
+    public Connection getConnection() {
+        if (comboPooledDataSource != null) {
+            Connection connection = null;
+            try {
+                connection = comboPooledDataSource.getConnection();
+                LOG.debug("Создание Connection и пула: idleConnections = {}; busyConnections = {}",
+                        comboPooledDataSource.getNumIdleConnections(),
+                        comboPooledDataSource.getNumBusyConnections());
+            } catch (Exception e) {
+                LOG.error("Ошибка при создании Connection из пула\n", e);
+            }
+            return connection;
+        } else {
+            return this.connection;
         }
-        return connection;
     }
 
 
@@ -498,9 +440,13 @@ public class DBService {
     /**
      * Закрываем пул подлключений к БД
      */
-    public void closePoolConnect() {
-        comboPooledDataSource.close();
+/*
+    public void closePooledDataSource() {
+        if (comboPooledDataSource != null) {
+            comboPooledDataSource.close();
+        }
     }
+*/
 
     /**
      * Установка параметов для подключения к БД
@@ -725,7 +671,7 @@ public class DBService {
             String dbPassword) {
 
         if (isConnection()) {
-            disconnect();
+            close();
         }
 
         setParamsForConnect(
@@ -755,7 +701,7 @@ public class DBService {
             String dbPassword) {
 
         if (isConnection()) {
-            disconnect();
+            close();
         }
 
         setParamsForConnect(
@@ -821,11 +767,11 @@ ResultSet.CONCUR_UPDATABLE
      * Отключение от БД
      * Для HSQLDB делаем SHUTDOWN
      */
-    public void disconnect() {
-        disconnect(true);
+    public void close() {
+        close(true);
     }
 
-    public void disconnect(boolean shutdownForHSQLDB) {
+    public void close(boolean shutdownForHSQLDB) {
         if (isConnection()) {
             LOG.info("SQL Disconnect: {}", dbUrl);
             try {
@@ -843,6 +789,10 @@ ResultSet.CONCUR_UPDATABLE
             } catch (SQLException e) {
                 LOG.error("SQL Disconnect\n", e);
             }
+        }
+        if (comboPooledDataSource != null){
+            LOG.info("SQL Pool Disconnect: {}", dbUrl);
+            comboPooledDataSource.close();
         }
     }
 

@@ -78,7 +78,7 @@ public class DataFromDB {
      */
     public void end() {
         if (dbServiceCommon != null) {
-            dbServiceCommon.disconnect();
+            dbServiceCommon.close();
         }
     }
 

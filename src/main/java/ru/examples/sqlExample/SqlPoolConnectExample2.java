@@ -30,7 +30,7 @@ public class SqlPoolConnectExample2 {
                 .dbPassword(dbPassword)
                 .build();
 
-        dbService.initPoolConnect(
+        dbService.initPooledDataSource(
                 100,
                 100,
                 3,
@@ -52,7 +52,7 @@ public class SqlPoolConnectExample2 {
         }
         executorService.shutdown();
         LOG.info("Работа всех потоков завершена");
-        dbService.closePoolConnect();
+        dbService.close();
     }
 
     static class RunnableSQL implements Runnable {
@@ -73,7 +73,7 @@ public class SqlPoolConnectExample2 {
         public void run() {
             LOG.info("Старт потока {}", name);
             try {
-                Connection connection = dbService.createConnectionFromPool();
+                Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
 
                 ResultSet resultSet = dbService.executeQuery(statement,

@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.utils.db.DBService;
+import ru.utils.db.DBType;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -49,7 +50,7 @@ public class SQLExample2 {
 
         LOG.info("\n\n==== переподключение к другой БД");
         if (!dbService.connect(
-                DBService.DBType.HSQLDB,
+                DBType.HSQLDB,
                 dbHost,
                 dbBase,
                 0,
@@ -192,7 +193,7 @@ public class SQLExample2 {
             statement.close();
         }
 
-        dbService.disconnect();
+        dbService.close();
 
     }
 }

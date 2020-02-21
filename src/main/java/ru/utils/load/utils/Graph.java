@@ -77,7 +77,10 @@ public class Graph {
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
             for (MetricView metricView : metricViewGroup.getMetricViewList()) {
-                yValueMax = Math.max(yValueMax, metricsList.get(i).getValue(metricView.getNumInList()));
+//                LOG.info("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+                if (!Double.isNaN(metricsList.get(i).getDoubleValue(metricView.getNumInList()))) {
+                    yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+                }
             }
             xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
         }

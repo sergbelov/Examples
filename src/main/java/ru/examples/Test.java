@@ -1,5 +1,6 @@
 package ru.examples;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import ru.utils.Utils;
 import ru.utils.files.FileUtils;
 
@@ -12,7 +13,6 @@ import java.util.List;
 public class Test {
 
     public static void main(String[] args) {
-
         FileUtils fu = new FileUtils();
         List<String> list = new ArrayList<>();
         fu.scanFiles("c:/Common/Prog/Java/GitHub/Examples/", list);

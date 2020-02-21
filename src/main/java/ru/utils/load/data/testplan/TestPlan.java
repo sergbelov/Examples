@@ -12,7 +12,6 @@ public class TestPlan {
     int vuStepCount;           // Шаг увеличения VU
     long pacing;               // Длительность операции (мс)
     int pacingType;            // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
-    int statisticsStepTime;    // Шаг между снятиями статистики
     String keyBpm;             // задача в БД БПМ
 
     public TestPlan() {
@@ -30,7 +29,6 @@ public class TestPlan {
             int vuStepCount,
             long pacing,
             int pacingType,
-            int statisticsStepTime,
             String keyBpm) {
         this.apiNum = apiNum;
         this.name = name;
@@ -43,7 +41,6 @@ public class TestPlan {
         this.vuStepCount = vuStepCount;
         this.pacing = pacing;
         this.pacingType = pacingType;
-        this.statisticsStepTime = statisticsStepTime;
         this.keyBpm = keyBpm;
     }
 
@@ -83,10 +80,6 @@ public class TestPlan {
 
     public int getPacingType() {
         return pacingType;
-    }
-
-    public int getStatisticsStepTime() {
-        return statisticsStepTime;
     }
 
     public String getKeyBpm() {

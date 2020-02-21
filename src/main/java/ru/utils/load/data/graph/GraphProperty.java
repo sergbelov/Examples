@@ -31,21 +31,36 @@ public class GraphProperty {
                         new MetricView(VarInList.DurAvg, "средняя длительность (мс)", "#9f9f00"),
                         new MetricView(VarInList.Dur90, "90 перцентиль (мс)", "#009f00"),
                         new MetricView(VarInList.DurMax, "максимальная длительность (мс)", "#ff0000"))));
-        // 2 - TPS (в списке metricsList)
+        // 2 - Длительность выполнения (информация из БД)
+        metricViewGroupList.add(new MetricViewGroup("Длительность выполнения (информация из БД)",
+                Arrays.asList(
+                        new MetricView(VarInList.DbDurMin, "минимальная длительность (мс)", "#00009f"),
+                        new MetricView(VarInList.DbDurAvg, "средняя длительность (мс)", "#9f9f00"),
+                        new MetricView(VarInList.DbDur90, "90 перцентиль (мс)", "#009f00"),
+                        new MetricView(VarInList.DbDurMax, "максимальная длительность (мс)", "#ff0000"))));
+        // 3 - TPS (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Количество запросов в секунду (tps)",
                 Arrays.asList(
                         new MetricView(VarInList.Tps, "tps - отправлено", "#00009f"),
-                        new MetricView(VarInList.TpsRs, "tps - выполнено", "#00af00"))));
-        // 3 - Статистика из БД БПМ (в списке metricsList)
+                        new MetricView(VarInList.TpsRs, "tps - response", "#00af00"))));
+        // 4 - Статистика из БД БПМ (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Статистика из БД БПМ",
                 Arrays.asList(
                         new MetricView(VarInList.CountCall, "отправлено запросов", "#00009f"),
                         new MetricView(VarInList.DbCompleted, "COMPLETED", "#009f00"),
                         new MetricView(VarInList.DbRunning, "RUNNING", "#ff9f00"),
                         new MetricView(VarInList.DbLost, "потеряно", "#ff0000"))));
-        // 4 - Ошибки (в списке metricsList)
+        // 5 - Ошибки (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Ошибки",
                 Arrays.asList(new MetricView(VarInList.Errors, "", "#ff0000"))));
+
+        // 6 - Количество шагов завершенных в секунду
+        metricViewGroupList.add(new MetricViewGroup("Количество шагов завершенных в секунду",
+                Arrays.asList(new MetricView(0, "", "#004f00"))));
+
+        // 7 - BpmsJobEntityImpl Count
+        metricViewGroupList.add(new MetricViewGroup("BpmsJobEntityImpl Count",
+                Arrays.asList(new MetricView(0, "", "#004f00"))));
 
 //        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }

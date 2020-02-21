@@ -1,5 +1,6 @@
 package ru.utils.load.utils;
 
+import ru.utils.db.DBService;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.data.DateTimeValue;
@@ -12,6 +13,7 @@ import ru.utils.load.data.graph.VarInList;
 import ru.utils.load.data.metrics.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
+import ru.utils.load.runnable.RunnableThrottlingState;
 import ru.utils.load.runnable.RunnableVU;
 
 import java.text.DateFormat;
@@ -51,6 +53,7 @@ public class MultiRunService {
         15 - errors
     */
     private List<DateTimeValue> metricsList = new ArrayList<>();
+    private List<DateTimeValue> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
 
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
     private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
@@ -65,6 +68,7 @@ public class MultiRunService {
     private AtomicBoolean warming = new AtomicBoolean(true); // прогрев
 
     private MultiRun multiRun;
+    private DBService dbService;
     private int apiNum;
     private String name;
     private long testStartTime;
@@ -85,8 +89,6 @@ public class MultiRunService {
 
     private long pacing = 1000;    // задержка перед выполнением следующей итерации (ms)
     private int pacingType = 1;    // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
-
-    private int statisticsStepTime = 5;    // частота снятия метрик - через данное количество секунд
 
     private boolean stopTestOnError = false; // прерывать тест при большом количестве ошибок
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
@@ -121,7 +123,6 @@ public class MultiRunService {
             int vuStepCount,
             long pacing,
             int pacingType,
-            int statisticsStepTime,
             boolean stopTestOnError,
             int countErrorForStopTest,
             String grafanaHostsDetailUrl,
@@ -129,9 +130,7 @@ public class MultiRunService {
             String grafanaTransportThreadPoolsUrl,
             String splunkUrl,
             String csmUrl,
-            String dbUrl,
-            String dbUserName,
-            String dbPassword,
+            DBService dbService,
             String keyBpm,
             String pathReport
     ) {
@@ -147,7 +146,6 @@ public class MultiRunService {
         this.vuStepCount = vuStepCount;
         this.pacing = pacing;
         this.pacingType = pacingType;
-        this.statisticsStepTime = statisticsStepTime;
         this.stopTestOnError = stopTestOnError;
         this.countErrorForStopTest = countErrorForStopTest;
         this.grafanaHostsDetailUrl = grafanaHostsDetailUrl;
@@ -162,13 +160,10 @@ public class MultiRunService {
             System.exit(1);
         }
 
-        if (!dbUrl.isEmpty()) {
-            dataFromDB.init( // подключаемся к БД
-                    dbUrl,
-                    dbUserName,
-                    dbPassword);
+        if (dbService != null) {
+            this.dbService = dbService;
+            dataFromDB.init(dbService);
         }
-
     }
 
     public void end() { dataFromDB.end(); }
@@ -186,6 +181,8 @@ public class MultiRunService {
 
     public boolean isAsync() { return async; }
 
+    public DBService getDbService() { return dbService; }
+
     public DataFromDB getDataFromDB() {
         return dataFromDB;
     }
@@ -201,6 +198,8 @@ public class MultiRunService {
     public List<DateTimeValue> getMetricsList() {
         return metricsList;
     }
+
+    public List<DateTimeValue> getBpmsJobEntityImplCountList() { return bpmsJobEntityImplCountList; }
 
     public List<Call> getCallList() {
         return callList;
@@ -311,9 +310,6 @@ public class MultiRunService {
                 .append("</td></tr>\n")
                 .append("<tr><td>Максимальное количество VU</td><td>")
                 .append(vuCountMax)
-                .append("</td></tr>\n")
-                .append("<tr><td>Периодичность снятия метрик (сек)</td><td>")
-                .append(statisticsStepTime)
                 .append("</td></tr>\n")
                 .append("<tr><td>Прерывать тест при большом количестве ошибок</td><td>")
                 .append(stopTestOnError ? "Да" : "Нет")
@@ -573,13 +569,6 @@ public class MultiRunService {
             r = false;
 
         }
-        if (vuStepTime < statisticsStepTime) {
-            LOG.error("\n{}: Внимание!!! Пользователи добавляются чаще чем снимается статистика ({} / {})",
-                    name,
-                    vuStepTime,
-                    statisticsStepTime);
-            r = false;
-        }
         if (vuStepTime * 1000 < vuStepTimeDelay * vuCountMin) {
             LOG.error("\n{}: Внимание!!! {} начальных пользователей с задержкой {} мс не успеют стартовать за время между шагами {} мс",
                     name,
@@ -621,6 +610,7 @@ public class MultiRunService {
         this.warming.set(warming);
         vuList.clear();
         errorList.clear();
+        bpmsJobEntityImplCountList.clear();
         threadCount = new AtomicInteger(0);
         vuCount = new AtomicInteger(0);
         CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -634,13 +624,8 @@ public class MultiRunService {
                 while (!multiRun.isWarmingCompleted()) { // ждем завершения прогрева всех сервисов
                 }
             }
+            LOG.info("{}: Прогрев всех сервисов завершен, подаем нагрузку...", name);
         }
-
-        vuListAdd(testStartTime, 0); // игнорируем нулевой элемент при формировании графиков
-        executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
-                name + " RunnableAwaitAndAddVU",
-                countDownLatch,
-                this));
 
         int vuCountMinMem = vuCountMin;
         int vuCountMaxMem = vuCountMax;
@@ -649,7 +634,7 @@ public class MultiRunService {
             LOG.info("{}: Прогрев...", name);
             vuCountMin = 5;
             vuCountMax = 5;
-            testStopTime = testStartTime + statisticsStepTime * 3000L; // время завершения теста (прогрев)
+            testStopTime = testStartTime + 15000L; // время завершения теста (прогрев)
         } else {
             testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
         }
@@ -665,14 +650,30 @@ public class MultiRunService {
                 sdf1.format(testStopTime),
                 sdf1.format(nextTimeAddVU));
 
+        vuListAdd(testStartTime, 0); // игнорируем нулевой элемент при формировании графиков
         vuListAdd(testStartTime, 0); // стартовое количество VU
+        executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
+                name + " RunnableAwaitAndAddVU",
+                countDownLatch,
+                this));
+
+        executorServiceAwaitAndAddVU.submit(new RunnableAwaitAndAddVU(
+                name + " RunnableAwaitAndAddVU",
+                countDownLatch,
+                this));
+
+        if (!warming && dbService != null) { // опрашиваем размерность таблицы BpmsJobEntityImpl
+            executorService.submit(new RunnableThrottlingState(
+                    name + " ThrottlingState",
+                    this,
+                    bpmsJobEntityImplCountList));
+        }
 
         try {
             countDownLatch.await(); // ждем завершения работы всех потоков
         } catch (InterruptedException e) {
             LOG.error("{}\n", name, e);
         }
-//        while (getThreadCount() > 0){}
 
         executorServiceAwaitAndAddVU.shutdown();
         executorService.shutdown();
@@ -683,24 +684,21 @@ public class MultiRunService {
             LOG.info("{}: Прогрев завершен...", name);
             this.warming.set(false);
         } else {
-            LOG.info("{}: Пауза...", name);
-            try { // даем время завершиться начатым заданиям
-                Thread.sleep(statisticsStepTime * 1000);
-            } catch (InterruptedException e) {
-                LOG.error("", e);
-            }
+
             testStopTime = System.currentTimeMillis();
             vuList.add(new DateTimeValue(testStopTime, getVuCount())); // сбросим VU на конец теста
-            try { // даем время завершиться начатым заданиям (кто не успел я не виноват)
-//                Thread.sleep(Math.max(pacing * 10, 20000));
-                Thread.sleep(20000);
-            } catch (InterruptedException e) {
-                LOG.error("", e);
-            }
+
+            // даем время завершиться начатым заданиям (кто не успел я не виноват)
+            dataFromDB.waitCompleteProcess(
+                    keyBpm,
+                    testStartTime,
+                    testStopTime,
+                    bpmsJobEntityImplCountList);
+
             LOG.info("{}: Сбор статистики...", name);
 
             long startTime = testStartTime;
-            long stopTime = testStopTime; // + statisticsStepTime * 1000L;
+            long stopTime = testStopTime;
 
             // данные из БД БПМ за период
             getDataFromDB().getDataFromDbSelect(keyBpm, startTime, stopTime);
@@ -709,8 +707,10 @@ public class MultiRunService {
 
             // сбор статистики после снятия нагрузки
             prevStartTimeStatistic = testStartTime;
+            long statisticsStepTime = (long) Math.max((stopTime - startTime) / 600.00, 1000); // шаг вывода метрик
+            statisticsStepTime = (long) (Math.ceil(statisticsStepTime / 1000.00) * 1000); // шаг кратен 1 сек (в большую сторону)
             while (startTime <= stopTime) {
-                startTime = startTime + statisticsStepTime * 1000L;
+                startTime = startTime + statisticsStepTime;
                 getStatistics(startTime);
             }
             LOG.info("{}: Завершен сбор статистики", name);
@@ -778,10 +778,10 @@ public class MultiRunService {
         metricsList.add(new DateTimeValue(
                 stopTime,
                 Arrays.asList(
-                        (int) callMetrics.getDurMin(),
-                        (int) callMetrics.getDurAvg(),
-                        (int) callMetrics.getDur90(),
-                        (int) callMetrics.getDurMax(),
+                        callMetrics.getDurMin(),
+                        callMetrics.getDurAvg(),
+                        callMetrics.getDur90(),
+                        callMetrics.getDurMax(),
 
                         callMetrics.getTps(),
                         callMetrics.getTpsRs(),
@@ -793,10 +793,10 @@ public class MultiRunService {
                         dbResponse.getIntValue(VarInList.DbRunning),
                         callMetrics.getCountCall() - (dbResponse.getIntValue(VarInList.DbCompleted) + dbResponse.getIntValue(VarInList.DbRunning)),
 
-                        dbResponse.getIntValue(VarInList.DbDurMin),
-                        dbResponse.getIntValue(VarInList.DurAvg),
-                        dbResponse.getIntValue(VarInList.Dur90),
-                        dbResponse.getIntValue(VarInList.DurMax),
+                        dbResponse.getDoubleValue(VarInList.DbDurMin),
+                        dbResponse.getDoubleValue(VarInList.DbDurAvg),
+                        dbResponse.getDoubleValue(VarInList.DbDur90),
+                        dbResponse.getDoubleValue(VarInList.DbDurMax),
 
                         countError)));
 
@@ -812,7 +812,7 @@ public class MultiRunService {
     public CallMetrics getMetricsForPeriod(long startTime, long stopTime) {
         LOG.debug("{}: метрики {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
         int[] countCall = {0, 0};                       // 0-all, 1-Rs
-        long[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
+        double[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
         double[] tps = {0.00, 0.00};                    // 0-tps, 1-tpsRs
         callList.stream()
                 .filter(e -> (e.getStartTime() >= startTime && e.getStartTime() <= stopTime))
@@ -831,9 +831,9 @@ public class MultiRunService {
         }
 
         if (countCall[1] > 0) {
-            dur[1] = dur[1] / countCall[1]; // avg
+            dur[1] = dur[1] / countCall[1] * 1.00; // avg
             Percentile percentile90 = new Percentile();
-            dur[2] = (long) percentile90.evaluate(
+            dur[2] = percentile90.evaluate(
                     callList
                             .stream()
                             .filter(x -> (x.getDuration() != null & x.getStartTime() >= startTime && x.getStartTime() <= stopTime))

@@ -30,7 +30,7 @@ public class SqlPoolConnectExample2 {
                 .dbPassword(dbPassword)
                 .build();
 
-        dbService.initPooledDataSource(
+        dbService.connectPooled(
                 100,
                 100,
                 3,

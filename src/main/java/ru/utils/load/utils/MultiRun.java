@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.db.DBService;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.graph.GraphProperty;
@@ -15,6 +16,10 @@ import ru.utils.load.runnable.RunnableLoadAPI;
 
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +62,8 @@ public class MultiRun {
     private final String PATH_REPORT;
     private int apiMax = -1;
 
+    private DBService dbService;
+
     public MultiRun() {
         propertiesService.readProperties(PROPERTIES_FILE);
 
@@ -89,6 +96,9 @@ public class MultiRun {
         for (MultiRunService multiRunService: multiRunServiceList){
             multiRunService.end();
         }
+        if (dbService != null) {
+            dbService.close();
+        }
     }
 
 
@@ -97,42 +107,50 @@ public class MultiRun {
      * @param className
      */
     public boolean init(String className) {
-        for (TestPlans testPlans : testPlansList) {
-            if (testPlans.getClassName().equals(className)){
-                for (TestPlan testPlan : testPlans.getTestPlanList()) {
-                    apiMax++;
-                    multiRunServiceList.add(new MultiRunService());
-                    multiRunServiceList.get(apiMax).init(
-                            this,
-                            testPlan.getApiNum(),
-                            testPlan.getName(),
-                            testPlan.isAsync(),
-                            testPlan.getTestDuration(),
-                            testPlan.getVuCountMin(),
-                            testPlan.getVuCountMax(),
-                            testPlan.getVuStepTime(),
-                            testPlan.getVuStepTimeDelay(),
-                            testPlan.getVuStepCount(),
-                            testPlan.getPacing(),
-                            testPlan.getPacingType(),
-                            testPlan.getStatisticsStepTime(),
-                            STOP_TEST_ON_ERROR,
-                            COUNT_ERROR_FOR_STOP_TEST,
-                            GRAFANA_HOSTS_DETAIL_URL,
-                            GRAFANA_HOSTS_DETAIL_CPU_URL,
-                            GRAFANA_TRANSPORT_THREAD_POOLS,
-                            SPLUNK_URL,
-                            CSM_URL,
-                            propertiesService.getString("DB_URL"),
-                            propertiesService.getString("DB_USER_NAME"),
-                            propertiesService.getStringDecode("DB_USER_PASSWORD"),
-                            testPlan.getKeyBpm(),
-                            PATH_REPORT);
+        if (propertiesService.getString("DB_URL").isEmpty() ||
+                getConnectToDB(
+                    propertiesService.getString("DB_URL"),
+                    propertiesService.getString("DB_USER_NAME"),
+                    propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
+
+            for (TestPlans testPlans : testPlansList) {
+                if (testPlans.getClassName().equals(className)) {
+                    for (TestPlan testPlan : testPlans.getTestPlanList()) {
+                        apiMax++;
+                        multiRunServiceList.add(new MultiRunService());
+                        multiRunServiceList.get(apiMax).init(
+                                this,
+                                testPlan.getApiNum(),
+                                testPlan.getName(),
+                                testPlan.isAsync(),
+                                testPlan.getTestDuration(),
+                                testPlan.getVuCountMin(),
+                                testPlan.getVuCountMax(),
+                                testPlan.getVuStepTime(),
+                                testPlan.getVuStepTimeDelay(),
+                                testPlan.getVuStepCount(),
+                                testPlan.getPacing(),
+                                testPlan.getPacingType(),
+                                STOP_TEST_ON_ERROR,
+                                COUNT_ERROR_FOR_STOP_TEST,
+                                GRAFANA_HOSTS_DETAIL_URL,
+                                GRAFANA_HOSTS_DETAIL_CPU_URL,
+                                GRAFANA_TRANSPORT_THREAD_POOLS,
+                                SPLUNK_URL,
+                                CSM_URL,
+                                dbService,
+                                testPlan.getKeyBpm(),
+                                PATH_REPORT);
+                    }
+                    return true;
                 }
-                return true;
             }
+            LOG.error("Не найден план тестирования для {}", className);
+            return false;
+        } else {
+            dbService.close();
+            System.exit(-1);
         }
-        LOG.error("Не найден план тестирования для {}", className);
         return false;
     }
 
@@ -200,6 +218,64 @@ public class MultiRun {
             }
         }
         return true;
+    }
+
+
+    /**
+     * Подключение к БД, создание пула
+     * @param dbUrl
+     * @param dbUserName
+     * @param dbPassword
+     * @return
+     */
+    private boolean getConnectToDB(
+            String dbUrl,
+            String dbUserName,
+            String dbPassword
+    ){
+        dbService = new DBService.Builder()
+                .dbUrl(dbUrl)
+                .dbUserName(dbUserName)
+                .dbPassword(dbPassword)
+                .build();
+
+        if (dbService.connectPooled(
+                200,
+                210,
+                3,
+                120,
+                3,
+                0)) {
+
+//            if (1==1){return true;}
+            // проверка занятости БПМ
+            String sql = "select count(1) as cnt from ";
+            try {
+                boolean res = true;
+                Connection connection = dbService.getConnection();
+                Statement statement = dbService.createStatement(connection);
+                ResultSet resultSet = dbService.executeQuery(statement, sql);
+                if (resultSet.next()) { // есть задачи в статусе Running
+                    int cnt = resultSet.getInt("cnt");
+                    if (cnt > 0){
+                        LOG.error("####" +
+                                "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
+                                "\nselect count(1) as cnt from : {}\n" +
+                                "Дождитесь завершения обработки, либо выполните:\n" +
+                                "--очистка очереди\n", cnt);
+                        res = false;
+                    }
+                }
+                resultSet.close();
+                statement.close();
+                connection.close();
+                return res;
+            } catch (SQLException e) {
+                LOG.error("Ошибка при получении данных из БД\n", e);
+                return false;
+            }
+        }
+        return false;
     }
 
 }

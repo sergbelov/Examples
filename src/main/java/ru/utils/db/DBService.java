@@ -11,7 +11,6 @@ import java.sql.*;
 import java.util.Properties;
 
 public class DBService {
-
     private static final Logger LOG = LogManager.getLogger();
 
     private ComboPooledDataSource comboPooledDataSource = null; //new ComboPooledDataSource();
@@ -27,7 +26,6 @@ public class DBService {
     private String dbUrl;
     private String dbUserName;
     private String dbPassword;
-
 
     public static class Builder {
         private Level loggerLevel = null;
@@ -292,133 +290,6 @@ public class DBService {
 
 
     /**
-     * Инициализация пула подключений к БД
-     */
-    public void initPooledDataSource() {
-        initPooledDataSource(
-                50,
-                50,
-                2,
-                10,
-                2,
-                30);
-    }
-
-    /**
-     * Инициализация пула подключений к БД
-     *
-     * @param maxStatements
-     * @param maxStatementsPerConnection
-     * @param minPoolSize
-     * @param maxPoolSize
-     * @param acquireIncrement
-     * @param maxIdleTime
-     */
-    public void initPooledDataSource(
-            int maxStatements,
-            int maxStatementsPerConnection,
-            int minPoolSize,
-            int maxPoolSize,
-            int acquireIncrement,
-            int maxIdleTime
-    ) {
-        try {
-            if (comboPooledDataSource == null) {
-                LOG.info("Инициализация пула подключений {}...", dbUrl);
-                comboPooledDataSource = new ComboPooledDataSource();
-                comboPooledDataSource.setDriverClass(dbType.getDriver());
-                comboPooledDataSource.setJdbcUrl(dbUrl);
-                comboPooledDataSource.setUser(dbUserName);
-                comboPooledDataSource.setPassword(dbPassword);
-
-                Properties properties = new Properties();
-                properties.setProperty("user", dbUserName);
-                properties.setProperty("password", dbPassword);
-                properties.setProperty("useUnicode", "true");
-                properties.setProperty("characterEncoding", "UTF8");
-                comboPooledDataSource.setProperties(properties);
-
-                // set options
-                comboPooledDataSource.setMaxStatements(maxStatements);
-                comboPooledDataSource.setMaxStatementsPerConnection(maxStatementsPerConnection);
-                comboPooledDataSource.setMinPoolSize(minPoolSize);
-                comboPooledDataSource.setMaxPoolSize(maxPoolSize);
-                comboPooledDataSource.setAcquireIncrement(acquireIncrement);
-                comboPooledDataSource.setMaxIdleTime(maxIdleTime);
-                LOG.debug("Пул подключений {} инициализирован", dbUrl);
-            } else {
-                LOG.warn("Пул подключений {} уже инициализирован...", dbUrl);
-            }
-        } catch (PropertyVetoException e) {
-            LOG.error("Ошибка при инициализации пула подключений {}\n", dbUrl, e);
-        }
-    }
-
-    /**
-     * Получить Connection из пула
-     *
-     * @return
-     */
-    public Connection getConnection() {
-        if (comboPooledDataSource != null) {
-            Connection connection = null;
-            try {
-                connection = comboPooledDataSource.getConnection();
-                LOG.debug("Создание Connection и пула: idleConnections = {}; busyConnections = {}",
-                        comboPooledDataSource.getNumIdleConnections(),
-                        comboPooledDataSource.getNumBusyConnections());
-            } catch (Exception e) {
-                LOG.error("Ошибка при создании Connection из пула\n", e);
-            }
-            return connection;
-        } else {
-            return this.connection;
-        }
-    }
-
-
-    public Statement createStatement(Connection connection){
-        return createStatement(
-                connection,
-                ResultSet.TYPE_SCROLL_INSENSITIVE,
-                ResultSet.CONCUR_READ_ONLY);
-    }
-
-    /**
-     * Создание Statement
-     * ResultSet.TYPE_FORWARD_ONLY
-     * Указатель двигается только вперёд по множеству полученных результатов.
-     * ResultSet.TYPE_SCROLL_INTENSIVE
-     * Указатель может двигаться вперёд и назад и не чуствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
-     * ResultSet.TYPE_SCROLL_SENSITIVE
-     * Указатель может двигаться вперёд и назад и чувствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
-     * -------------------------------------------------------------------------------------
-     * ResultSet.CONCUR_READ_ONLY
-     * Создаёт экземпляр ResultSet только для чтения. Устанавливается по умолчанию.
-     * ResultSet.CONCUR_UPDATABLE
-     * Создаёт экземпляр ResultSet, который может изменять данные.
-     *
-     * @return
-     */
-    public Statement createStatement(
-            Connection connection,
-            int resultSetType,
-            int resultSetConcurrency
-    ) {
-        Statement statement = null;
-        if (connection != null) {
-            try {
-                statement = connection.createStatement(resultSetType, resultSetConcurrency);
-            } catch (SQLException e) {
-                LOG.error("Ошибка при создании Statement\n", e);
-            }
-        } else {
-            LOG.error("SQL Отсутствует подключение к базе данных");
-        }
-        return statement;
-    }
-
-    /**
      * Закрытие Connection из пула
      * @param connection
      */
@@ -437,16 +308,6 @@ public class DBService {
         }
     }
 
-    /**
-     * Закрываем пул подлключений к БД
-     */
-/*
-    public void closePooledDataSource() {
-        if (comboPooledDataSource != null) {
-            comboPooledDataSource.close();
-        }
-    }
-*/
 
     /**
      * Установка параметов для подключения к БД
@@ -613,7 +474,7 @@ public class DBService {
      * @return true or false
      */
     public boolean isConnection() {
-        return connection == null ? false : true;
+        return (connection == null && comboPooledDataSource == null) ? false : true;
     }
 
     /**
@@ -623,6 +484,69 @@ public class DBService {
      */
     public Connection connection() {
         return connection;
+    }
+
+    /**
+     * Получить Connection, если пул активен берется из него
+     *
+     * @return
+     */
+    public Connection getConnection() {
+        if (comboPooledDataSource != null) {
+            Connection connection = null;
+            try {
+                connection = comboPooledDataSource.getConnection();
+                LOG.debug("Создание Connection и пула: idleConnections = {}; busyConnections = {}",
+                        comboPooledDataSource.getNumIdleConnections(),
+                        comboPooledDataSource.getNumBusyConnections());
+            } catch (Exception e) {
+                LOG.error("Ошибка при создании Connection из пула\n", e);
+            }
+            return connection;
+        } else {
+            return this.connection;
+        }
+    }
+
+    public Statement createStatement(Connection connection){
+        return createStatement(
+                connection,
+                ResultSet.TYPE_SCROLL_INSENSITIVE,
+                ResultSet.CONCUR_READ_ONLY);
+    }
+
+    /**
+     * Создание Statement
+     * ResultSet.TYPE_FORWARD_ONLY
+     * Указатель двигается только вперёд по множеству полученных результатов.
+     * ResultSet.TYPE_SCROLL_INTENSIVE
+     * Указатель может двигаться вперёд и назад и не чуствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
+     * ResultSet.TYPE_SCROLL_SENSITIVE
+     * Указатель может двигаться вперёд и назад и чувствителен к изменениям в БД, которые сделаны другими пользователями после того, как ResultSet был создан.
+     * -------------------------------------------------------------------------------------
+     * ResultSet.CONCUR_READ_ONLY
+     * Создаёт экземпляр ResultSet только для чтения. Устанавливается по умолчанию.
+     * ResultSet.CONCUR_UPDATABLE
+     * Создаёт экземпляр ResultSet, который может изменять данные.
+     *
+     * @return
+     */
+    public Statement createStatement(
+            Connection connection,
+            int resultSetType,
+            int resultSetConcurrency
+    ) {
+        Statement statement = null;
+        if (connection != null) {
+            try {
+                statement = connection.createStatement(resultSetType, resultSetConcurrency);
+            } catch (SQLException e) {
+                LOG.error("Ошибка при создании Statement\n", e);
+            }
+        } else {
+            LOG.error("SQL Отсутствует подключение к базе данных");
+        }
+        return statement;
     }
 
     /**
@@ -650,6 +574,71 @@ public class DBService {
         return true;
     }
 
+
+    /**
+     * Инициализация пула подключений к БД
+     */
+    public boolean connectPooled() {
+        return connectPooled(
+                50,
+                55,
+                3,
+                15,
+                3,
+                0);
+    }
+
+    /**
+     * Инициализация пула подключений к БД
+     *
+     * @param maxStatements
+     * @param maxStatementsPerConnection
+     * @param minPoolSize
+     * @param maxPoolSize
+     * @param acquireIncrement
+     * @param maxIdleTime
+     */
+    public boolean connectPooled(
+            int maxStatements,
+            int maxStatementsPerConnection,
+            int minPoolSize,
+            int maxPoolSize,
+            int acquireIncrement,
+            int maxIdleTime
+    ) {
+        try {
+            if (comboPooledDataSource == null) {
+                LOG.info("Инициализация пула подключений {}...", dbUrl);
+                comboPooledDataSource = new ComboPooledDataSource();
+                comboPooledDataSource.setDriverClass(dbType.getDriver());
+                comboPooledDataSource.setJdbcUrl(dbUrl);
+                comboPooledDataSource.setUser(dbUserName);
+                comboPooledDataSource.setPassword(dbPassword);
+
+                Properties properties = new Properties();
+                properties.setProperty("user", dbUserName);
+                properties.setProperty("password", dbPassword);
+                properties.setProperty("useUnicode", "true");
+                properties.setProperty("characterEncoding", "UTF8");
+                comboPooledDataSource.setProperties(properties);
+
+                // set options
+                comboPooledDataSource.setMaxStatements(maxStatements);
+                comboPooledDataSource.setMaxStatementsPerConnection(maxStatementsPerConnection);
+                comboPooledDataSource.setMinPoolSize(minPoolSize);
+                comboPooledDataSource.setMaxPoolSize(maxPoolSize);
+                comboPooledDataSource.setAcquireIncrement(acquireIncrement);
+                comboPooledDataSource.setMaxIdleTime(maxIdleTime);
+                LOG.debug("Пул подключений {} инициализирован", dbUrl);
+            } else {
+                LOG.warn("Пул подключений {} уже инициализирован", dbUrl);
+            }
+            return true;
+        } catch (PropertyVetoException e) {
+            LOG.error("Ошибка при инициализации пула подключений {}\n", dbUrl, e);
+            return false;
+        }
+    }
 
     /**
      * Подключение к БД с параметрами
@@ -775,10 +764,10 @@ ResultSet.CONCUR_UPDATABLE
         if (isConnection()) {
             LOG.info("SQL Disconnect: {}", dbUrl);
             try {
-                if (dbType == DBType.HSQLDB && shutdownForHSQLDB) {
-                    execute("SHUTDOWN");
-                }
                 if (statement != null) {
+                    if (dbType == DBType.HSQLDB && shutdownForHSQLDB) {
+                        execute("SHUTDOWN");
+                    }
                     statement.close();
                 }
                 if (connection != null) {
@@ -791,8 +780,8 @@ ResultSet.CONCUR_UPDATABLE
             }
         }
         if (comboPooledDataSource != null){
-            LOG.info("SQL Pool Disconnect: {}", dbUrl);
             comboPooledDataSource.close();
+            comboPooledDataSource = null;
         }
     }
 
@@ -864,7 +853,7 @@ ResultSet.CONCUR_UPDATABLE
     public boolean execute(Statement statement, String sql) {
         boolean res = false;
         try {
-            if (!statement.isClosed()) {
+            if (statement != null && !statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
                 statement.execute(sql);
                 ;
@@ -900,7 +889,7 @@ ResultSet.CONCUR_UPDATABLE
     public int executeUpdate(Statement statement, String sql) {
         int res = 0;
         try {
-            if (!statement.isClosed()) {
+            if (statement != null && !statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
                 res = statement.executeUpdate(sql);
                 ;
@@ -934,7 +923,7 @@ ResultSet.CONCUR_UPDATABLE
     public ResultSet executeQuery(Statement statement, String sql) {
         ResultSet resultSet = null;
         try {
-            if (!statement.isClosed()) {
+            if (statement != null && !statement.isClosed()) {
                 LOG.trace("SQL Request:\n{}", sql);
                 resultSet = statement.executeQuery(sql);
             } else {

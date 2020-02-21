@@ -12,10 +12,10 @@ public class CallMetrics {
         7  - countCallRs
      */
 
-    long durMin;
-    long durAvg;
-    long dur90;
-    long durMax;
+    double durMin;
+    double durAvg;
+    double dur90;
+    double durMax;
 
     double tps;
     double tpsRs;
@@ -24,10 +24,10 @@ public class CallMetrics {
     int countCallRs;
 
     public CallMetrics(
-            long durMin,
-            long durAvg,
-            long dur90,
-            long durMax,
+            double durMin,
+            double durAvg,
+            double dur90,
+            double durMax,
             double tps,
             double tpsRs,
             int countCall,
@@ -43,19 +43,19 @@ public class CallMetrics {
         this.countCallRs = countCallRs;
     }
 
-    public long getDurMin() {
+    public double getDurMin() {
         return durMin;
     }
 
-    public long getDurAvg() {
+    public double getDurAvg() {
         return durAvg;
     }
 
-    public long getDur90() {
+    public double getDur90() {
         return dur90;
     }
 
-    public long getDurMax() {
+    public double getDurMax() {
         return durMax;
     }
 

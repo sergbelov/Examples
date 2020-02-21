@@ -1,7 +1,7 @@
 package ru.utils.db;
 
 public enum DBType {
-    //        com.mysql.jdbc.Driver
+//        com.mysql.jdbc.Driver
 
     HSQLDB {
         public String getDriver() {
@@ -60,5 +60,4 @@ public enum DBType {
     public abstract String getDriver();
 
     public abstract String getUrl(String dbHost, String dbBase, int dbPort);
-
 }

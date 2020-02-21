@@ -1,5 +1,6 @@
 package ru.examples.loadExample;
 
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import ru.utils.load.ScriptRun;
@@ -18,20 +19,32 @@ import java.io.IOException;
  * !!! не запускать из PC
  * -Dltf.logger.level=info
  *
- * @author Belov Sergey
+ * @author Belov Sergey 
  */
+
 public class MultiLoad implements ScriptRun {
     private static final Logger LOG = LogManager.getLogger(MultiLoad.class);
     private MultiRun multiRun = new MultiRun();
 
+    /**
+     * Инициализация скрипта
+     *
+     * @throws Exception
+     */
     public void init() throws Exception {
 //        initialize();
         multiRun.init("MultiLoad");
     }
 
+    /**
+     * Завершение работы скрипта
+     *
+     * @throws Exception
+     */
     public void end() throws Exception {
         multiRun.end();
     }
+
 
     /**
      * Основное действие скрипта.
@@ -40,7 +53,6 @@ public class MultiLoad implements ScriptRun {
         GuiControl guiControl = new GuiControl(multiRun);
         multiRun.start(this);
     }
-
 
 
     public static void main(String[] args) throws Exception {
@@ -54,11 +66,12 @@ public class MultiLoad implements ScriptRun {
 
     /**
      * Запуск API по номеру
+     *
      * @param apiNum
      * @return
      */
-    public void start(int apiNum) throws Exception{
-        switch (apiNum){
+    public void start(int apiNum) throws Exception {
+        switch (apiNum) {
             case 0:
                 start0(apiNum);
                 break;
@@ -80,7 +93,7 @@ public class MultiLoad implements ScriptRun {
         String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
 
 // иммитация вызова API
-        long delay = (long) (Math.random() * (1000 + multiRun.getMultiRunService(apiNum).getVuCount()));
+        long delay = (long) ((Math.random() * 900) + 100);
 //        delay = 2000;
         try {
             Thread.sleep(delay);
@@ -89,11 +102,12 @@ public class MultiLoad implements ScriptRun {
         }
 
 // имитация возникновения ошибки
-        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 1000));
-//        rnd = 1;
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 100));
         if (rnd == 11) { // типо ошибка
 //        if (rnd % 2 == 0) { // типо ошибка
-            String text = "No resources to process message with messageId:\n" +
+            String text = "\n(c)Спокойствие, только спокойствие...\n" +
+                    "Данная ошибка создана специально\n" +
+                    "No resources to process message with messageId:\n" +
                     "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
             throw new Exception(text);
         }
@@ -104,11 +118,11 @@ public class MultiLoad implements ScriptRun {
     /**
      * Вызов API 1
      */
-    public void start1(int apiNum) throws  Exception{
+    public void start1(int apiNum) throws Exception {
         String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
 
 // иммитация вызова API
-        long delay = (long) (Math.random() * (2000 + multiRun.getMultiRunService(apiNum).getVuCount()));
+        long delay = (long) ((Math.random() * 1900) + 100);
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
@@ -116,12 +130,14 @@ public class MultiLoad implements ScriptRun {
         }
 
 // имитация возникновения ошибки
-        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 20));
-//        rnd = 1;
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 100));
         if (rnd == 11) { // типо ошибка
 //        if (rnd % 2 == 0) { // типо ошибка
-            String text = "No resources to process message with messageId:\n" +
+            String text = "\n(c)Спокойствие, только спокойствие...\n" +
+                    "Данная ошибка создана специально\n" +
+                    "No resources to process message with messageId:\n" +
                     "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
+//            String text = "error" + ((int) (Math.random() * 3));
             throw new Exception(text);
         }
     }
@@ -129,11 +145,13 @@ public class MultiLoad implements ScriptRun {
     /**
      * Вызов API 2
      */
-    public void start2(int apiNum) throws Exception{
+    public void start2(int apiNum) throws Exception {
         String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
-        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 10));
-        if (rnd == 5) { // типо ошибка
-            String text = "No resources to process message with messageId:\n" +
+        int rnd = (int) (Math.random() * (multiRun.getMultiRunService(apiNum).getVuCount() * 100));
+        if (rnd == 11) { // типо ошибка
+            String text = "\n(c)Спокойствие, только спокойствие...\n" +
+                    "Данная ошибка создана специально\n" +
+                    "No resources to process message with messageId:\n" +
                     "ThreadPoolSizeConfig(methodConfiguration=MODULE, poolSize=";
             throw new Exception(text);
         }

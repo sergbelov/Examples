@@ -6,6 +6,10 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.influxdb.InfluxDB;
+import org.influxdb.InfluxDBFactory;
+import org.influxdb.dto.BatchPoints;
+import org.influxdb.dto.Point;
 import ru.utils.db.DBService;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
@@ -26,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MultiRun {
     private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
@@ -37,6 +42,12 @@ public class MultiRun {
         put("DB_URL", "");
         put("DB_USER_NAME", "");
         put("DB_USER_PASSWORD", "");
+
+        put("INFLUXDB_URL", "http://localhost:8086");
+        put("INFLUXDB_USER_NAME", "admin");
+        put("INFLUXDB_PASSWORD", "admin");
+        put("INFLUXDB_DB_NAME", "BPM_LOAD");
+        put("INFLUXDB_MEASUREMENT", "CALL");
 
         put("GRAFANA_HOSTS_DETAIL", "");
         put("GRAFANA_HOSTS_DETAIL_CPU", "");
@@ -62,7 +73,8 @@ public class MultiRun {
     private final String PATH_REPORT;
     private int apiMax = -1;
 
-    private DBService dbService;
+    private DBService dbService = null;
+    private InfluxDB influxDB = null;
 
     public MultiRun() {
         propertiesService.readProperties(PROPERTIES_FILE);
@@ -99,6 +111,9 @@ public class MultiRun {
         if (dbService != null) {
             dbService.close();
         }
+        if (influxDB != null){
+            influxDB.close();
+        }
     }
 
 
@@ -112,6 +127,37 @@ public class MultiRun {
                     propertiesService.getString("DB_URL"),
                     propertiesService.getString("DB_USER_NAME"),
                     propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
+
+            try {
+                InfluxDB influxDB = InfluxDBFactory.connect(
+                        propertiesService.getString("INFLUXDB_URL"),
+                        propertiesService.getString("INFLUXDB_USER_NAME"),
+                        propertiesService.getString("INFLUXDB_PASSWORD"));
+
+                if (!influxDB.databaseExists(propertiesService.getString("INFLUXDB_DB_NAME"))) {
+                    influxDB.createDatabase(propertiesService.getString("INFLUXDB_DB_NAME"));
+                }
+
+/*
+                long start = System.currentTimeMillis();
+                long stop = start + 1000;
+                Point point = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+//                        .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+                        .time(start, TimeUnit.MILLISECONDS)
+                        .addField("api", "API")
+                        .addField("key", "KEY")
+                        .build();
+                BatchPoints batchPoints = BatchPoints
+                        .database(propertiesService.getString("INFLUXDB_DB_NAME"))
+//                .retentionPolicy("defaultPolicy")
+                        .build();
+                batchPoints.point(point);
+                influxDB.write(batchPoints);
+*/
+
+            } catch (Exception e) {
+                LOG.error("Ошибка при подключении к InfluxDB: {}", propertiesService.getString("INFLUXDB_URL"));
+            }
 
             for (TestPlans testPlans : testPlansList) {
                 if (testPlans.getClassName().equals(className)) {
@@ -140,7 +186,10 @@ public class MultiRun {
                                 CSM_URL,
                                 dbService,
                                 testPlan.getKeyBpm(),
-                                PATH_REPORT);
+                                PATH_REPORT,
+                                influxDB,
+                                propertiesService.getString("INFLUXDB_DB_NAME"),
+                                propertiesService.getString("INFLUXDB_MEASUREMENT")                                );
                     }
                     return true;
                 }

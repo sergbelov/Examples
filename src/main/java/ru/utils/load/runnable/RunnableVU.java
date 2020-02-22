@@ -2,6 +2,7 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.influxdb.InfluxDB;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
@@ -17,6 +18,7 @@ public class RunnableVU implements Runnable {
     private List<Call> callList;
     private MultiRunService multiRunService;
     private ExecutorService executorService;
+    private InfluxDB influxDB;
 
     public RunnableVU(
             String name,
@@ -31,6 +33,7 @@ public class RunnableVU implements Runnable {
         this.callList = callList;
         this.multiRunService = multiRunService;
         this.executorService = executorService;
+        this.influxDB = multiRunService.getInfluxDB();
     }
 
     @Override
@@ -44,10 +47,17 @@ public class RunnableVU implements Runnable {
                         name,
                         baseScript,
                         callList,
-                        multiRunService));
+                        multiRunService,
+                        executorService));
             } else {
                 if (multiRunService.isAsync()){ // асинхронный вызов, не ждем завершения выполнения
                     callList.add(new Call(start)); // фиксируем вызов
+                    executorService.submit(new RunnableSaveToInfluxDB(
+                            name,
+                            start,
+                            null,
+                            callList,
+                            multiRunService));
                     try {
                         baseScript.start(multiRunService.getApiNum());
                     } catch (Exception e) {
@@ -55,10 +65,23 @@ public class RunnableVU implements Runnable {
                     }
                 } else { // синхронный вызов, ждем завершения выполнения
                     try {
+                        long stop = System.currentTimeMillis();
                         baseScript.start(multiRunService.getApiNum());
-                        callList.add(new Call(start, System.currentTimeMillis())); // фиксируем вызов
+                        callList.add(new Call(start, stop)); // фиксируем вызов
+                        executorService.submit(new RunnableSaveToInfluxDB(
+                                name,
+                                start,
+                                stop,
+                                callList,
+                                multiRunService));
                     } catch (Exception e) {
                         callList.add(new Call(start)); // фиксируем вызов
+                        executorService.submit(new RunnableSaveToInfluxDB(
+                                name,
+                                start,
+                                null,
+                                callList,
+                                multiRunService));
                         multiRunService.errorListAdd(name, e);
                     }
                 }

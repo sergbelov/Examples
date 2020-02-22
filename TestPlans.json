@@ -15,7 +15,7 @@
         "pacing": 1000,
         "pacingType": 0,
         "keyBpm": "process01"
-      },
+      }/*,
       {
         "apiNum": 1,
         "name": "MultiLoad_Template2",
@@ -43,7 +43,7 @@
         "pacing": 2000,
         "pacingType": 1,
         "keyBpm": "process03"
-      }
+      }*/
     ]
   }
 ]

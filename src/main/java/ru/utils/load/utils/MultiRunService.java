@@ -1,5 +1,6 @@
 package ru.utils.load.utils;
 
+import org.influxdb.InfluxDB;
 import ru.utils.db.DBService;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
@@ -75,6 +76,9 @@ public class MultiRunService {
     private long testStopTime;
     private long nextTimeAddVU;
     private Long prevStartTimeStatistic;
+    private InfluxDB influxDB;
+    private String influxDbBaseName;
+    private String influxDbMeasurement;
 
     // параметры теста
     private boolean async; // асинхронный вызов сервиса
@@ -132,7 +136,10 @@ public class MultiRunService {
             String csmUrl,
             DBService dbService,
             String keyBpm,
-            String pathReport
+            String pathReport,
+            InfluxDB influxDB,
+            String influxDbBaseName,
+            String influxDbMeasurement
     ) {
         this.multiRun = multiRun;
         this.apiNum = apiNum;
@@ -164,9 +171,14 @@ public class MultiRunService {
             this.dbService = dbService;
             dataFromDB.init(dbService);
         }
+        this.influxDB = influxDB;
+        this.influxDbBaseName = influxDbBaseName;
+        this.influxDbMeasurement = influxDbMeasurement;
     }
 
-    public void end() { dataFromDB.end(); }
+    public void end() {
+        dataFromDB.end();
+    }
 
     public MultiRunService() {
     }
@@ -186,6 +198,12 @@ public class MultiRunService {
     public DataFromDB getDataFromDB() {
         return dataFromDB;
     }
+
+    public InfluxDB getInfluxDB() { return influxDB; }
+
+    public String getInfluxDbBaseName() { return influxDbBaseName; }
+
+    public String getInfluxDbMeasurement() { return influxDbMeasurement; }
 
     public MultiRun getMultiRun() {
         return multiRun;
@@ -352,10 +370,11 @@ public class MultiRunService {
 
     /**
      * Добавляем ошибку в список
+     *
      * @param name
      * @param error
      */
-    public void errorListAdd(String name, Exception error){
+    public void errorListAdd(String name, Exception error) {
         if (!warming.get()) { // при прогреве ошибки не фиксируем
             long time = System.currentTimeMillis();
             LOG.error("{}\n", name, error);
@@ -746,7 +765,7 @@ public class MultiRunService {
         }
 
         // ошибки (при сборе статистики за весь период не фиксируем )
-        LOG.debug("{}: группировка ошибок {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime) );
+        LOG.debug("{}: группировка ошибок {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
         int countError = 0;
         if (startTime != testStartTime || stopTime != testStopTime) {
             for (int i = 0; i < errorList.size(); i++) {

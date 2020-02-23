@@ -7,11 +7,11 @@
         "name": "MultiLoad_Template1",
         "async": false,
         "testDuration": 1,
-        "vuCountMin": 5,
+        "vuCountMin": 1,
         "vuCountMax": 10,
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
-        "vuStepCount": 5,
+        "vuStepCount": 1,
         "pacing": 1000,
         "pacingType": 0,
         "keyBpm": "process01"

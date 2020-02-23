@@ -138,25 +138,49 @@ public class MultiRun {
                     influxDB.createDatabase(propertiesService.getString("INFLUXDB_DB_NAME"));
                 }
 
-/*
+                influxDB.createRetentionPolicy(
+                        "defaultPolicy",
+                        propertiesService.getString("INFLUXDB_DB_NAME"),
+                        "90d",
+                        1,
+                        true);
+
                 long start = System.currentTimeMillis();
+//                long start = System.nanoTime();
                 long stop = start + 1000;
-                Point point = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-//                        .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+                Point point1 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
                         .time(start, TimeUnit.MILLISECONDS)
+                        .addField("num", 1)
                         .addField("api", "API")
                         .addField("key", "KEY")
                         .build();
+/*
+                Point point2 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+                        .time(start, TimeUnit.MILLISECONDS)
+                        .addField("num", 2)
+                        .addField("api", "API")
+                        .addField("key", "KEY")
+                        .build();
+                Point point3 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+                        .time(start, TimeUnit.MILLISECONDS)
+                        .addField("num", 3)
+                        .addField("api", "API")
+                        .addField("key", "KEY")
+                        .build();
+*/
                 BatchPoints batchPoints = BatchPoints
                         .database(propertiesService.getString("INFLUXDB_DB_NAME"))
-//                .retentionPolicy("defaultPolicy")
+                        .retentionPolicy("defaultPolicy")
                         .build();
-                batchPoints.point(point);
+                batchPoints.point(point1);
+//                batchPoints.point(point2);
+//                batchPoints.point(point3);
                 influxDB.write(batchPoints);
-*/
-
+if (1==1) {
+    System.exit(0);
+}
             } catch (Exception e) {
-                LOG.error("Ошибка при подключении к InfluxDB: {}", propertiesService.getString("INFLUXDB_URL"));
+                LOG.error("Ошибка при подключении к InfluxDB: {}\n{}", propertiesService.getString("INFLUXDB_URL"), e);
             }
 
             for (TestPlans testPlans : testPlansList) {

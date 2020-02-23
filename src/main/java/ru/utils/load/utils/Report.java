@@ -497,7 +497,7 @@ public class Report {
                 sdf3.format(multiRunService.getTestStopTime()) + ".html";
         fileUtils.writeFile(fileName, sbHtml.toString());
         LOG.info("{}: Сформирован отчет {}", multiRunService.getName(), fileName);
-        LOG.info("Количество запросов: {}", multiRunService.getCountRequest());
+        LOG.info("Количество запросов: {}", multiRunService.getNumberRequest());
     }
 
     /**

@@ -69,7 +69,7 @@ public class MultiRunService {
     private AtomicBoolean running = new AtomicBoolean(true); // тест продолжается
     private AtomicBoolean warming = new AtomicBoolean(true); // прогрев
 
-    private AtomicInteger countRequest = new AtomicInteger(0);
+    private AtomicInteger numberRequest = new AtomicInteger(0);
 
     private MultiRun multiRun;
     private DBService dbService;
@@ -276,7 +276,7 @@ public class MultiRunService {
 
     public String getSqlSelect(int num) { return sqlSelect[num]; }
 
-    public AtomicInteger getCountRequest() { return countRequest; }
+    public AtomicInteger getNumberRequest() { return numberRequest; }
 
     /**
      * Количество активных потоков
@@ -399,12 +399,14 @@ public class MultiRunService {
                 }
             }
 
-            countRequest.incrementAndGet();
-            executorService.submit(new RunnableSaveToInfluxDB(
-                    name,
-                    start,
-                    stop,
-                    this));
+            int num = numberRequest.incrementAndGet();
+            if (influxDB != null) {
+                executorService.submit(new RunnableSaveToInfluxDB(
+                        num,
+                        start,
+                        stop,
+                        this));
+            }
         }
     }
 

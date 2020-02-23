@@ -92,26 +92,26 @@ public class MultiRun {
         Gson gson = new GsonBuilder() // с форматированием
                 .setPrettyPrinting()
                 .create();
-        try(
+        try (
                 JsonReader reader = new JsonReader(new InputStreamReader(
                         new FileInputStream(FILE_TEST_PLAN),
                         "UTF-8"));
-        )
-        {
-            testPlansList = gson.fromJson(reader, new TypeToken<List<TestPlans>>(){}.getType());
+        ) {
+            testPlansList = gson.fromJson(reader, new TypeToken<List<TestPlans>>() {
+            }.getType());
         } catch (Exception e) {
             LOG.error("Ошибка при чтении данных из файла {}\n", FILE_TEST_PLAN, e);
         }
     }
 
-    public void end(){
-        for (MultiRunService multiRunService: multiRunServiceList){
+    public void end() {
+        for (MultiRunService multiRunService : multiRunServiceList) {
             multiRunService.end();
         }
         if (dbService != null) {
             dbService.close();
         }
-        if (influxDB != null){
+        if (influxDB != null) {
             influxDB.close();
         }
     }
@@ -119,14 +119,15 @@ public class MultiRun {
 
     /**
      * Инициализация запуска сервисов (API) для заданного сценария (Класса)
+     *
      * @param className
      */
     public boolean init(String className) {
         if (propertiesService.getString("DB_URL").isEmpty() ||
                 getConnectToDB(
-                    propertiesService.getString("DB_URL"),
-                    propertiesService.getString("DB_USER_NAME"),
-                    propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
+                        propertiesService.getString("DB_URL"),
+                        propertiesService.getString("DB_USER_NAME"),
+                        propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
 
             try {
                 influxDB = InfluxDBFactory.connect(
@@ -141,44 +142,50 @@ public class MultiRun {
                 influxDB.createRetentionPolicy(
                         "defaultPolicy",
                         propertiesService.getString("INFLUXDB_DB_NAME"),
-                        "90d",
+                        "120d",
                         1,
                         true);
 
-                long start = System.currentTimeMillis();
-//                long start = System.nanoTime();
-                long stop = start + 1000;
-                Point point1 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                        .time(start, TimeUnit.MILLISECONDS)
-                        .addField("num", 1)
-                        .addField("api", "API")
-                        .addField("key", "KEY")
-                        .build();
-/*
-                Point point2 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                        .time(start, TimeUnit.MILLISECONDS)
-                        .addField("num", 2)
-                        .addField("api", "API")
-                        .addField("key", "KEY")
-                        .build();
-                Point point3 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                        .time(start, TimeUnit.MILLISECONDS)
-                        .addField("num", 3)
-                        .addField("api", "API")
-                        .addField("key", "KEY")
-                        .build();
-*/
-                BatchPoints batchPoints = BatchPoints
-                        .database(propertiesService.getString("INFLUXDB_DB_NAME"))
-                        .retentionPolicy("defaultPolicy")
-                        .build();
-                batchPoints.point(point1);
-//                batchPoints.point(point2);
-//                batchPoints.point(point3);
-                influxDB.write(batchPoints);
-if (1==1) {
-    System.exit(0);
-}
+                if (1 == 2) { // отладка
+                    long start = System.currentTimeMillis();
+                    long stop = start + 1000;
+                    long dur = stop - start;
+
+                    Point point1 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("num", "1")
+                            .tag("api", "API1")
+                            .tag("key", "KEY1")
+                            .addField("i", 1)
+                            .addField("dur", dur)
+                            .build();
+                    Point point2 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("num", "2")
+                            .tag("api", "API1")
+                            .tag("key", "KEY1")
+                            .addField("i", 1)
+                            .addField("dur", dur)
+                            .build();
+                    Point point3 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("num", "3")
+                            .tag("api", "API2")
+                            .tag("key", "KEY2")
+                            .addField("i", 1)
+                            .addField("dur", dur)
+                            .build();
+                    BatchPoints batchPoints = BatchPoints
+                            .database(propertiesService.getString("INFLUXDB_DB_NAME"))
+                            .retentionPolicy("defaultPolicy")
+                            .build();
+                    batchPoints.point(point1);
+                    batchPoints.point(point2);
+                    batchPoints.point(point3);
+                    influxDB.write(batchPoints);
+
+                    System.exit(0);
+                }
             } catch (Exception e) {
                 LOG.error("Ошибка при подключении к InfluxDB: {}\n{}", propertiesService.getString("INFLUXDB_URL"), e);
             }
@@ -213,7 +220,7 @@ if (1==1) {
                                 PATH_REPORT,
                                 influxDB,
                                 propertiesService.getString("INFLUXDB_DB_NAME"),
-                                propertiesService.getString("INFLUXDB_MEASUREMENT")                                );
+                                propertiesService.getString("INFLUXDB_MEASUREMENT"));
                     }
                     return true;
                 }
@@ -227,16 +234,22 @@ if (1==1) {
         return false;
     }
 
-    public GraphProperty getGraphProperty() { return graphProperty;}
+    public GraphProperty getGraphProperty() {
+        return graphProperty;
+    }
 
     /**
      * Список MultiRunService
+     *
      * @return
      */
-    public List<MultiRunService> getMultiRunServiceList() { return multiRunServiceList;}
+    public List<MultiRunService> getMultiRunServiceList() {
+        return multiRunServiceList;
+    }
 
     /**
      * Сервис для API по номеру
+     *
      * @param apiNum
      * @return
      */
@@ -244,7 +257,7 @@ if (1==1) {
         return multiRunServiceList.get(apiNum);
     }
 
-    public void start(ScriptRun baseScript){
+    public void start(ScriptRun baseScript) {
 /*
         // отладка
         final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
@@ -265,10 +278,10 @@ if (1==1) {
             LOG.error("Не задано количество тестируемых сервисов");
             return;
         }
-        CountDownLatch countDownLatch = new CountDownLatch(apiMax+1);
-        ExecutorService executorService = Executors.newFixedThreadPool(apiMax+1);
+        CountDownLatch countDownLatch = new CountDownLatch(apiMax + 1);
+        ExecutorService executorService = Executors.newFixedThreadPool(apiMax + 1);
 
-        for (MultiRunService multiRunService: multiRunServiceList){
+        for (MultiRunService multiRunService : multiRunServiceList) {
             executorService.submit(new RunnableLoadAPI(
                     multiRunService.getName(),
                     baseScript,
@@ -284,9 +297,9 @@ if (1==1) {
         executorService.shutdown();
     }
 
-    public boolean isWarmingCompleted(){
-        for (MultiRunService multiRunService: multiRunServiceList){
-            if (multiRunService.isWarming()){
+    public boolean isWarmingCompleted() {
+        for (MultiRunService multiRunService : multiRunServiceList) {
+            if (multiRunService.isWarming()) {
                 return false;
             }
         }
@@ -296,6 +309,7 @@ if (1==1) {
 
     /**
      * Подключение к БД, создание пула
+     *
      * @param dbUrl
      * @param dbUserName
      * @param dbPassword
@@ -305,7 +319,7 @@ if (1==1) {
             String dbUrl,
             String dbUserName,
             String dbPassword
-    ){
+    ) {
         dbService = new DBService.Builder()
                 .dbUrl(dbUrl)
                 .dbUserName(dbUserName)
@@ -330,7 +344,7 @@ if (1==1) {
                 ResultSet resultSet = dbService.executeQuery(statement, sql);
                 if (resultSet.next()) { // есть задачи в статусе Running
                     int cnt = resultSet.getInt("cnt");
-                    if (cnt > 0){
+                    if (cnt > 0) {
                         LOG.error("####" +
                                 "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
                                 "\nselect count(1) as cnt from : {}\n" +

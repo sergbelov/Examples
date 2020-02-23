@@ -16,58 +16,55 @@ import java.util.concurrent.TimeUnit;
  */
 public class RunnableSaveToInfluxDB implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RunnableSaveToInfluxDB.class);
-    private final String name;
+    private int num;
     private long start;
-    private Long stop;
+    private Long dur = null;
     private MultiRunService multiRunService;
     private InfluxDB influxDB;
 
     public RunnableSaveToInfluxDB(
-            String name,
+            int num,
             long start,
             Long stop,
             MultiRunService multiRunService
     ) {
-        this.name = name + "_SaveToInfluxDB";
-        LOG.trace("Инициализация потока {}", name);
+        this.num = num;
         this.start = start;
-        this.stop = stop;
         this.multiRunService = multiRunService;
         this.influxDB = multiRunService.getInfluxDB();
+        if (stop != null){
+            this.dur = stop - start;
+        }
     }
 
     @Override
     public void run() {
-        LOG.debug("Старт потока {}", name);
-        Point point = null;
-        if (stop != null) {
-            if (influxDB != null) {
+        if (influxDB != null) {
+            Point point = null;
+            if (dur != null) {
                 point = Point.measurement(multiRunService.getInfluxDbMeasurement())
                         .time(start, TimeUnit.MILLISECONDS)
-//                        .addField("start", start)
-                        .addField("stop", stop)
-                        .addField("api", multiRunService.getName())
-                        .addField("key", multiRunService.getKeyBpm())
+                        .tag("num", String.valueOf(num))
+                        .tag("api", multiRunService.getName())
+                        .tag("key", multiRunService.getKeyBpm())
+                        .addField("i", 1)
+                        .addField("dur", dur)
                         .build();
-            }
-        } else {
-            if (influxDB != null) {
+            } else {
                 point = Point.measurement(multiRunService.getInfluxDbMeasurement())
                         .time(start, TimeUnit.MILLISECONDS)
-//                        .addField("start", start)
-                        .addField("api", multiRunService.getName())
-                        .addField("key", multiRunService.getKeyBpm())
+                        .tag("num", String.valueOf(num))
+                        .tag("api", multiRunService.getName())
+                        .tag("key", multiRunService.getKeyBpm())
+                        .addField("i", 1)
                         .build();
             }
-        }
-        if (point != null) {
             BatchPoints batchPoints = BatchPoints
                     .database(multiRunService.getInfluxDbBaseName())
-//                .retentionPolicy("defaultPolicy")
+//                    .retentionPolicy("defaultPolicy")
                     .build();
             batchPoints.point(point);
             influxDB.write(batchPoints);
         }
-        LOG.debug("Остановка потока {}", name);
     }
 }

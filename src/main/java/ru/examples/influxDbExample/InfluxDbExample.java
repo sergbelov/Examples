@@ -61,6 +61,7 @@ public class InfluxDbExample {
 
         Point point1 = Point.measurement("memory")
                 .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+                .tag("num", "1")
                 .addField("name", "server1")
                 .addField("free", 4743656L)
                 .addField("used", 1015096L)
@@ -69,6 +70,7 @@ public class InfluxDbExample {
 
         Point point2 = Point.measurement("memory")
                 .time(System.currentTimeMillis() - 100, TimeUnit.MILLISECONDS)
+                .tag("num", "2")
                 .addField("name", "server1")
                 .addField("free", 4743696L)
                 .addField("used", 1016096L)

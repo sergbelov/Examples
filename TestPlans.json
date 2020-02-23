@@ -6,16 +6,16 @@
         "apiNum": 0,
         "name": "MultiLoad_Template1",
         "async": false,
-        "testDuration": 1,
-        "vuCountMin": 1,
-        "vuCountMax": 10,
+        "testDuration": 2,
+        "vuCountMin": 5,
+        "vuCountMax": 50,
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
-        "vuStepCount": 1,
+        "vuStepCount": 5,
         "pacing": 1000,
         "pacingType": 0,
         "keyBpm": "process01"
-      }/*,
+      },
       {
         "apiNum": 1,
         "name": "MultiLoad_Template2",
@@ -26,7 +26,7 @@
         "vuStepTime": 5,
         "vuStepTimeDelay": 0,
         "vuStepCount": 5,
-        "pacing": 1000,
+        "pacing": 2000,
         "pacingType": 0,
         "keyBpm": "process02"
       },
@@ -43,7 +43,7 @@
         "pacing": 2000,
         "pacingType": 1,
         "keyBpm": "process03"
-      }*/
+      }
     ]
   }
 ]

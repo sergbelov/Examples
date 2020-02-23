@@ -14,6 +14,7 @@ import ru.utils.load.data.graph.VarInList;
 import ru.utils.load.data.metrics.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.RunnableAwaitAndAddVU;
+import ru.utils.load.runnable.RunnableSaveToInfluxDB;
 import ru.utils.load.runnable.RunnableThrottlingState;
 import ru.utils.load.runnable.RunnableVU;
 
@@ -365,6 +366,41 @@ public class MultiRunService {
      */
     public void vuListAdd(long time, int count) {
         vuList.add(new DateTimeValue(time, count));
+    }
+
+
+    /**
+     * Сохранение метрики вызова
+     * @param start
+     * @param callList
+     */
+    public void callListAdd( long start, List<Call> callList){
+        if (!warming.get()) { // не сохраняем во время прогрева
+            Long stop = null;
+            if (async) { // асинхронный вызов, не ждем завершения выполнения
+                callList.add(new Call(start)); // фиксируем вызов
+                try {
+                    baseScript.start(apiNum);
+                } catch (Exception e) {
+                    errorListAdd(name, e);
+                }
+            } else { // синхронный вызов, ждем завершения выполнения
+                try {
+                    baseScript.start(apiNum);
+                    stop = System.currentTimeMillis();
+                    callList.add(new Call(start, stop)); // фиксируем вызов
+                } catch (Exception e) {
+                    callList.add(new Call(start)); // фиксируем вызов
+                    errorListAdd(name, e);
+                }
+            }
+
+            executorService.submit(new RunnableSaveToInfluxDB(
+                    name,
+                    start,
+                    stop,
+                    this));
+        }
     }
 
 

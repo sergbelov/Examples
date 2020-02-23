@@ -19,7 +19,6 @@ public class RunnableSaveToInfluxDB implements Runnable {
     private final String name;
     private long start;
     private Long stop;
-    private List<Call> callList;
     private MultiRunService multiRunService;
     private InfluxDB influxDB;
 
@@ -27,14 +26,12 @@ public class RunnableSaveToInfluxDB implements Runnable {
             String name,
             long start,
             Long stop,
-            List<Call> callList,
             MultiRunService multiRunService
     ) {
         this.name = name + "_SaveToInfluxDB";
         LOG.trace("Инициализация потока {}", name);
         this.start = start;
         this.stop = stop;
-        this.callList = callList;
         this.multiRunService = multiRunService;
         this.influxDB = multiRunService.getInfluxDB();
     }
@@ -46,24 +43,22 @@ public class RunnableSaveToInfluxDB implements Runnable {
         if (stop != null) {
             if (influxDB != null) {
                 point = Point.measurement(multiRunService.getInfluxDbMeasurement())
-//                        .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                         .time(start, TimeUnit.MILLISECONDS)
+//                        .addField("start", start)
                         .addField("stop", stop)
                         .addField("api", multiRunService.getName())
                         .addField("key", multiRunService.getKeyBpm())
                         .build();
             }
-            callList.add(new Call(start, stop));
         } else {
             if (influxDB != null) {
                 point = Point.measurement(multiRunService.getInfluxDbMeasurement())
-//                        .time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                         .time(start, TimeUnit.MILLISECONDS)
+//                        .addField("start", start)
                         .addField("api", multiRunService.getName())
                         .addField("key", multiRunService.getKeyBpm())
                         .build();
             }
-            callList.add(new Call(start));
         }
         if (point != null) {
             BatchPoints batchPoints = BatchPoints

@@ -50,41 +50,7 @@ public class RunnableVU implements Runnable {
                         multiRunService,
                         executorService));
             } else {
-                if (multiRunService.isAsync()){ // асинхронный вызов, не ждем завершения выполнения
-                    callList.add(new Call(start)); // фиксируем вызов
-                    executorService.submit(new RunnableSaveToInfluxDB(
-                            name,
-                            start,
-                            null,
-                            callList,
-                            multiRunService));
-                    try {
-                        baseScript.start(multiRunService.getApiNum());
-                    } catch (Exception e) {
-                        multiRunService.errorListAdd(name, e);
-                    }
-                } else { // синхронный вызов, ждем завершения выполнения
-                    try {
-                        long stop = System.currentTimeMillis();
-                        baseScript.start(multiRunService.getApiNum());
-                        callList.add(new Call(start, stop)); // фиксируем вызов
-                        executorService.submit(new RunnableSaveToInfluxDB(
-                                name,
-                                start,
-                                stop,
-                                callList,
-                                multiRunService));
-                    } catch (Exception e) {
-                        callList.add(new Call(start)); // фиксируем вызов
-                        executorService.submit(new RunnableSaveToInfluxDB(
-                                name,
-                                start,
-                                null,
-                                callList,
-                                multiRunService));
-                        multiRunService.errorListAdd(name, e);
-                    }
-                }
+                multiRunService.callListAdd(start, callList);
             }
 
             if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {

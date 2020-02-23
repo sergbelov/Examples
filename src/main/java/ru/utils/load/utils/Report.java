@@ -147,6 +147,17 @@ public class Report {
                         printMetrics))
                 .append("\t\t</div>\n");
 
+        // TPS
+        sbHtml.append("\n\t\t<div class=\"graph\">\n")
+                .append(graph.getSvgGraphLine("Количество запросов в секунду (tps)",
+                        multiRunService,
+                        multiRunService.getMetricsList(),
+                        false,
+                        printMetrics))
+                .append("\t\t</div>\n");
+
+        sbHtml.append(getTpsAvg());
+
         // Response time
         if (multiRunService.getMetricsList().get(0).getDoubleValue(VarInList.DurMax) > 0) {
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -188,18 +199,6 @@ public class Report {
                             multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCallRs)))
                     .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
         }
-
-        // TPS
-        sbHtml.append("\n\t\t<div class=\"graph\">\n")
-                .append(graph.getSvgGraphLine("Количество запросов в секунду (tps)",
-                        multiRunService,
-                        multiRunService.getMetricsList(),
-                        false,
-                        printMetrics))
-                .append("\t\t</div>\n");
-
-        sbHtml.append(getTpsAvg());
-
 
         // группа метрик из БД БПМ (выводим при наличии)
         StatData countStepCompleteInSec = null;

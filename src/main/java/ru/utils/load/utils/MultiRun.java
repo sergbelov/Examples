@@ -129,7 +129,7 @@ public class MultiRun {
                     propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
 
             try {
-                InfluxDB influxDB = InfluxDBFactory.connect(
+                influxDB = InfluxDBFactory.connect(
                         propertiesService.getString("INFLUXDB_URL"),
                         propertiesService.getString("INFLUXDB_USER_NAME"),
                         propertiesService.getString("INFLUXDB_PASSWORD"));

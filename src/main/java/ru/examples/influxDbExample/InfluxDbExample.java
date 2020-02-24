@@ -17,7 +17,7 @@ public class InfluxDbExample {
         String url = "http://localhost:8086";
         String username = "admin";
         String password = "admin";
-        String dbName = "java-database";
+        String dbName = "DB_JAVA";
 
         Preconditions.checkNonEmptyString(url, "url");
 
@@ -48,11 +48,11 @@ public class InfluxDbExample {
 
 //        influxDB.deleteDatabase("java-database");
 
-        influxDB.createDatabase(dbName);
-        influxDB.createRetentionPolicy(
-                "one-year", dbName, "365d", 1, true);
-
-
+        if (!influxDB.databaseExists(dbName)) {
+            influxDB.createDatabase(dbName);
+        }
+        influxDB.setDatabase(dbName);
+        influxDB.createRetentionPolicy("defaultPolicy", dbName, "365d", 1, true);
 
         BatchPoints batchPoints = BatchPoints
                 .database(dbName)
@@ -80,6 +80,7 @@ public class InfluxDbExample {
         batchPoints.point(point1);
         batchPoints.point(point2);
         influxDB.write(batchPoints);
+
         influxDB.close();
     }
 }

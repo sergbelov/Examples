@@ -16,19 +16,16 @@ import java.util.concurrent.TimeUnit;
  */
 public class RunnableSaveToInfluxDB implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RunnableSaveToInfluxDB.class);
-    private int num;
     private long start;
     private Long dur = null;
     private MultiRunService multiRunService;
     private InfluxDB influxDB;
 
     public RunnableSaveToInfluxDB(
-            int num,
             long start,
             Long stop,
             MultiRunService multiRunService
     ) {
-        this.num = num;
         this.start = start;
         this.multiRunService = multiRunService;
         this.influxDB = multiRunService.getInfluxDB();
@@ -39,6 +36,7 @@ public class RunnableSaveToInfluxDB implements Runnable {
 
     @Override
     public void run() {
+        int num = multiRunService.getNumberRequest().incrementAndGet();
         if (influxDB != null) {
             Point point = null;
             if (dur != null) {

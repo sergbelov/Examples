@@ -399,10 +399,8 @@ public class MultiRunService {
                 }
             }
 
-            int num = numberRequest.incrementAndGet();
             if (influxDB != null) {
                 executorService.submit(new RunnableSaveToInfluxDB(
-                        num,
                         start,
                         stop,
                         this));

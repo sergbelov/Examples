@@ -2,55 +2,37 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.influxdb.InfluxDB;
-import ru.utils.load.ScriptRun;
-import ru.utils.load.data.Call;
 import ru.utils.load.utils.MultiRunService;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 public class RunnableVU implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
-
     private final String name;
-    private ScriptRun baseScript;
-    private List<Call> callList;
     private MultiRunService multiRunService;
-    private ExecutorService executorService;
-    private InfluxDB influxDB;
 
     public RunnableVU(
             String name,
-            ScriptRun baseScript,
-            List<Call> callList,
-            MultiRunService multiRunService,
-            ExecutorService executorService
+            MultiRunService multiRunService
     ) {
         this.name = name;
         LOG.debug("Инициализация потока {}", name);
-        this.baseScript = baseScript;
-        this.callList = callList;
         this.multiRunService = multiRunService;
-        this.executorService = executorService;
-        this.influxDB = multiRunService.getInfluxDB();
     }
 
     @Override
     public void run() {
         int threadNum = multiRunService.startThread(); // счетчик активных потоков
         LOG.info("Старт потока {}, Threads: {}", name, threadNum);
+        ExecutorService executorService = multiRunService.getExecutorService();
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
                 executorService.submit(new RunnableTaskVU(
                         name,
-                        baseScript,
-                        callList,
-                        multiRunService,
-                        executorService));
+                        multiRunService));
             } else {
-                multiRunService.callListAdd(start, callList);
+                multiRunService.callListAdd(start);
             }
 
             if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {
@@ -68,7 +50,6 @@ public class RunnableVU implements Runnable {
         multiRunService.stopVU();
         multiRunService.vuListAdd();
         LOG.info("Остановка потока {}, Threads: {}", name, threadNum);
-
     }
 
     /**

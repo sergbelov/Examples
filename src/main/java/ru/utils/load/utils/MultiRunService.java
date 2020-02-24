@@ -212,6 +212,8 @@ public class MultiRunService {
         return multiRun;
     }
 
+    public ExecutorService getExecutorService() { return executorService;}
+
     public List<DateTimeValue> getVuList() {
         return vuList;
     }
@@ -376,9 +378,8 @@ public class MultiRunService {
     /**
      * Сохранение метрики вызова
      * @param start
-     * @param callList
      */
-    public void callListAdd( long start, List<Call> callList){
+    public void callListAdd(long start){
         if (!warming.get()) { // не сохраняем во время прогрева
             Long stop = null;
             if (async) { // асинхронный вызов, не ждем завершения выполнения
@@ -398,7 +399,6 @@ public class MultiRunService {
                     errorListAdd(name, e);
                 }
             }
-
             if (influxDB != null) {
                 executorService.submit(new RunnableSaveToInfluxDB(
                         start,
@@ -456,13 +456,11 @@ public class MultiRunService {
     /**
      * Старт нового VU
      */
-    public boolean startVU() {
-        boolean r = false;
+    public int startVU() {
         if (vuCount.get() < vuCountMax) {
-            vuCount.incrementAndGet();
-            r = true;
+            return vuCount.incrementAndGet();
         }
-        return r;
+        return -1;
     }
 
     /**
@@ -505,19 +503,16 @@ public class MultiRunService {
         if (isRunning() && System.currentTimeMillis() < testStopTime) {
             if (isTimeAddVU() || getVuCount() < vuCountMin) { // первоначальная инициализация или настало время увеличения количества VU
                 if (!isStartedAllVU()) { // не все VU стартовали
+                    int vu;
                     int step = (getVuCount() == 0 ? vuCountMin : vuStepCount);
                     for (int u = 0; u < step; u++) {
-                        if (startVU()) {
+                        if ((vu = startVU()) > -1) {
                             executorService.submit(new RunnableVU(
-                                    name + " RunnableVU" + getVuCount(),
-                                    baseScript,
-                                    callList,
-                                    this,
-                                    executorService));
+                                    name + " RunnableVU" + vu,
+                                    this));
 
                             if (vuStepTimeDelay > 0) { // фиксируем каждого пользователя
                                 vuListAdd(); // фиксация активных VU
-
                                 try {
                                     Thread.sleep(vuStepTimeDelay); // задержка перед стартом очередного пользователя
                                 } catch (InterruptedException e) {

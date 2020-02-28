@@ -71,7 +71,7 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
                 "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
                 "pa.ACTIVITYNAME as PROCESS, \n" +
                 "pa.DURATIONINMILLIS as DUR \n" +
-
+                "from " +
                 "where pi.processdefinitionkey = '" + key + "' " +
                 "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
@@ -98,7 +98,7 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
                 if (!idMain.equals(idMainMem)) {
                     if (countStep > 0) {
                         double durMainTransitions = (durMainMem - durSteps) / (countStep + 1);
-                        LOG.trace("{}: Длительность основоного процесса ({}): {}, Длительность шагов: {}, Количество переходов: {}, Длительность переходов: {}",
+                        LOG.trace("{}: Длительность основного процесса ({}): {}, Длительность шагов: {}, Количество переходов: {}, Длительность переходов: {}",
                                 name,
                                 idMain,
                                 durMainMem,

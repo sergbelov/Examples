@@ -34,6 +34,7 @@ public class Report {
     private ErrorsGroup errorsGroup = new ErrorsGroup(); // типы ошибок (для группировки)
     private int countActiveHost = 0;
     private double tpsMax = 0.00;
+    private int vuCountMax = 0;
 
     /**
      * Сохраняем отчет в HTML - файл
@@ -43,8 +44,7 @@ public class Report {
     public void saveReportHtml(
             MultiRunService multiRunService,
             String pathReport) {
-        saveReportHtml(multiRunService, pathReport, false);
-//        saveReportHtml(multiRunService, pathReport, true);
+        saveReportHtml(multiRunService, pathReport, false, false);
     }
 
     /**
@@ -55,6 +55,7 @@ public class Report {
     public void saveReportHtml(
             MultiRunService multiRunService,
             String pathReport,
+            boolean yStartFrom0,
             boolean printMetrics) {
 
         this.multiRunService = multiRunService;
@@ -113,9 +114,9 @@ public class Report {
                         "\t</head>\n" +
                         "\t<body>\n" +
                         "<h2>" + multiRunService.getName() + " (" + multiRunService.getKeyBpm() +
-                        ") период " + sdf1.format(multiRunService.getTestStartTime()) +
-                        " - " + sdf1.format(multiRunService.getTestStopTime()) + " (" +
-                        timeMillisToString(multiRunService.getTestStartTime(), multiRunService.getTestStopTime()) +
+                        ") период " + sdf1.format(multiRunService.getTestStartTimeReal()) +
+                        " - " + sdf1.format(multiRunService.getTestStopTimeReal()) + " (" +
+                        timeMillisToString(multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()) +
                         ")</h2>\n");
 
         // информация по версиям модуля и активности хостов
@@ -144,6 +145,7 @@ public class Report {
                         multiRunService,
                         multiRunService.getVuList(),
                         true,
+                        true,
                         printMetrics))
                 .append("\t\t</div>\n");
 
@@ -152,6 +154,7 @@ public class Report {
                 .append(graph.getSvgGraphLine("Количество запросов в секунду (tps)",
                         multiRunService,
                         multiRunService.getMetricsList(),
+                        yStartFrom0,
                         false,
                         printMetrics))
                 .append("\t\t</div>\n");
@@ -164,6 +167,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Response time",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            yStartFrom0,
                             false,
                             printMetrics))
                     .append("\t\t</div>\n");
@@ -211,6 +215,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Длительность выполнения (информация из БД)",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            yStartFrom0,
                             false,
                             printMetrics))
                     .append("\t\t</div>\n");
@@ -252,6 +257,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Статистика из БД БПМ",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            yStartFrom0,
                             false,
                             printMetrics))
                     .append("\t\t</div>\n");
@@ -322,17 +328,19 @@ public class Report {
                         .append(graph.getSvgGraphLine("Количество шагов завершенных в секунду",
                                 multiRunService,
                                 multiRunService.getDataFromDB().getCountEndInSecList(),
+                                yStartFrom0,
                                 false,
                                 printMetrics))
                         .append("\t\t</div>\n");
             }
 
             // Throttling
-            if (multiRunService.getBpmsJobEntityImplCountList().size() > 0) {
+            if (multiRunService.getBpmsJobEntityImplCountList().size() > 1) {
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("BpmsJobEntityImpl Count",
                                 multiRunService,
                                 multiRunService.getBpmsJobEntityImplCountList(),
+                                yStartFrom0,
                                 false,
                                 printMetrics))
                         .append("\t\t</div>\n");
@@ -365,6 +373,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Ошибки",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            yStartFrom0,
                             false,
                             printMetrics))
                     .append("\t\t</div>\n");
@@ -380,10 +389,11 @@ public class Report {
         sbHtml.append("<br><table><caption>Сравнительная таблица</caption><tbody>\n<tr>" +
                 "<th rowspan=\"2\">Кол-во<br>узлов</th>" +
                 "<th rowspan=\"2\">Сервис</th>" +
+                "<th rowspan=\"2\">Длительность<br>теста</th>" +
                 "<th rowspan=\"2\">Отправлено<br>запросов</th>" +
                 "<th colspan=\"3\">Процессы в БД</th>" +
 
-                "<th rowspan=\"2\">tps max</th>" +
+                "<th rowspan=\"2\">max tps при VU</th>" +
                 "<th rowspan=\"2\">Response<br>time<br>90% (мс)</th>" +
                 "<th rowspan=\"2\">Длительность<br>выполнения<br>90% (мс)</th>" +
 
@@ -400,6 +410,8 @@ public class Report {
         sbHtml.append(countActiveHost)
                 .append("</td><td>")
                 .append(multiRunService.getName())
+                .append("</td><td>")
+                .append(timeMillisToString( multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()))
                 .append("</td><td>")
                 .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)))
                 .append("</td>");
@@ -434,6 +446,8 @@ public class Report {
                          multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning))))
                 .append("</td><td>")
                 .append(decimalFormat.format(tpsMax))
+                .append(" / ")
+                .append(vuCountMax)
                 .append("</td><td>")
                 .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(VarInList.Dur90)))
                 .append("</td><td>")
@@ -441,9 +455,9 @@ public class Report {
                 .append("</td><td>");
 
         if (countStepCompleteInSec != null) { // Количество шагов завершенных в секунду
-            sbHtml.append(countStepCompleteInSec.getCountList(0))
+            sbHtml.append(decimalFormat.format(countStepCompleteInSec.getCountList(0)))
                     .append("</td><td>")
-                    .append(countStepCompleteInSec.getCountList(1))
+                    .append(decimalFormat.format(countStepCompleteInSec.getCountList(1)))
                     .append("</td><td>")
                     .append(decimalFormat.format(countStepCompleteInSec.getVal90()))
                     .append("</td><td>");
@@ -497,7 +511,9 @@ public class Report {
                 sdf3.format(multiRunService.getTestStopTime()) + ".html";
         fileUtils.writeFile(fileName, sbHtml.toString());
         LOG.info("{}: Сформирован отчет {}", multiRunService.getName(), fileName);
-        LOG.info("{}: Количество запросов: {}", multiRunService.getName(), multiRunService.getNumberRequest());
+        if (multiRunService.getNumberRequest().get() > 0) {
+            LOG.info("{}: Количество запросов: {}", multiRunService.getName(), multiRunService.getNumberRequest());
+        }
     }
 
     /**
@@ -756,7 +772,7 @@ public class Report {
         int vuCount = 0;
         int vuCountRs = 0;
         int vuStartIndex = 0;
-        int step = 5000;
+        int step = 4999;
         while (multiRunService.getVuList().get(vuStartIndex).getIntValue() == 0 && vuStartIndex < multiRunService.getVuList().size()) {
             vuStartIndex++;
         }
@@ -793,6 +809,7 @@ public class Report {
             }
         }
         tpsMax = tps;
+        vuCountMax = vuCount;
         StringBuilder res = new StringBuilder("<table><tbody>\n" +
                 "<tr><th rowspan=\"2\">Сервис</th>" +
                 "<th colspan=\"2\">tps отправлено</th>" +

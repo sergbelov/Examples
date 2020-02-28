@@ -162,17 +162,9 @@ public class DataFromDB {
         int maxDelay = 10; // ждем не более минут
         if (dbService != null) {
             LOG.info("{}: Ожидаем завершения начатых задач (не более {} мин)...", key, maxDelay);
-/*
-        String sql = "select count(1) as cnt " +
 
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and hpi.processstate = 'RUNNING' " +
-                "group by pdi.key, hpi.processstate";
-*/
-            String sql = "select count(1) as cnt " +
-                    "from BPMS.BPMSJOBENTITYIMPL j " +
-                    "and pdi.key = '" + key + "'";
+        String sql = "select count(1) as cnt " +
+                "from and pdi.key = '" + key + "'";
             try {
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
@@ -189,7 +181,7 @@ public class DataFromDB {
                             if (waitCountStart == null) { // начальный размер очереди
                                 waitCountStart = cnt;
                             }
-                            if (prevCnt == cnt) {
+                            if (prevCnt <= cnt) {
                                 replay++;
                             } else {
                                 replay = 0; // значение изменилось сбрасываем счетчик
@@ -233,16 +225,21 @@ public class DataFromDB {
             long startTime,
             long stopTime
     ) {
+/*
+        if (sdf1.format(startTime).equals("27/02/2020 10:16:35.139")) {
+            LOG.info("Отладка");
+        }
+*/
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
         String[] sql = {
                 "select pdi.key, hpi.processstate, count(1) as cnt " +
-
+                        "from and pdi.key = '" + key + "' " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "group by pdi.key, hpi.processstate",
 
                 "select pdi.key, count(1) as cnt, min(hpi.DURATIONINMILLIS), max(hpi.DURATIONINMILLIS), avg(hpi.DURATIONINMILLIS) " +
-
+                        "from and pdi.key = '" + key + "' " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and hpi.processstate = 'COMPLETED' " +
@@ -285,7 +282,7 @@ public class DataFromDB {
             dur[2] = percentile90.evaluate(
                     dbDataList
                             .stream()
-                            .filter(x -> (x.getDuration() != null & x.getStartTime() >= startTime && x.getStopTime() <= stopTime))
+                            .filter(x -> (x.getDuration() != null && x.getStartTime() >= startTime && x.getStartTime() <= stopTime))
                             .mapToDouble(DBData::getDuration)
                             .toArray(), 90);
         } else {
@@ -320,7 +317,7 @@ public class DataFromDB {
                 "hpi.PROCESSSTATE, " +
                 "to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS') as sec, " +
                 "count(hpa.id) as cnt\n" +
-
+                "from pdi.key = '" + key + "'\n" +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
 //                "and hpi.PROCESSSTATE = 'COMPLETED'\n" +
@@ -502,8 +499,7 @@ public class DataFromDB {
                     "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
                     "pa.ACTIVITYNAME as PROCESS, \n" +
                     "pa.DURATIONINMILLIS as DUR \n" +
-
-                    "where pi.processdefinitionkey = '" + key + "'\n" +
+                    "from where pi.processdefinitionkey = '" + key + "'\n" +
                     "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                     "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
 //                "and pi.endtime < to_timestamp('" + sdf1.format(stopTime + 60000) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
@@ -556,7 +552,7 @@ public class DataFromDB {
     public String getDoubleCheck(long startTime, long stopTime) {
         LOG.info("Поиск дублей в БД БПМ...");
         String sql = "select distinct PROCESSDEFINITIONKEY, PROCESSINSTANCEID, ACTIVITYID, min(STARTTIME) as STARTTIME, count(1) as cnt\n" +
-
+                "from " +
                 "where hai.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "group by PROCESSDEFINITIONKEY, processinstanceid, ACTIVITYID, EXECUTIONID, ACTIVITYNAME\n" +
@@ -676,8 +672,7 @@ public class DataFromDB {
                 "min(pa.DURATIONINMILLIS) AS MIN,\n" +
                 "max(pa.DURATIONINMILLIS) AS MAX,\n" +
                 "ROUND(AVG(pa.DURATIONINMILLIS)) AS AVG\n" +
-
-                "where pi.processdefinitionkey = '" + key + "'\n" +
+                "from where pi.processdefinitionkey = '" + key + "'\n" +
                 "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "group by pi.PROCESSSTATE, pd.name, pa.ACTIVITYNAME\n" +

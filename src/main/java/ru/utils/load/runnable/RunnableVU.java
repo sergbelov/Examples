@@ -8,14 +8,13 @@ import java.util.concurrent.ExecutorService;
 
 public class RunnableVU implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
+    private final int thread;
     private final String name;
     private MultiRunService multiRunService;
 
-    public RunnableVU(
-            String name,
-            MultiRunService multiRunService
-    ) {
-        this.name = name;
+    public RunnableVU(int thread, MultiRunService multiRunService) {
+        this.thread = thread;
+        this.name = multiRunService.getName() + " RunnableVU" + thread;
         LOG.debug("Инициализация потока {}", name);
         this.multiRunService = multiRunService;
     }
@@ -28,11 +27,9 @@ public class RunnableVU implements Runnable {
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения
-                executorService.submit(new RunnableTaskVU(
-                        name,
-                        multiRunService));
+                executorService.submit(new RunnableTaskVU(thread, multiRunService));
             } else {
-                multiRunService.callListAdd(start);
+                multiRunService.callListAdd(start, thread);
             }
 
             if (multiRunService.getPacingType() == 0 || multiRunService.getPacingType() == 2) {

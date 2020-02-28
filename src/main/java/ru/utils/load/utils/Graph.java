@@ -3,13 +3,11 @@ package ru.utils.load.utils;
 import ru.utils.load.data.DateTimeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.load.data.graph.VarInList;
 import ru.utils.load.data.metrics.MetricView;
 import ru.utils.load.data.metrics.MetricViewGroup;
 
-import java.text.DateFormat;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +19,8 @@ public class Graph {
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
     private final DateFormat sdf4 = new SimpleDateFormat("HH:mm:ss.SSS");
-    private final DateFormat sdf5 = new SimpleDateFormat("yyyyMMdd");
+    private final DateFormat sdf5 = new SimpleDateFormat("HH:mm:ss");
+    private final DateFormat sdf6 = new SimpleDateFormat("yyyyMMdd");
 
     public Graph() {
     }
@@ -30,6 +29,28 @@ public class Graph {
     /**
      * Линейный график (несколько показателей)
      * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
+     *
+     * @param title
+     * @param multiRunService
+     * @param metricsList
+     * @return
+     */
+    public String getSvgGraphLine(
+            String title,
+            MultiRunService multiRunService,
+            List<DateTimeValue> metricsList) {
+        return getSvgGraphLine(
+                title,
+                multiRunService,
+                metricsList,
+                true,
+                false,
+                false);
+    }
+    /**
+     * Линейный график (несколько показателей)
+     * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
+     *
      * @param multiRunService
      * @param title
      * @param metricsList
@@ -41,8 +62,18 @@ public class Graph {
             String title,
             MultiRunService multiRunService,
             List<DateTimeValue> metricsList,
+            boolean yStartFrom0,
             boolean step,
             boolean printMetrics) {
+
+/*
+        if (title.equals("Ошибки")){
+            LOG.info("Отлаживаем...");
+            for (int i = 0; i < metricsList.size(); i++){
+                LOG.info("{}: {} {}", multiRunService.getName(), sdf1.format(metricsList.get(i).getTime()), metricsList.get(i).getValue(VarInList.Errors));
+            }
+        }
+*/
 
         MetricViewGroup metricViewGroup = multiRunService
                 .getMultiRun()
@@ -54,7 +85,19 @@ public class Graph {
 
         LOG.info("{}: Формирование графика {}", multiRunService.getName(), metricViewGroup.getTitle());
 
-        long startTime = multiRunService.getTestStartTime();
+        long xValueMin = 0L;
+        try {
+            xValueMin = sdf2.parse(sdf2.format(multiRunService.getTestStartTime())).getTime();
+        } catch (ParseException e) {
+            LOG.error("Ошибка в формате даты", e);
+        }
+        long xValueMax = (long) (Math.ceil(multiRunService.getTestStopTime() / 1000.00) * 1000);
+        LOG.debug("{}: xValueMin: {} {}, xValueMax: {} {}",
+                multiRunService.getName(),
+                sdf1.format(multiRunService.getTestStartTime()),
+                sdf1.format(xValueMin),
+                sdf1.format(multiRunService.getTestStopTime()),
+                sdf1.format(xValueMax));
 
         int xSize = Math.max(10000, metricsList.size() - 1);
         int ySize = (int) (xSize / 2.8);
@@ -63,7 +106,7 @@ public class Graph {
         int xMax = xSize + xStart;
         int yMax = ySize + yStart;
         int xMarginRight = xSize / 300;
-        int yMarginBottom = xSize / 11;
+        int yMarginBottom = xSize / 12;
         int xText = xSize / 500;
         int yText = xSize / 400;
         int fontSize = xSize / 120;
@@ -73,18 +116,23 @@ public class Graph {
         String background = "#f0f0f0"; //"#dfdfdf";
 
         // максимальное/минимальное значение Y и X
-        long xValueMax = 0L;
+        double yValueMin = 99999999999D;
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
             for (MetricView metricView : metricViewGroup.getMetricViewList()) {
-//                LOG.info("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                if (!Double.isNaN(metricsList.get(i).getDoubleValue(metricView.getNumInList()))) {
+//                if (!Double.isNaN(metricsList.get(i).getDoubleValue(metricView.getNumInList()))) {
+//                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+                    yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
                     yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                }
+//                }
             }
-            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
+//            xValueMin = Math.min(xValueMin, metricsList.get(i).getTime());
+//            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
         }
-        xValueMax = xValueMax - startTime;
+//        LOG.info("{}: {}, {}, {}", multiRunService.getName(), title, yValueMin, yValueMax);
+        if (yValueMax == 0 || xValueMax == 0){
+            return "";
+        }
 
         StringBuilder sbResult = new StringBuilder("<!--" + metricViewGroup.getTitle() + "-->\n" +
                 "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
@@ -116,91 +164,109 @@ public class Graph {
 
         // ось Y
         sbResult.append("<!-- Ось Y -->\n");
+        if (yStartFrom0) { yValueMin = 0L; } // начальное значение по оси Y = 0 или минимальному значению из списка
+        yValueMin = (int) yValueMin;
         if (yValueMax > 1) {
-            yValueMax = (int) (Math.ceil(yValueMax / 5.00) * 5); // максимальное значение на графике - ближайшее большее кратное 5
+            yValueMax = (int) (Math.ceil(yValueMax / 1.00) * 1);
         }
         int kfY = 40;
-        double yScale = Math.max(Math.min(kfY, yValueMax), 10);
-        if (yValueMax > 10) {
-            while (yValueMax % yScale != 0) {
-                yScale--;
+        double yValueRange = yValueMax - yValueMin;
+        double yScale = Math.max(Math.min(kfY, yValueRange), 10);
+        if (yValueRange > 10) {
+            while (true) {
+                yScale = Math.max(Math.min(kfY, yValueRange), 10);
+                while (yValueRange % yScale != 0) {
+                    yScale--;
+                }
+                if (yScale == yValueRange || yScale > 10){
+                    break;
+                } else {
+                    yValueMax++;
+                    yValueRange = yValueMax - yValueMin;
+                }
+//                LOG.info("{}: {} {}, {}", multiRunService.getName(), yValueMin, yValueMax, yScale);
             }
         }
-        double yRatio = ySize / (yValueMax * 1.00);
-        double yRatioValue = yValueMax / (yScale * 1.00);
+        double yRatio = ySize / (yValueRange * 1.00);
+        double yRatioValue = yValueRange / (yScale * 1.00);
         double yStep = ySize / (yScale * 1.00);
-        double yValue = 0.00;
+        double yValue = yValueMin;
         yCur = yMax;
-        double yValueMem = yValue;
 //        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}; yCur:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep, yCur);
-
-        while (yCur > (yStart+yStep/2)) {
-            yCur = yCur - yStep;
-            yValue = yValue + yRatioValue;
+        while (yValue <= yValueMax) {
             sbResult.append("\t\t\t\t<polyline " +
                     "fill=\"none\" " +
                     "stroke=\"#a0a0a0\" " +
                     "stroke-dasharray=\"" + xText + "\" " +
                     "stroke-width=\"" + lineSize + "\" " +
                     "points=\"" + xStart + "," + yCur + "  " + xMax + "," + yCur + "\"/>\n");
-            if (yValueMem != yValue) {
-                    sbResult.append("\t\t\t\t<text " +
-                            "font-size=\"" + fontSize + "\" " +
-                            "x=\"0\" " +
-                            "y=\"" + (yCur + yText) + "\">" +
-                        decimalFormat.format(yValue) + "</text>\n");
-            }
-            yValueMem = yValue;
+            sbResult.append("\t\t\t\t<text " +
+                    "font-size=\"" + fontSize + "\" " +
+                    "x=\"0\" " +
+                    "y=\"" + (yCur + yText) + "\">" +
+                    decimalFormat.format(yValue) + "</text>\n");
+            yCur = yCur - yStep;
+            yValue = yValue + yRatioValue;
         }
 
         // ось X
         sbResult.append("<!-- Ось X -->\n");
-        xValueMax = (long) (Math.ceil(xValueMax / 5000.00) * 5000); // максимальное значение на графике - ближайшее большее кратное 5 сек
+        long xValueRange = xValueMax - xValueMin;
+        double xScale;
         int kfX = 60;
-        double xScale = Math.min(kfX, xValueMax);
-        while (xValueMax % xScale != 0) {
-            xScale--;
+        while (true) {
+            xScale = Math.min(kfX, xValueRange);
+            while ((xValueRange / xScale) % 1000 != 0) {
+                xScale--;
+            }
+            if (xScale == xValueRange/1000 || xScale > 20){
+                break;
+            } else {
+                xValueMax = xValueMax + 1000;
+                xValueRange = xValueMax - xValueMin;
+            }
+//            LOG.info("{}: {} {}, {}", multiRunService.getName(), xValueMin, xValueMax, xScale);
         }
-        xScale = Math.min(xScale, metricsList.size() - 1);
-        double xRatio = xSize / (xValueMax * 1.00);
-        double xRatioValue = xValueMax / xScale;
+        double xRatio = xSize / (xValueRange * 1.00);
+        double xRatioValue = xValueRange / xScale;
         double xStep = xSize / xScale;
         double xCur = xStart;
-        long xValue = startTime;
+        long xValue = xValueMin;
 //        LOG.info("xSize:{}; xStart: {}; xScale:{}; xRatio:{}; xRatioValue:{}; xStep:{}", xSize, xStart, xScale, xRatio, xRatioValue, xStep);
-
         long xValueMem = 0;
-        while ((int) xCur <= xMax) {
+        if (xStep > 0) {
+            while (xValue <= xValueMax) {
 //            LOG.info("xMax: {}, xCur: {}", xMax, xCur);
-            if (xCur > xStart) {
-                sbResult.append("\t\t\t\t<polyline " +
-                        "fill=\"none\" " +
-                        "stroke=\"#a0a0a0\" " +
-                        "stroke-dasharray=\"" + yText + "\" " +
-                        "stroke-width=\"" + lineSize + "\" " +
-                        "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n");
+                if (xCur > xStart) {
+                    sbResult.append("\t\t\t\t<polyline " +
+                            "fill=\"none\" " +
+                            "stroke=\"#a0a0a0\" " +
+                            "stroke-dasharray=\"" + yText + "\" " +
+                            "stroke-width=\"" + lineSize + "\" " +
+                            "points=\"" + xCur + "," + yStart + "  " + xCur + "," + yMax + "\"/>\n");
+                }
+                sbResult.append("\t\t\t\t<text " +
+                        "font-size=\"");
+                if (!sdf6.format(xValueMem).equals(sdf6.format(xValue))) { // шрифт для полной даты
+                    sbResult.append(fontSizeX);
+                } else {
+                    sbResult.append(fontSizeX + fontSizeX / 10);
+                }
+                sbResult.append("\" " +
+                        "font-family=\"Courier New\" " +
+                        "letter-spacing=\"0\" " + // 0.5
+                        "writing-mode=\"tb\" " +
+                        "x=\"" + xCur + "\" " +
+                        "y=\"" + (yMax + yText) + "\">");
+                if (!sdf6.format(xValueMem).equals(sdf6.format(xValue))) { // полную даты выводим 1 раз
+                    sbResult.append(sdf2.format(xValue)).append("</text>\n");
+                    xValueMem = xValue;
+                } else {
+                    sbResult.append(sdf5.format(xValue)).append("</text>\n");
+                }
+                xCur = xCur + xStep;
+                xValue = xValue + (long) xRatioValue;
             }
-            sbResult.append("\t\t\t\t<text " +
-                    "font-size=\"");
-            if (!sdf5.format(xValueMem).equals(sdf5.format(xValue))) { // шрифт для полной даты
-                sbResult.append(fontSizeX);
-            } else {
-                sbResult.append(fontSizeX + fontSizeX/10);
-            }
-            sbResult.append("\" " +
-                    "font-family=\"Courier New\" " +
-                    "letter-spacing=\"0\" " + // 0.5
-                    "writing-mode=\"tb\" " +
-                    "x=\"" + xCur + "\" " +
-                    "y=\"" + (yMax + yText) + "\">");
-            if (!sdf5.format(xValueMem).equals(sdf5.format(xValue))){ // полную даты выводим 1 раз
-                sbResult.append(sdf1.format(xValue)).append("</text>\n");
-                xValueMem = xValue;
-            } else {
-                sbResult.append(sdf4.format(xValue)).append("</text>\n");
-            }
-            xCur = xCur + xStep;
-            xValue = xValue + (long) xRatioValue;
         }
 
         // рисуем график
@@ -209,7 +275,7 @@ public class Graph {
         StringBuilder sbSignatureTitle = new StringBuilder("<!-- Всплывающие надписи -->\n"); // значения метрик на графике
 
         StringBuilder[] sbGraph = new StringBuilder[metricViewGroup.getMetricsCount()]; // графики
-        for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
+        for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
             String curColor = metricViewGroup.getMetricView(m).getColor();
             sbGraph[m] = new StringBuilder();
             sbGraph[m].append("<!-- График" + (m + 1) + " -->\n" +
@@ -217,67 +283,68 @@ public class Graph {
                     "fill=\"none\" " +
                     "stroke=\"" + curColor + "\" " +
                     "stroke-width=\"" + (lineSize * 2) + "\" " +
-                    "points=\"" + xCur + "," + yMax + " \n");
+                    "points=\"\n");
+//                    "points=\"" + xCur + "," + yMax + " \n");
         }
 
         for (int i = 1; i < metricsList.size(); i++) {
-            xCur = (metricsList.get(i).getTime() - startTime) * xRatio + xStart;
+            xCur = (metricsList.get(i).getTime() - xValueMin) * xRatio + xStart;
             // ступеньки
             if (step && i > 0) {
-                for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
+                for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
                     int numInList = metricViewGroup
                             .getMetricViewList()
                             .get(m)
                             .getNumInList();
-                    sbGraph[m].append(xCur + "," + (yMax - Math.round(metricsList.get(i - 1).getValue(numInList) * yRatio)) + " \n");
+                    sbGraph[m].append(xCur + "," + (yMax - Math.round((metricsList.get(i - 1).getValue(numInList) - yValueMin) * yRatio)) + " \n");
                 }
             }
 
             List<Double> yPrevList = new ArrayList<>();
-            for (int m = 0; m < metricViewGroup.getMetricsCount(); m++){ // перебираем метрики для отображения
-                    int numInList = metricViewGroup // номер метрики в общем вписке
-                            .getMetricViewList()
-                            .get(m)
-                            .getNumInList();
-                    String curColor = metricViewGroup.getMetricView(m).getColor();
-                    double y = yMax - Math.round(metricsList.get(i).getValue(numInList) * yRatio);
-                    // график
-                    sbGraph[m].append(xCur + "," + y + " \n");
-                    // значение отличается от предыдущего
-                    if (i == 1 || metricsList.get(i - 1).getValue(numInList) != metricsList.get(i).getValue(numInList)) {
-                        // значение метрики
-                        if (printMetrics) {
-                            // надписи не пересекаются
-                            boolean print = true;
-                            for (int p = 0; p < yPrevList.size(); p++) {
-                                if (Math.abs(y - yPrevList.get(p)) < yText * 4) {
-                                    print = false;
-                                    break;
-                                }
-                            }
-                            if (print) {
-                                sbSignature.append("\t\t\t\t<text " +
-                                        "font-size=\"" + fontSize + "\" " +
-                                        "fill=\"#000000\" " +
-//                                    "font-weight=\"bold\" " +
-                                        "x=\"" + (xCur - xText) + "\" " +
-                                        "y=\"" + (y - yText) + "\">" +
-                                        decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</text>\n");
-                                yPrevList.add(y);
+            for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
+                int numInList = metricViewGroup // номер метрики в общем вписке
+                        .getMetricViewList()
+                        .get(m)
+                        .getNumInList();
+                String curColor = metricViewGroup.getMetricView(m).getColor();
+                double y = yMax - Math.round((metricsList.get(i).getValue(numInList) - yValueMin) * yRatio);
+                // график
+                sbGraph[m].append(xCur + "," + y + " \n");
+                // значение отличается от предыдущего
+                if (i == 1 || metricsList.get(i - 1).getValue(numInList) != metricsList.get(i).getValue(numInList)) {
+                    // значение метрики
+                    if (printMetrics) {
+                        // надписи не пересекаются
+                        boolean print = true;
+                        for (int p = 0; p < yPrevList.size(); p++) {
+                            if (Math.abs(y - yPrevList.get(p)) < yText * 4) {
+                                print = false;
+                                break;
                             }
                         }
+                        if (print) {
+                            sbSignature.append("\t\t\t\t<text " +
+                                    "font-size=\"" + fontSize + "\" " +
+                                    "fill=\"#000000\" " +
+//                                    "font-weight=\"bold\" " +
+                                    "x=\"" + (xCur - xText) + "\" " +
+                                    "y=\"" + (y - yText) + "\">" +
+                                    decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</text>\n");
+                            yPrevList.add(y);
+                        }
                     }
-                    // точка с всплывающим описанием
-                    sbSignatureTitle.append("<g> " +
-                            "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 5) + "\"/> " +
-                            "<title>");
-                    if (!metricViewGroup.getMetricView(m).getTitle().isEmpty()) {
-                        sbSignatureTitle.append(metricViewGroup.getMetricView(m).getTitle() + "; ");
-                    }
-                    sbSignatureTitle.append("время: " + sdf1.format(metricsList.get(i).getTime()) + "; " +
-                            "VU: " +  multiRunService.getVuCount(metricsList.get(i).getTime()) + "; " +
-                            "значение: " + decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
-                            "</g>\n");
+                }
+                // точка с всплывающим описанием
+                sbSignatureTitle.append("<g> " +
+                        "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 5) + "\"/> " +
+                        "<title>");
+                if (!metricViewGroup.getMetricView(m).getTitle().isEmpty()) {
+                    sbSignatureTitle.append(metricViewGroup.getMetricView(m).getTitle() + "; ");
+                }
+                sbSignatureTitle.append("время: " + sdf1.format(metricsList.get(i).getTime()) + "; " +
+                        "VU: " + multiRunService.getVuCount(metricsList.get(i).getTime()) + "; " +
+                        "значение: " + decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
+                        "</g>\n");
             }
         }
         for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {

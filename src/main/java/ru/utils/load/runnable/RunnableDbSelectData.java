@@ -52,10 +52,10 @@ public class RunnableDbSelectData implements Runnable {
     public void run() {
         LOG.debug("Старт потока {}", name);
         if (dbService != null) {
-            String sql = "select hpi.starttime, hpi.endtime, hpi.processstate " +
-
-                    "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                    "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')";
+        String sql = "select hpi.starttime, hpi.endtime, hpi.processstate " +
+                "from " +
+                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
+                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')";
             try {
                 int row = 0;
                 LOG.debug("{}: Запрос данных из БД БПМ...\n{}", name, sql);

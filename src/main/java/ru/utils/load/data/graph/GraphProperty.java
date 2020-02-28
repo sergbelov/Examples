@@ -60,7 +60,7 @@ public class GraphProperty {
 
         // 7 - BpmsJobEntityImpl Count
         metricViewGroupList.add(new MetricViewGroup("BpmsJobEntityImpl Count",
-                Arrays.asList(new MetricView(0, "", "#004f00"))));
+                Arrays.asList(new MetricView(0, "", "#902000"))));
 
 //        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }

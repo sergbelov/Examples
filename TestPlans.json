@@ -1,3 +1,9 @@
+/*
+    testDuration    - сек
+    vuStepTime      - сек
+    vuStepTimeDelay - мс
+    pacing          - мс
+*/
 [
   {
     "className": "MultiLoad",
@@ -16,6 +22,7 @@
         "pacingType": 0,
         "keyBpm": "process01"
       },
+
       {
         "apiNum": 1,
         "name": "MultiLoad_Template2",
@@ -27,7 +34,7 @@
         "vuStepTimeDelay": 0,
         "vuStepCount": 5,
         "pacing": 2000,
-        "pacingType": 0,
+        "pacingType": 1,
         "keyBpm": "process02"
       },
       {
@@ -38,7 +45,7 @@
         "vuCountMin": 5,
         "vuCountMax": 50,
         "vuStepTime": 5,
-        "vuStepTimeDelay": 100,
+        "vuStepTimeDelay": 500,
         "vuStepCount": 10,
         "pacing": 2000,
         "pacingType": 1,

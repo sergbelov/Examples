@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.influxdb.BatchOptions;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
@@ -39,15 +40,22 @@ public class MultiRun {
         put("STOP_TEST_ON_ERROR", "true");
         put("COUNT_ERROR_FOR_STOP_TEST", "100");
 
+        put("WARM_DURATION", "60");
+
         put("DB_URL", "");
         put("DB_USER_NAME", "");
         put("DB_USER_PASSWORD", "");
 
-        put("INFLUXDB_URL", "http://localhost:8086");
-        put("INFLUXDB_USER_NAME", "admin");
-        put("INFLUXDB_PASSWORD", "admin");
-        put("INFLUXDB_DB_NAME", "BPM_LOAD");
-        put("INFLUXDB_MEASUREMENT", "CALL");
+        put("InfluxDB.SAVE", "false");
+        put("InfluxDB.URL", "http://localhost:8086");
+        put("InfluxDB.USER_NAME", "admin");
+        put("InfluxDB.PASSWORD", "admin");
+        put("InfluxDB.DB_NAME", "bpm_load");
+        put("InfluxDB.MEASUREMENT", "call");
+        put("InfluxDB.Batch.Actions", "1000");
+        put("InfluxDB.Batch.BufferLimit", "10000");
+        put("InfluxDB.Batch.FlushDuration", "200");
+        put("InfluxDB.Batch.JitterDuration", "0");
 
         put("GRAFANA_HOSTS_DETAIL", "");
         put("GRAFANA_HOSTS_DETAIL_CPU", "");
@@ -64,6 +72,7 @@ public class MultiRun {
     private GraphProperty graphProperty = new GraphProperty();
     private final boolean STOP_TEST_ON_ERROR;
     private final int COUNT_ERROR_FOR_STOP_TEST;
+    private final int WARM_DURATION;
     private final String GRAFANA_HOSTS_DETAIL_URL;
     private final String GRAFANA_HOSTS_DETAIL_CPU_URL;
     private final String GRAFANA_TRANSPORT_THREAD_POOLS;
@@ -79,6 +88,7 @@ public class MultiRun {
     public MultiRun() {
         propertiesService.readProperties(PROPERTIES_FILE);
 
+        WARM_DURATION = propertiesService.getInt("WARM_DURATION");
         STOP_TEST_ON_ERROR = propertiesService.getBoolean("STOP_TEST_ON_ERROR");
         COUNT_ERROR_FOR_STOP_TEST = propertiesService.getInt("COUNT_ERROR_FOR_STOP_TEST");
         GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL");
@@ -124,71 +134,19 @@ public class MultiRun {
      */
     public boolean init(String className) {
         if (propertiesService.getString("DB_URL").isEmpty() ||
-                getConnectToDB(
+                connectToDB(
                         propertiesService.getString("DB_URL"),
                         propertiesService.getString("DB_USER_NAME"),
                         propertiesService.getStringDecode("DB_USER_PASSWORD"))) {
 
-            try {
-                influxDB = InfluxDBFactory.connect(
-                        propertiesService.getString("INFLUXDB_URL"),
-                        propertiesService.getString("INFLUXDB_USER_NAME"),
-                        propertiesService.getString("INFLUXDB_PASSWORD"));
+            connectToInfluxDB(); // подключение к InfluxDB
 
-                if (!influxDB.databaseExists(propertiesService.getString("INFLUXDB_DB_NAME"))) {
-                    influxDB.createDatabase(propertiesService.getString("INFLUXDB_DB_NAME"));
-                }
-
-                influxDB.createRetentionPolicy(
-                        "defaultPolicy",
-                        propertiesService.getString("INFLUXDB_DB_NAME"),
-                        "120d",
-                        1,
-                        true);
-
-                if (1 == 2) { // отладка
-                    long start = System.currentTimeMillis();
-                    long stop = start + 1000;
-                    long dur = stop - start;
-
-                    Point point1 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                            .time(start, TimeUnit.MILLISECONDS)
-                            .tag("num", "1")
-                            .tag("api", "API1")
-                            .tag("key", "KEY1")
-                            .addField("i", 1)
-                            .addField("dur", dur)
-                            .build();
-                    Point point2 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                            .time(start, TimeUnit.MILLISECONDS)
-                            .tag("num", "2")
-                            .tag("api", "API1")
-                            .tag("key", "KEY1")
-                            .addField("i", 1)
-                            .addField("dur", dur)
-                            .build();
-                    Point point3 = Point.measurement(propertiesService.getString("INFLUXDB_MEASUREMENT"))
-                            .time(start, TimeUnit.MILLISECONDS)
-                            .tag("num", "3")
-                            .tag("api", "API2")
-                            .tag("key", "KEY2")
-                            .addField("i", 1)
-                            .addField("dur", dur)
-                            .build();
-                    BatchPoints batchPoints = BatchPoints
-                            .database(propertiesService.getString("INFLUXDB_DB_NAME"))
-                            .retentionPolicy("defaultPolicy")
-                            .build();
-                    batchPoints.point(point1);
-                    batchPoints.point(point2);
-                    batchPoints.point(point3);
-                    influxDB.write(batchPoints);
-
-                    System.exit(0);
-                }
-            } catch (Exception e) {
-                LOG.error("Ошибка при подключении к InfluxDB: {}\n{}", propertiesService.getString("INFLUXDB_URL"), e);
-            }
+/*
+    testDuration    - сек
+    vuStepTime      - сек
+    vuStepTimeDelay - мс
+    pacing          - мс
+*/
 
             for (TestPlans testPlans : testPlansList) {
                 if (testPlans.getClassName().equals(className)) {
@@ -208,6 +166,7 @@ public class MultiRun {
                                 testPlan.getVuStepCount(),
                                 testPlan.getPacing(),
                                 testPlan.getPacingType(),
+                                WARM_DURATION,
                                 STOP_TEST_ON_ERROR,
                                 COUNT_ERROR_FOR_STOP_TEST,
                                 GRAFANA_HOSTS_DETAIL_URL,
@@ -219,8 +178,8 @@ public class MultiRun {
                                 testPlan.getKeyBpm(),
                                 PATH_REPORT,
                                 influxDB,
-                                propertiesService.getString("INFLUXDB_DB_NAME"),
-                                propertiesService.getString("INFLUXDB_MEASUREMENT"));
+                                propertiesService.getString("InfluxDB.DB_NAME"),
+                                propertiesService.getString("InfluxDB.MEASUREMENT"));
                     }
                     return true;
                 }
@@ -233,6 +192,86 @@ public class MultiRun {
         }
         return false;
     }
+
+    /**
+     * Подключение к InfluxDB
+     */
+    private void connectToInfluxDB(){
+        if (propertiesService.getBoolean("InfluxDB.SAVE") && !propertiesService.getString("InfluxDB.URL").isEmpty()) {
+            try {
+                // подключение к InfluxDB
+                influxDB = InfluxDBFactory.connect(
+                        propertiesService.getString("InfluxDB.URL"),
+                        propertiesService.getString("InfluxDB.USER_NAME"),
+                        propertiesService.getStringDecode("InfluxDB.PASSWORD"));
+
+//                if (!influxDB.databaseExists(propertiesService.getString("INFLUXDB_DB_NAME"))) {
+//                    influxDB.createDatabase(propertiesService.getString("INFLUXDB_DB_NAME"));
+//                }
+
+                influxDB.setDatabase(propertiesService.getString("InfluxDB.DB_NAME"));
+
+                influxDB.enableBatch( // параметры кеширования записи точек
+                        BatchOptions.DEFAULTS
+                                .actions(propertiesService.getInt("InfluxDB.Batch.Actions"))
+                                .bufferLimit(propertiesService.getInt("InfluxDB.Batch.BufferLimit"))
+                                .flushDuration(propertiesService.getInt("InfluxDB.Batch.FlushDuration"))
+                                .jitterDuration(propertiesService.getInt("InfluxDB.Batch.JitterDuration"))
+                                .exceptionHandler((points, throwable) -> LOG.error("Ошибка influxDB.write(point)", throwable)));
+
+                if (1 == 2) { // отладка
+                    long start = System.currentTimeMillis();
+                    long stop = start + 1000;
+                    long dur = stop - start;
+
+                    Point point1 = Point.measurement(propertiesService.getString("InfluxDB.MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("type", "call")
+//                        .tag("num", "1")
+                            .tag("thread", "1")
+                            .tag("api", "API1")
+                            .tag("key", "KEY1")
+                            .addField("i", 1)
+                            .addField("duration", dur)
+                            .build();
+                    Point point2 = Point.measurement(propertiesService.getString("InfluxDB.MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("type", "call")
+//                        .tag("num", "2")
+                            .tag("thread", "2")
+                            .tag("api", "API1")
+                            .tag("key", "KEY1")
+                            .addField("i", 1)
+                            .addField("duration", dur)
+                            .build();
+                    Point point3 = Point.measurement(propertiesService.getString("InfluxDB.MEASUREMENT"))
+                            .time(start, TimeUnit.MILLISECONDS)
+                            .tag("type", "call")
+//                        .tag("num", "3")
+                            .tag("thread", "3")
+                            .tag("api", "API2")
+                            .tag("key", "KEY2")
+                            .addField("i", 1)
+                            .addField("duration", dur)
+                            .build();
+                    BatchPoints batchPoints = BatchPoints
+                            .database(propertiesService.getString("InfluxDB.DB_NAME"))
+//                            .retentionPolicy("defaultPolicy")
+                            .build();
+                    batchPoints.point(point1);
+                    batchPoints.point(point2);
+                    batchPoints.point(point3);
+                    influxDB.write(batchPoints);
+
+                    System.exit(0);
+                }
+            } catch (Exception e) {
+                LOG.error("\nМетрики в базу сохраняться не будут.\nОшибка при подключении к InfluxDB: {}\n", propertiesService.getString("InfluxDB.URL"), e);
+                influxDB = null;
+            }
+        }
+    }
+
 
     public GraphProperty getGraphProperty() {
         return graphProperty;
@@ -315,7 +354,7 @@ public class MultiRun {
      * @param dbPassword
      * @return
      */
-    private boolean getConnectToDB(
+    private boolean connectToDB(
             String dbUrl,
             String dbUserName,
             String dbPassword

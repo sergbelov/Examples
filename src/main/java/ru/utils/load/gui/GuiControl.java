@@ -61,7 +61,7 @@ public class GuiControl extends JFrame {
                         bStopButton.setEnabled(false);
                         bStopButton.setText("Остановка нагрузки...");
                         for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
-                            multiRunService.stop();
+                            multiRunService.stop("Прерывание нажатием на кнопку");
                         }
                     } else {
                         JOptionPane.showMessageDialog(

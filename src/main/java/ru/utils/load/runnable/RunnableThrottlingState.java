@@ -38,9 +38,9 @@ public class RunnableThrottlingState implements Runnable {
     @Override
     public void run() {
         LOG.info("Старт потока {}", name);
-        String sqlForLog =  "select count(1) from BPMS.BPMSJOBENTITYIMPL";
+        String sqlForLog = "select count(1) ";
         String sql = "select count(1) as cnt " +
-
+                "from " +
                 "and pdi.key = '" + multiRunService.getKeyBpm() + "'";
         if (multiRunService.getDbService() != null) {
             Connection connection = multiRunService.getDbService().getConnection();
@@ -57,16 +57,17 @@ public class RunnableThrottlingState implements Runnable {
                         ResultSet resultSet = multiRunService.getDbService().executeQuery(statement, sql);
                         if (resultSet.next()) {
                             int cnt = resultSet.getInt("cnt");
-//                            if (cnt > 0) {
-                                bpmsJobEntityImplCountList.add(new DateTimeValue(System.currentTimeMillis(), cnt));
-                                LOG.info("{} ({}) (VU:{}) (Threads:{}): {}: {}",
-                                        name,
-                                        multiRunService.getKeyBpm(),
-                                        multiRunService.getVuCount(),
-                                        multiRunService.getThreadCount(),
-                                        sqlForLog,
-                                        cnt);
-//                            }
+                            bpmsJobEntityImplCountList.add(new DateTimeValue(System.currentTimeMillis(), cnt));
+                            LOG.info("{} ({}) (VU:{}) (Threads:{}): {}: {}",
+                                    name,
+                                    multiRunService.getKeyBpm(),
+                                    multiRunService.getVuCount(),
+                                    multiRunService.getThreadCount(),
+                                    sqlForLog,
+                                    cnt);
+                            if (cnt > 1000) {
+                                multiRunService.stop(sqlForLog + ": " + cnt);
+                            }
                         }
                         resultSet.close();
                     } catch (SQLException e) {

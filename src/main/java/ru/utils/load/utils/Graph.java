@@ -175,7 +175,7 @@ public class Graph {
         if (yValueRange > 10) {
             while (true) {
                 yScale = Math.max(Math.min(kfY, yValueRange), 10);
-                while (yValueRange % yScale != 0) {
+                while (yScale > 0 && yValueRange % yScale != 0) {
                     yScale--;
                 }
                 if (yScale == yValueRange || yScale > 10){
@@ -216,7 +216,7 @@ public class Graph {
         int kfX = 60;
         while (true) {
             xScale = Math.min(kfX, xValueRange);
-            while ((xValueRange / xScale) % 1000 != 0) {
+            while (xScale > 0 && (xValueRange / xScale) % 1000 != 0) {
                 xScale--;
             }
             if (xScale == xValueRange/1000 || xScale > 20){

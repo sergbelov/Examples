@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MultiRun {
-    private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
+    private static final Logger LOG = LogManager.getLogger();
     private static final String PROPERTIES_FILE = "load.properties";
     private static PropertiesService propertiesService = new PropertiesService(new LinkedHashMap<String, String>() {{
         put("STOP_TEST_ON_ERROR", "true");

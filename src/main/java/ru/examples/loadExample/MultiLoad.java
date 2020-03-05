@@ -4,10 +4,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.gui.GuiControl;
-import ru.utils.load.utils.MultiRun;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.load.utils.MultiRun;
 
 import java.io.IOException;
 

@@ -14,6 +14,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import com.google.common.util.concurrent.AtomicDouble;
+import ru.utils.load.utils.SqlSelectBuilder;
 
 /**
  * Created by Belov Sergey
@@ -34,6 +35,7 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
     private AtomicLong durMax;
     private AtomicDouble durAvg;
     private List<Double> durList;
+    private SqlSelectBuilder sqlSelectBuilder;
 
     public RunnableDbSelectTransitionsTime(
             int cnt,
@@ -46,7 +48,8 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
             AtomicLong durMin,
             AtomicLong durMax,
             AtomicDouble durAvg,
-            List<Double> durList
+            List<Double> durList,
+            SqlSelectBuilder sqlSelectBuilder
     ) {
         this.name = "SQL Select TransitionsTime_" + cnt + " (" + sdf1.format(startTime) + " - " + sdf1.format(stopTime) + ")";
         LOG.trace("Инициализация потока {}", name);
@@ -60,24 +63,13 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
         this.durMax = durMax;
         this.durAvg = durAvg;
         this.durList = durList;
+        this.sqlSelectBuilder = sqlSelectBuilder;
     }
 
     @Override
     public void run() {
         LOG.debug("Старт потока {}", name);
-        String sql = "select \n" +
-                "pd.name as MAIN_PROCESS,\n" +
-                "pi.ID as MAIN_ID,\n" +
-                "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
-                "pa.ACTIVITYNAME as PROCESS, \n" +
-                "pa.DURATIONINMILLIS as DUR \n" +
-                "from " +
-                "where pi.processdefinitionkey = '" + key + "' " +
-                "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-//                "and pi.endtime < to_timestamp('" + sdf1.format(stopTime + 60000) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and pi.PROCESSSTATE = 'COMPLETED'\n" +
-                "order by pd.name, pi.id, pa.ACTIVITYNAME";
+        String sql = sqlSelectBuilder.getTransitionTime(key, startTime, stopTime);
         try {
             String idMainMem = "";
             long durMainMem = 0L;
@@ -90,11 +82,12 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
             while (resultSet.next()) {
-                String idMain = resultSet.getString("MAIN_ID");
-//                String process = resultSet.getString("PROCESS");
-                long durMain = resultSet.getLong("MAIN_DUR");
-                long dur = resultSet.getLong("DUR");
-//                LOG.info("{}: {}, {}, {}, {}", name, idMain, process, durMain, dur);
+                String idMain = resultSet.getString("root_process_id");
+//                String activityname = resultSet.getString("ACTIVITYNAME");
+                long durMain = resultSet.getLong("root_process_duration");
+                long dur = resultSet.getLong("duration");
+//                LOG.info("{}: {}, {}, {}, {}", name, idMain, activityname, durMain, dur);
+
                 if (!idMain.equals(idMainMem)) {
                     if (countStep > 0) {
                         double durMainTransitions = (durMainMem - durSteps) / (countStep + 1);
@@ -117,8 +110,10 @@ public class RunnableDbSelectTransitionsTime implements Runnable {
                     durMainMem = durMain;
                     countStep = 0;
                 }
-                countStep++;
-                durSteps = durSteps + dur;
+                if (resultSet.getInt("lastStepInLevel") == 1) { // нет потомков
+                    countStep++;
+                    durSteps = durSteps + dur;
+                }
             }
             if (countStep > 0) { // последняя группа
                 double durMainTransitions = (durMainMem - durSteps) / (countStep + 1);

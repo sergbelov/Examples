@@ -113,18 +113,16 @@ public class Graph {
         int fontSizeX = xSize / 156;
         int fontAxisSize = xSize / 110;
         int lineSize = Math.max(1, xSize / 5000);
-        String background = "#f0f0f0"; //"#dfdfdf";
+        String background = "#fafafa";
 
         // максимальное/минимальное значение Y и X
         double yValueMin = 99999999999D;
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
             for (MetricView metricView : metricViewGroup.getMetricViewList()) {
-//                if (!Double.isNaN(metricsList.get(i).getDoubleValue(metricView.getNumInList()))) {
 //                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                    yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                    yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-//                }
+                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
             }
 //            xValueMin = Math.min(xValueMin, metricsList.get(i).getTime());
 //            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
@@ -175,7 +173,7 @@ public class Graph {
         if (yValueRange > 10) {
             while (true) {
                 yScale = Math.max(Math.min(kfY, yValueRange), 10);
-                while (yScale > 0 && yValueRange % yScale != 0) {
+                while (yScale > 1 && yValueRange % yScale != 0) {
                     yScale--;
                 }
                 if (yScale == yValueRange || yScale > 10){
@@ -216,7 +214,7 @@ public class Graph {
         int kfX = 60;
         while (true) {
             xScale = Math.min(kfX, xValueRange);
-            while (xScale > 0 && (xValueRange / xScale) % 1000 != 0) {
+            while (xScale > 1 && (xValueRange / xScale) % 1000 != 0) {
                 xScale--;
             }
             if (xScale == xValueRange/1000 || xScale > 20){

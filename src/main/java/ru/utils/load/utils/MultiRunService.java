@@ -54,6 +54,7 @@ public class MultiRunService {
     */
     private List<DateTimeValue> metricsList = new ArrayList<>();
     private List<DateTimeValue> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
+    private List<DateTimeValue> retryPolicyJobEntityImplCountList = new CopyOnWriteArrayList<>();
 
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
     private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
@@ -104,6 +105,7 @@ public class MultiRunService {
     private String grafanaHostsDetailUrl; // Графана - Хосты детализованно (URL)
     private String grafanaHostsDetailCpuUrl; // Графана - Хосты детализованно CPU (URL)
     private String grafanaTransportThreadPoolsUrl; //Графана - TransportThreadPools (URL)
+    private String grafanaTsUrl; //Графана - ТС (URL)
     private String splunkUrl; // Спланк (URL)
     private String csmUrl; // CSM (URL)
 
@@ -137,6 +139,7 @@ public class MultiRunService {
             String grafanaHostsDetailUrl,
             String grafanaHostsDetailCpuUrl,
             String grafanaTransportThreadPoolsUrl,
+            String grafanaTsUrl,
             String splunkUrl,
             String csmUrl,
             DBService dbService,
@@ -164,6 +167,7 @@ public class MultiRunService {
         this.grafanaHostsDetailUrl = grafanaHostsDetailUrl;
         this.grafanaHostsDetailCpuUrl = grafanaHostsDetailCpuUrl;
         this.grafanaTransportThreadPoolsUrl = grafanaTransportThreadPoolsUrl;
+        this.grafanaTsUrl = grafanaTsUrl;
         this.splunkUrl = splunkUrl;
         this.csmUrl = csmUrl;
         this.keyBpm = keyBpm;
@@ -241,6 +245,10 @@ public class MultiRunService {
         return bpmsJobEntityImplCountList;
     }
 
+    public List<DateTimeValue> getRetryPolicyJobEntityImplCountList() {
+        return retryPolicyJobEntityImplCountList;
+    }
+
     public List<Call> getCallList() {
         return callList;
     }
@@ -285,9 +293,9 @@ public class MultiRunService {
         return grafanaHostsDetailCpuUrl;
     }
 
-    public String getGrafanaTransportThreadPoolsUrl() {
-        return grafanaTransportThreadPoolsUrl;
-    }
+    public String getGrafanaTransportThreadPoolsUrl() { return grafanaTransportThreadPoolsUrl;}
+
+    public String getGrafanaTsUrl() { return grafanaTsUrl;}
 
     public String getSplunkUrl() {
         return splunkUrl;
@@ -412,6 +420,7 @@ public class MultiRunService {
             try {
                 baseScript.start(apiNum);
             } catch (Exception e) {
+//                errorListAdd(name, e, thread);
                 errorListAdd(name, start, e, thread);
             }
         } else { // синхронный вызов, ждем завершения выполнения
@@ -421,6 +430,7 @@ public class MultiRunService {
                 callList.add(new Call(start, stop)); // фиксируем вызов
             } catch (Exception e) {
                 callList.add(new Call(start)); // фиксируем вызов
+//                errorListAdd(name, e, thread);
                 errorListAdd(name, start, e, thread);
             }
         }
@@ -729,6 +739,7 @@ public class MultiRunService {
         vuList.clear();
         errorList.clear();
         bpmsJobEntityImplCountList.clear();
+        retryPolicyJobEntityImplCountList.clear();
         threadCount = new AtomicInteger(0);
         vuCount = new AtomicInteger(0);
         CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -775,11 +786,33 @@ public class MultiRunService {
                 countDownLatch,
                 this));
 
-        if (!warming && dbService != null) { // опрашиваем размерность таблицы BpmsJobEntityImpl
-            executorService.submit(new RunnableThrottlingState(
+        if (!warming && dbService != null) {
+            // опрашиваем размерность таблицы BpmsJobEntityImpl (тротлинг)
+            String sql = "select count(1) as cnt " +
+                    "from " +
+                    "join " +
+                    "and pdi.key = '" + keyBpm + "'";
+            executorService.submit(new RunnableSqlSelectCount(
                     name + " ThrottlingState",
+                    sql,
+                    15000,
                     this,
-                    bpmsJobEntityImplCountList));
+                    bpmsJobEntityImplCountList,
+                    1000)); // ToDo:
+
+            // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
+            sql = "select count(1) as cnt " +
+                    "from " +
+                    "join " +
+                    "and pdi.key = '" + keyBpm + "'";
+            executorService.submit(new RunnableSqlSelectCount(
+                    name + " RetryCount",
+                    sql,
+                    5000,
+                    this,
+                    retryPolicyJobEntityImplCountList,
+                    100000)); // ToDo:
+
         }
 
         try {

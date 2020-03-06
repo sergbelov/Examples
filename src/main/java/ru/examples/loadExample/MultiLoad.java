@@ -1,13 +1,11 @@
 package ru.examples.loadExample;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.gui.GuiControl;
+import ru.utils.load.utils.MultiRun;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.utils.MultiRun;
 
 import java.io.IOException;
 
@@ -20,6 +18,7 @@ import java.io.IOException;
  *
  * @author Belov Sergey
  */
+
 public class MultiLoad implements ScriptRun {
     private static final Logger LOG = LogManager.getLogger(MultiLoad.class);
     private MultiRun multiRun = new MultiRun();
@@ -54,7 +53,7 @@ public class MultiLoad implements ScriptRun {
 
 
     public static void main(String[] args) throws Exception {
-        Configurator.setRootLevel(Level.INFO);
+//        Configurator.setRootLevel(Level.ERROR);
         MultiLoad multiLoad = new MultiLoad();
         multiLoad.init();
         multiLoad.action();

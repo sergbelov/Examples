@@ -54,6 +54,7 @@ public class RunnableDbSelectData implements Runnable {
         if (dbService != null) {
         String sql = "select hpi.starttime, hpi.endtime, hpi.processstate " +
                 "from " +
+                "join " +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')";
             try {

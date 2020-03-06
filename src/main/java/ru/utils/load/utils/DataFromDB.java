@@ -49,6 +49,7 @@ public class DataFromDB {
     private Integer waitCountStart = null;
     private Integer waitCountStop = null;
     private long waitTime = 0L;
+    private SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
 
 
     public DataFromDB() {
@@ -162,9 +163,18 @@ public class DataFromDB {
         int maxDelay = 10; // ждем не более минут
         if (dbService != null) {
             LOG.info("{}: Ожидаем завершения начатых задач (не более {} мин)...", key, maxDelay);
-
+/*
         String sql = "select count(1) as cnt " +
-                "from and pdi.key = '" + key + "'";
+                "from " +
+                "join " +
+                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
+                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
+                "and hpi.processstate = 'RUNNING' " +
+                "group by pdi.key, hpi.processstate";
+*/
+        String sql = "select count(1) as cnt " +
+                "from " +
+                "join ";
             try {
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
@@ -233,13 +243,15 @@ public class DataFromDB {
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
         String[] sql = {
                 "select pdi.key, hpi.processstate, count(1) as cnt " +
-                        "from and pdi.key = '" + key + "' " +
+                        "from " +
+                        "join " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "group by pdi.key, hpi.processstate",
 
                 "select pdi.key, count(1) as cnt, min(hpi.DURATIONINMILLIS), max(hpi.DURATIONINMILLIS), avg(hpi.DURATIONINMILLIS) " +
-                        "from and pdi.key = '" + key + "' " +
+                        "from " +
+                        "join " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and hpi.processstate = 'COMPLETED' " +
@@ -317,7 +329,9 @@ public class DataFromDB {
                 "hpi.PROCESSSTATE, " +
                 "to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS') as sec, " +
                 "count(hpa.id) as cnt\n" +
-                "from pdi.key = '" + key + "'\n" +
+                "from " +
+                "join " +
+                "join " +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
 //                "and hpi.PROCESSSTATE = 'COMPLETED'\n" +
@@ -465,7 +479,8 @@ public class DataFromDB {
                     durMin,
                     durMax,
                     durAvg,
-                    durList));
+                    durList,
+                    sqlSelectBuilder));
             start = stop + 1;
         }
 
@@ -493,19 +508,7 @@ public class DataFromDB {
         }
         LOG.info("Обработка данных SQL БПМ (Время затраченное на переходы между задачами процесса) завершена.");
         if (countMain.get() > 0) {
-            String sql = "select \n" +
-                    "pd.name as MAIN_PROCESS,\n" +
-                    "pi.ID as MAIN_ID,\n" +
-                    "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
-                    "pa.ACTIVITYNAME as PROCESS, \n" +
-                    "pa.DURATIONINMILLIS as DUR \n" +
-                    "from where pi.processdefinitionkey = '" + key + "'\n" +
-                    "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                    "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-//                "and pi.endtime < to_timestamp('" + sdf1.format(stopTime + 60000) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                    "and pi.PROCESSSTATE = 'COMPLETED'\n" +
-                    "order by pd.name, pi.id, pa.ACTIVITYNAME";
-
+            String sql = sqlSelectBuilder.getTransitionTime(key, startTime, stopTime);
             StringBuilder res = new StringBuilder();
             res.append("<tr><td>")
                     .append(decimalFormat.format(countMain.get()))
@@ -553,7 +556,7 @@ public class DataFromDB {
         LOG.info("Поиск дублей в БД БПМ...");
         String sql = "select distinct PROCESSDEFINITIONKEY, PROCESSINSTANCEID, ACTIVITYID, min(STARTTIME) as STARTTIME, count(1) as cnt\n" +
                 "from " +
-                "where hai.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                "where " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "group by PROCESSDEFINITIONKEY, processinstanceid, ACTIVITYID, EXECUTIONID, ACTIVITYNAME\n" +
                 "having count(1) > 1\n" +
@@ -652,35 +655,19 @@ public class DataFromDB {
     }
 
     /**
-     * Статистика по длительности выполнения шагов
+     * Статистика по длительности выполнения задач
      *
      * @param startTime
      * @param stopTime
      * @return
      */
     public String getProcessDuration(String key, long startTime, long stopTime) {
-        LOG.info("Статистика по длительности выполнения шагов...");
-        String sql = "select\n" +
-                "pd.name as MAIN_PROCESS,\n" +
-//                "count(pi.ID) as MAIN_COUNT,\n" +
-                "min(pi.DURATIONINMILLIS) AS MAIN_MIN,\n" +
-                "max(pi.DURATIONINMILLIS) AS MAIN_MAX,\n" +
-                "ROUND(AVG(pi.DURATIONINMILLIS)) AS MAIN_AVG,\n" +
-                "pi.PROCESSSTATE,\n" +
-                "pa.ACTIVITYNAME as PROCESS,\n" +
-                "count(pa.ID) as COUNT,\n" +
-                "min(pa.DURATIONINMILLIS) AS MIN,\n" +
-                "max(pa.DURATIONINMILLIS) AS MAX,\n" +
-                "ROUND(AVG(pa.DURATIONINMILLIS)) AS AVG\n" +
-                "from where pi.processdefinitionkey = '" + key + "'\n" +
-                "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "group by pi.PROCESSSTATE, pd.name, pa.ACTIVITYNAME\n" +
-                "order by pi.PROCESSSTATE, pd.name, pa.ACTIVITYNAME";
+        LOG.info("Статистика по длительности выполнения задач...");
+        String sql = sqlSelectBuilder.getProcessDuration(key, startTime, stopTime);
         int row = 0;
         StringBuilder res = new StringBuilder();
         try {
-            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения шагов)...\n{}", sql);
+            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения задач)...\n{}", sql);
             Connection connection = dbService.getConnection();
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
@@ -698,7 +685,7 @@ public class DataFromDB {
                 res.append(resultSet.getString("PROCESSSTATE"))
                         .append("</td>");
                 res.append("<td>");
-                res.append(resultSet.getString("PROCESS"))
+                res.append(resultSet.getString("ACTIVITYNAME"))
                         .append("</td>");
                 res.append("<td>");
                 res.append(resultSet.getString("COUNT"))
@@ -716,18 +703,18 @@ public class DataFromDB {
             resultSet.close();
             statement.close();
             connection.close();
-            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения шагов) завершена.");
+            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения задач) завершена.");
         } catch (Exception e) {
             LOG.error("", e);
         }
 
         if (row > 0) {
-            return "\n<br><table><caption>Статистика по длительности выполнения шагов<br>" + sql + "</caption>" +
+            return "\n<br><table><caption>Статистика по длительности выполнения задач<br\n" + sql + "\n</caption>" +
                     "<thead>\n" +
                     "<tr><th></th>" +
                     "<th>MAIN_PROCESS</th>" +
                     "<th>PROCESSSTATE</th>" +
-                    "<th>PROCESS</th>" +
+                    "<th>ACTIVITYNAME</th>" +
                     "<th>COUNT</th>" +
                     "<th>MIN</th>" +
                     "<th>MAX</th>" +

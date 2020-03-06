@@ -2,7 +2,6 @@ package ru.utils.load.runnable;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.db.DBService;
 import ru.utils.load.data.DateTimeValue;
 import ru.utils.load.utils.MultiRunService;
 
@@ -14,66 +13,65 @@ import java.util.List;
 
 /**
  * Created by Belov Sergey
- * Проверяем возникновение тротлинга
+ * Количество записей по заданному SQL - запросу
  */
-public class RunnableThrottlingState implements Runnable {
+public class RunnableSqlSelectCount implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableThrottlingState.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableSqlSelectCount.class);
 
-    private final String name;
-    private MultiRunService multiRunService;
-    private List<DateTimeValue> bpmsJobEntityImplCountList;
+    private final String name;                      // наименование потока
+    private final String sql;                       // sql - запрос
+    private final long timeStep;                    // временной интервал между снятиями метрик (мс)
+    private MultiRunService multiRunService;        //
+    private List<DateTimeValue> sqlSelectCountList; // list для сохранеиня метрик
+    private final int countForBreak;                // произойдет прерываени нагрузки при достижении данного значения ( > 0)
 
-    public RunnableThrottlingState(
+    public RunnableSqlSelectCount(
             String name,
+            String sql,
+            long timeStep,
             MultiRunService multiRunService,
-            List<DateTimeValue> bpmsJobEntityImplCountList
+            List<DateTimeValue> sqlSelectCountList,
+            int countForBreak
     ) {
         this.name = name;
+        this.sql = sql;
+        this.timeStep = timeStep; // 15 * 1000; // опрос каждые 15 секунд
         LOG.debug("Инициализация потока {}", name);
         this.multiRunService = multiRunService;
-        this.bpmsJobEntityImplCountList = bpmsJobEntityImplCountList;
+        this.sqlSelectCountList = sqlSelectCountList;
+        this.countForBreak = countForBreak;
     }
 
     @Override
     public void run() {
         LOG.info("Старт потока {}", name);
-        String sqlForLog = "select count(1) ";
-        String sql = "select count(1) as cnt " +
-                "from " +
-                "and pdi.key = '" + multiRunService.getKeyBpm() + "'";
         if (multiRunService.getDbService() != null) {
             Connection connection = multiRunService.getDbService().getConnection();
             Statement statement = multiRunService.getDbService().createStatement(connection);
-            long step = 15 * 1000; // опрос каждые 15 секунд
-            long start = System.currentTimeMillis() + step;
-//            while (multiRunService.isRunning() && (
-//                    System.currentTimeMillis() < multiRunService.getTestStopTime() ||
-//                            multiRunService.getThreadCount() > 0)) {
+            long start = System.currentTimeMillis() + timeStep;
             while (multiRunService.getThreadCount() > 0) {
-
                 if (System.currentTimeMillis() > start) {
                     try {
                         ResultSet resultSet = multiRunService.getDbService().executeQuery(statement, sql);
                         if (resultSet.next()) {
                             int cnt = resultSet.getInt("cnt");
-                            bpmsJobEntityImplCountList.add(new DateTimeValue(System.currentTimeMillis(), cnt));
-                            LOG.info("{} ({}) (VU:{}) (Threads:{}): {}: {}",
+                            sqlSelectCountList.add(new DateTimeValue(System.currentTimeMillis(), cnt));
+                            LOG.info("{} (VU:{} Threads:{}): {} - {}",
                                     name,
-                                    multiRunService.getKeyBpm(),
                                     multiRunService.getVuCount(),
                                     multiRunService.getThreadCount(),
-                                    sqlForLog,
-                                    cnt);
-                            if (cnt > 1000) {
-                                multiRunService.stop(sqlForLog + ": " + cnt);
+                                    cnt,
+                                    sql);
+                            if (countForBreak > 0 && cnt > countForBreak) {
+                                multiRunService.stop(sql + ": " + cnt);
                             }
                         }
                         resultSet.close();
                     } catch (SQLException e) {
                         LOG.error("", e);
                     }
-                    start = System.currentTimeMillis() + step;
+                    start = System.currentTimeMillis() + timeStep;
                 }
             }
             try {

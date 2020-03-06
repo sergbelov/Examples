@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import ru.utils.files.FileUtils;
 import ru.utils.load.data.Call;
+import ru.utils.load.data.DateTimeValue;
 import ru.utils.load.data.StatData;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
@@ -335,11 +336,23 @@ public class Report {
             }
 
             // Throttling
-            if (multiRunService.getBpmsJobEntityImplCountList().size() > 1) {
+            if (!isEmptyDateTimeValue(multiRunService.getBpmsJobEntityImplCountList())) {
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("BpmsJobEntityImpl Count",
                                 multiRunService,
                                 multiRunService.getBpmsJobEntityImplCountList(),
+                                yStartFrom0,
+                                false,
+                                printMetrics))
+                        .append("\t\t</div>\n");
+            }
+
+            // Retry
+            if (!isEmptyDateTimeValue(multiRunService.getRetryPolicyJobEntityImplCountList())) {
+                sbHtml.append("\t\t<div class=\"graph\">\n")
+                        .append(graph.getSvgGraphLine("RetryPolicyJobEntityImpl Count",
+                                multiRunService,
+                                multiRunService.getRetryPolicyJobEntityImplCountList(),
                                 yStartFrom0,
                                 false,
                                 printMetrics))
@@ -492,6 +505,13 @@ public class Report {
         sbHtml.append(getLinkUrl(
                 "Grafana - ППРБ TransportThreadPools",
                 multiRunService.getGrafanaTransportThreadPoolsUrl(),
+                String.valueOf(multiRunService.getTestStartTime()),
+                String.valueOf(multiRunService.getTestStopTime())));
+
+        // ссылка на Графану (ТС)
+        sbHtml.append(getLinkUrl(
+                "Grafana - ТС (БПМ модульный)",
+                multiRunService.getGrafanaTsUrl(),
                 String.valueOf(multiRunService.getTestStartTime()),
                 String.valueOf(multiRunService.getTestStopTime())));
 
@@ -829,5 +849,23 @@ public class Report {
         return res.toString();
     }
 
+
+    /**
+     * Есть не нулевые значения в списке
+     * @param list
+     * @return
+     */
+    private boolean isEmptyDateTimeValue(List<DateTimeValue> list){
+        if (list != null) {
+            for (int i = 0; i < list.size(); i++) {
+                for (int v = 0; v < list.get(i).getValueSize(); v++) {
+                    if (list.get(i).getDoubleValue(v) != 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
 }

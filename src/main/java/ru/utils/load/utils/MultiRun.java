@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MultiRun {
-    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
     private static final String PROPERTIES_FILE = "load.properties";
     private static PropertiesService propertiesService = new PropertiesService(new LinkedHashMap<String, String>() {{
         put("STOP_TEST_ON_ERROR", "true");
@@ -60,6 +60,7 @@ public class MultiRun {
         put("GRAFANA_HOSTS_DETAIL", "");
         put("GRAFANA_HOSTS_DETAIL_CPU", "");
         put("GRAFANA_TRANSPORT_THREAD_POOLS", "");
+        put("GRAFANA_TS", "");
         put("SPLUNK", "");
         put("CSM", "");
 
@@ -76,6 +77,7 @@ public class MultiRun {
     private final String GRAFANA_HOSTS_DETAIL_URL;
     private final String GRAFANA_HOSTS_DETAIL_CPU_URL;
     private final String GRAFANA_TRANSPORT_THREAD_POOLS;
+    private final String GRAFANA_TS;
     private final String SPLUNK_URL;
     private final String CSM_URL;
     private final String FILE_TEST_PLAN;
@@ -94,6 +96,7 @@ public class MultiRun {
         GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL");
         GRAFANA_HOSTS_DETAIL_CPU_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU");
         GRAFANA_TRANSPORT_THREAD_POOLS = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS");
+        GRAFANA_TS = propertiesService.getString("GRAFANA_TS");
         SPLUNK_URL = propertiesService.getString("SPLUNK");
         CSM_URL = propertiesService.getString("CSM");
         FILE_TEST_PLAN = propertiesService.getString("FILE_TEST_PLAN");
@@ -172,6 +175,7 @@ public class MultiRun {
                                 GRAFANA_HOSTS_DETAIL_URL,
                                 GRAFANA_HOSTS_DETAIL_CPU_URL,
                                 GRAFANA_TRANSPORT_THREAD_POOLS,
+                                GRAFANA_TS,
                                 SPLUNK_URL,
                                 CSM_URL,
                                 dbService,
@@ -386,9 +390,13 @@ public class MultiRun {
                     if (cnt > 0) {
                         LOG.error("####" +
                                 "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
-                                "\nselect count(1) as cnt from : {}\n" +
+                                "\nselect count(1) as cnt : {}\n" +
                                 "Дождитесь завершения обработки, либо выполните:\n" +
-                                "--очистка очереди\n", cnt);
+                                "--очистка очереди\n" +
+                                "delete from ;\n" +
+                                "delete from ;\n" +
+                                "--не нужно чистить delete from ;\n" +
+                                "delete from ;", cnt);
                         res = false;
                     }
                 }

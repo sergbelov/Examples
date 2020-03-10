@@ -110,8 +110,24 @@ public class PropertiesService {
                 .append(":");
 
         boolean fileExists = false;
+        InputStream inputStream = null;
         File file = new File(fileName);
-        if (file.exists()) { // найден файл с параметрами
+        try {
+            inputStream = new FileInputStream(file);
+            fileExists = true;
+        } catch (Exception e) {
+            Exception exception = e;
+            try {
+                inputStream = ClassLoader.getSystemResourceAsStream(fileName);
+                fileExists = true;
+            } catch (Exception e2) {
+                LOG.warn("Ошибка при чтении параметров из файла: {}\n" +
+                        "Прямая ссылка:\n{}\n" +
+                        "Из ресурсов:\n", fileName, exception, e2);
+            }
+        }
+
+        if (fileExists && inputStream != null){
             StringBuilder reportTrace = new StringBuilder();
             reportTrace
                     .append("Параметры в файле ")
@@ -119,7 +135,7 @@ public class PropertiesService {
                     .append(":");
 
             Properties properties = new Properties();
-            try (InputStream inputStream = new FileInputStream(file)) {
+            try {
                 properties.load(inputStream);
 
                 for (Map.Entry<Object, Object> entry : properties.entrySet()) {

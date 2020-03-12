@@ -1,9 +1,3 @@
-/*
-    testDuration    - сек
-    vuStepTime      - сек
-    vuStepTimeDelay - мс
-    pacing          - мс
-*/
 [
   {
     "className": "MultiLoad",
@@ -12,13 +6,13 @@
         "apiNum": 0,
         "name": "MultiLoad_Template1",
         "async": false,
-        "testDuration": 2,
+        "testDuration_min": 2,
         "vuCountMin": 5,
         "vuCountMax": 50,
-        "vuStepTime": 5,
-        "vuStepTimeDelay": 0,
+        "vuStepTime_sec": 5,
+        "vuStepTimeDelay_ms": 0,
         "vuStepCount": 5,
-        "pacing": 1000,
+        "pacing_ms": 1000,
         "pacingType": 0,
         "keyBpm": "process01"
       },
@@ -27,13 +21,13 @@
         "apiNum": 1,
         "name": "MultiLoad_Template2",
         "async": false,
-        "testDuration": 2,
+        "testDuration_min": 2,
         "vuCountMin": 5,
         "vuCountMax": 50,
-        "vuStepTime": 5,
-        "vuStepTimeDelay": 0,
+        "vuStepTime_sec": 5,
+        "vuStepTimeDelay_ms": 0,
         "vuStepCount": 5,
-        "pacing": 2000,
+        "pacing_ms": 2000,
         "pacingType": 1,
         "keyBpm": "process02"
       },
@@ -41,13 +35,13 @@
         "apiNum": 2,
         "name": "MultiLoad_Template3",
         "async": true,
-        "testDuration": 1,
+        "testDuration_min": 1,
         "vuCountMin": 5,
         "vuCountMax": 50,
-        "vuStepTime": 5,
-        "vuStepTimeDelay": 500,
+        "vuStepTime_sec": 5,
+        "vuStepTimeDelay_ms": 500,
         "vuStepCount": 10,
-        "pacing": 2000,
+        "pacing_ms": 2000,
         "pacingType": 1,
         "keyBpm": "process03"
       }

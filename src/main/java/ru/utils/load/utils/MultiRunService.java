@@ -265,13 +265,17 @@ public class MultiRunService {
         return errorRsGroupList;
     }
 
-    public long getTestStartTime() { return testStartTime;}
+    public long getTestStartTime() {
+        return testStartTime;
+    }
 
     public long getTestStopTime() {
         return testStopTime;
     }
 
-    public long getTestStartTimeReal() { return testStartTimeReal;}
+    public long getTestStartTimeReal() {
+        return testStartTimeReal;
+    }
 
     public long getTestStopTimeReal() {
         return testStopTimeReal;
@@ -293,9 +297,13 @@ public class MultiRunService {
         return grafanaHostsDetailCpuUrl;
     }
 
-    public String getGrafanaTransportThreadPoolsUrl() { return grafanaTransportThreadPoolsUrl;}
+    public String getGrafanaTransportThreadPoolsUrl() {
+        return grafanaTransportThreadPoolsUrl;
+    }
 
-    public String getGrafanaTsUrl() { return grafanaTsUrl;}
+    public String getGrafanaTsUrl() {
+        return grafanaTsUrl;
+    }
 
     public String getSplunkUrl() {
         return splunkUrl;
@@ -568,7 +576,7 @@ public class MultiRunService {
                     int step = (vu == 0 ? vuCountMin : Math.min(vuStepCount, vuCountMax - vu));
                     for (int u = 0; u < step; u++) {
                         if ((vu = startVU()) > -1) {
-                            executorService.submit(new RunnableVU(vu,this));
+                            executorService.submit(new RunnableVU(vu, this));
                             if (vuStepTimeDelay > 0) { // фиксируем каждого пользователя
                                 vuListAdd(); // фиксация активных VU
                                 try {
@@ -625,8 +633,10 @@ public class MultiRunService {
     public void stop() {
         stop("");
     }
+
     /**
      * Перестаем подавать нагрузку
+     *
      * @param message
      */
     public void stop(String message) {
@@ -706,7 +716,7 @@ public class MultiRunService {
                     vuStepTime * 1000);
             r = false;
         }
-        if (pacingType == 0  && pacing == 0) {
+        if (pacingType == 0 && pacing == 0) {
             LOG.error("\n{}: Внимание!!! не допустимо сочетание значений параметров pacingType: {} pacing: {}",
                     name,
                     pacingType,
@@ -789,29 +799,33 @@ public class MultiRunService {
         if (!warming && dbService != null) {
             // опрашиваем размерность таблицы BpmsJobEntityImpl (тротлинг)
             String sql = "select count(1) as cnt " +
-                    "from " +
-                    "join " +
+                    "from  j " +
+                    "join  pdi on pdi.id = j.processdefinitionid " +
                     "and pdi.key = '" + keyBpm + "'";
             executorService.submit(new RunnableSqlSelectCount(
-                    name + " ThrottlingState",
+                    name,
+                    "BpmsJobEntityImpl",
                     sql,
-                    15000,
+                    5000,
                     this,
                     bpmsJobEntityImplCountList,
-                    1000)); // ToDo:
+                    1000,
+                    influxDB)); // ToDo:
 
             // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
             sql = "select count(1) as cnt " +
-                    "from " +
-                    "join " +
+                    "from  r " +
+                    "join  pdi on pdi.id = r.processdefinitionid " +
                     "and pdi.key = '" + keyBpm + "'";
             executorService.submit(new RunnableSqlSelectCount(
-                    name + " RetryCount",
+                    name,
+                    "RetryPolicyJobEntityImpl",
                     sql,
                     5000,
                     this,
                     retryPolicyJobEntityImplCountList,
-                    100000)); // ToDo:
+                    100000,
+                    influxDB)); // ToDo:
 
         }
 
@@ -925,12 +939,13 @@ public class MultiRunService {
             7  - countCallRs
             8  - dbCompleted
             9  - dbRunning
-            10 - dbLost
-            11 - dbDurMin
-            12 - dbDurAvg
-            13 - dbDur90
-            14 - dbDurMax
-            15 - errors
+            10 - dbFailed
+            11 - dbLost
+            12 - dbDurMin
+            13 - dbDurAvg
+            14 - dbDur90
+            15 - dbDurMax
+            16 - errors
         */
         metricsList.add(new DateTimeValue(
                 stopTime,
@@ -948,7 +963,11 @@ public class MultiRunService {
 
                         dbResponse.getIntValue(VarInList.DbCompleted),
                         dbResponse.getIntValue(VarInList.DbRunning),
-                        callMetrics.getCountCall() - (dbResponse.getIntValue(VarInList.DbCompleted) + dbResponse.getIntValue(VarInList.DbRunning)),
+                        dbResponse.getIntValue(VarInList.DbFailed),
+                        callMetrics.getCountCall() - (dbResponse.getIntValue(new VarInList[]{
+                                VarInList.DbCompleted,
+                                VarInList.DbRunning,
+                                VarInList.DbFailed})),
 
                         dbResponse.getDoubleValue(VarInList.DbDurMin),
                         dbResponse.getDoubleValue(VarInList.DbDurAvg),

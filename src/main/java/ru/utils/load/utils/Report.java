@@ -82,12 +82,13 @@ public class Report {
             7  - countCallRs
             8  - dbCompleted
             9  - dbRunning
-            10 - dbLost
-            11 - dbDurMin
-            12 - dbDurAvg
-            13 - dbDur90
-            14 - dbDurMax
-            15 - errors
+            10 - dbFailed
+            11 - dbLost
+            12 - dbDurMin
+            13 - dbDurAvg
+            14 - dbDur90
+            15 - dbDurMax
+            16 - errors
          */
         LOG.info("{}: Формирование отчета...", multiRunService.getName());
 
@@ -208,8 +209,10 @@ public class Report {
         // группа метрик из БД БПМ (выводим при наличии)
         StatData countStepCompleteInSec = null;
         StatData transitionsTime = null;
-        if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) > 0 ||
-                multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(new VarInList[]{
+                VarInList.DbCompleted,
+                VarInList.DbRunning,
+                VarInList.DbFailed}) > 0) {
 
             // длительность выполнения (информация из БД)
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -227,14 +230,12 @@ public class Report {
                     "<tbody>\n" +
                     "<tr><th rowspan=\"2\">Сервис</th>\n" +
                     "<th colspan=\"4\">Длительность выполнения (из БД) (мс)</th>\n" +
-                    "<th colspan=\"3\">Количество запросов</th></tr>\n" +
+                    "<th>Количество запросов</th></tr>\n" +
                     "<tr><th>минимальная</th>\n" +
                     "<th>средняя</th>\n" +
                     "<th>90 перцентиль</th>\n" +
                     "<th>максимальная</th>\n" +
-                    "<th>общее</th>\n" +
-                    "<th>COMPLETED</th>\n" +
-                    "<th>RUNNING</th>\n")
+                    "<th>COMPLETED</th>\n")
                     .append("<tr><td>")
                     .append(multiRunService.getName())
                     .append("</td><td>")
@@ -245,13 +246,15 @@ public class Report {
                     .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(VarInList.DbDur90)))
                     .append("</td><td>")
                     .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(VarInList.DbDurMax)))
-                    .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)))
-                    .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted)))
-                    .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning)))
-                    .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
+                    .append("</td>");
+
+            if (multiRunService.getMetricsList().get(0).compareMetrics(VarInList.CountCall, VarInList.DbCompleted)) {
+                sbHtml.append("<td class=\"td_green\">");
+            } else {
+                sbHtml.append("<td>");
+            }
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted)));
+            sbHtml.append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
             // Статистика из БД БПМ
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -271,6 +274,7 @@ public class Report {
                             "<th>Отправлено</th>\n" +
                             "<th>COMPLETED</th>\n" +
                             "<th>RUNNING</th>\n" +
+                            "<th>FAILED</th>\n" +
                             "<th>Потеряно</th>\n")
                     .append("<tr><td>")
                     .append(multiRunService.getName())
@@ -278,8 +282,7 @@ public class Report {
                     .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) ==
-                    multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)) {
+            if (multiRunService.getMetricsList().get(0).compareMetrics(VarInList.CountCall, VarInList.DbCompleted)) {
                 sbHtml.append("<td class=\"td_green\">");
             } else {
                 sbHtml.append("<td>");
@@ -295,16 +298,27 @@ public class Report {
             sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning)))
                     .append("</td>");
 
-            if ((multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) +
-                    multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning)) !=
-                    multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)) {
+            if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbFailed) > 0) {
                 sbHtml.append("<td class=\"td_red\">");
             } else {
                 sbHtml.append("<td>");
             }
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbFailed)))
+                    .append("</td>");
+
+            if (multiRunService.getMetricsList().get(0).compareMetrics(VarInList.CountCall, new VarInList[]{
+                    VarInList.DbCompleted,
+                    VarInList.DbRunning,
+                    VarInList.DbFailed})) {
+                sbHtml.append("<td>");
+            } else {
+                sbHtml.append("<td class=\"td_red\">");
+            }
             sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall) -
-                    (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) +
-                            multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning))))
+                    multiRunService.getMetricsList().get(0).getIntValue(new VarInList[]{
+                            VarInList.DbCompleted,
+                            VarInList.DbRunning,
+                            VarInList.DbFailed})))
                     .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
             // Длительность процессов из БД БПМ
@@ -404,7 +418,7 @@ public class Report {
                 "<th rowspan=\"2\">Сервис</th>" +
                 "<th rowspan=\"2\">Длительность<br>теста</th>" +
                 "<th rowspan=\"2\">Отправлено<br>запросов</th>" +
-                "<th colspan=\"3\">Процессы в БД</th>" +
+                "<th colspan=\"4\">Процессы в БД</th>" +
 
                 "<th rowspan=\"2\">max tps при VU</th>" +
                 "<th rowspan=\"2\">Response<br>time<br>90% (мс)</th>" +
@@ -415,6 +429,7 @@ public class Report {
                 "<th rowspan=\"2\">CPU<br>core max<br>(%)</th></tr\n>" +
                 "<tr><th>COMPETED</th>" +
                 "<th>RUNNING</th>" +
+                "<th>FAILED</th>" +
                 "<th>потеряно</th>" +
                 "<th>всего шагов</th>" +
                 "<th>шагов<br>COMPLETED</th>" +
@@ -424,13 +439,12 @@ public class Report {
                 .append("</td><td>")
                 .append(multiRunService.getName())
                 .append("</td><td>")
-                .append(timeMillisToString( multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()))
+                .append(timeMillisToString(multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()))
                 .append("</td><td>")
                 .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) ==
-                multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)) {
+        if (multiRunService.getMetricsList().get(0).compareMetrics(VarInList.CountCall, VarInList.DbCompleted)) {
             sbHtml.append("<td class=\"td_green\">");
         } else {
             sbHtml.append("<td>");
@@ -446,17 +460,28 @@ public class Report {
         sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning)))
                 .append("</td>");
 
-        if ((multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) +
-                multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning)) !=
-                multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall)) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbFailed) > 0) {
             sbHtml.append("<td class=\"td_red\">");
         } else {
             sbHtml.append("<td>");
         }
+        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbFailed)))
+                .append("</td>");
+
+        if (multiRunService.getMetricsList().get(0).compareMetrics(VarInList.CountCall, new VarInList[]{
+                VarInList.DbCompleted,
+                VarInList.DbRunning,
+                VarInList.DbFailed})) {
+            sbHtml.append("<td>");
+        } else {
+            sbHtml.append("<td class=\"td_red\">");
+        }
         sbHtml.append(decimalFormat.format(
                 multiRunService.getMetricsList().get(0).getIntValue(VarInList.CountCall) -
-                        (multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbCompleted) +
-                         multiRunService.getMetricsList().get(0).getIntValue(VarInList.DbRunning))))
+                        (multiRunService.getMetricsList().get(0).getIntValue(new VarInList[]{
+                                VarInList.DbCompleted,
+                                VarInList.DbRunning,
+                                VarInList.DbFailed}))))
                 .append("</td><td>")
                 .append(decimalFormat.format(tpsMax))
                 .append(" / ")
@@ -852,10 +877,11 @@ public class Report {
 
     /**
      * Есть не нулевые значения в списке
+     *
      * @param list
      * @return
      */
-    private boolean isEmptyDateTimeValue(List<DateTimeValue> list){
+    private boolean isEmptyDateTimeValue(List<DateTimeValue> list) {
         if (list != null) {
             for (int i = 0; i < list.size(); i++) {
                 for (int v = 0; v < list.get(i).getValueSize(); v++) {

@@ -49,6 +49,7 @@ public class GraphProperty {
                         new MetricView(VarInList.CountCall, "отправлено запросов", "#00009f"),
                         new MetricView(VarInList.DbCompleted, "COMPLETED", "#009f00"),
                         new MetricView(VarInList.DbRunning, "RUNNING", "#ff9f00"),
+                        new MetricView(VarInList.DbFailed, "FAILED", "#ff9f00"),
                         new MetricView(VarInList.DbLost, "потеряно", "#ff0000"))));
         // 5 - Ошибки (в списке metricsList)
         metricViewGroupList.add(new MetricViewGroup("Ошибки",

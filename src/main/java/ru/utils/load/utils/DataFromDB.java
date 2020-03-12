@@ -165,16 +165,16 @@ public class DataFromDB {
             LOG.info("{}: Ожидаем завершения начатых задач (не более {} мин)...", key, maxDelay);
 /*
         String sql = "select count(1) as cnt " +
-                "from " +
-                "join " +
+                "from hpi " +
+                "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and hpi.processstate = 'RUNNING' " +
                 "group by pdi.key, hpi.processstate";
 */
         String sql = "select count(1) as cnt " +
-                "from " +
-                "join ";
+                "from  j " +
+                "join  pdi on pdi.id = j.processdefinitionid and pdi.key = '" + key + "'";
             try {
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
@@ -243,31 +243,31 @@ public class DataFromDB {
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
         String[] sql = {
                 "select pdi.key, hpi.processstate, count(1) as cnt " +
-                        "from " +
-                        "join " +
+                        "from hpi " +
+                        "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "group by pdi.key, hpi.processstate",
 
                 "select pdi.key, count(1) as cnt, min(hpi.DURATIONINMILLIS), max(hpi.DURATIONINMILLIS), avg(hpi.DURATIONINMILLIS) " +
-                        "from " +
-                        "join " +
+                        "from hpi " +
+                        "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and hpi.processstate = 'COMPLETED' " +
                         "group by pdi.key"
         };
 
-        int[] count = {0, 0, 0, 0};
+        int[] count = {0, 0, 0, 0, 0};; // 0-COMPLETED, 1-RUNNING; 2-FAILED; 3-All; 4-All end
         double[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
 
         dbDataList
                 .stream()
                 .filter(x -> (x.getStartTime() >= startTime && x.getStartTime() <= stopTime))
                 .forEach(x -> {
-                    count[2]++;
+                    count[3]++;
                     if (x.getDuration() != null) {
-                        count[3]++;
+                        count[4]++;
                         dur[0] = Math.min(dur[0], x.getDuration()); // min
                         dur[1] = dur[1] + x.getDuration();          // avg
                         dur[3] = Math.max(dur[3], x.getDuration()); // max
@@ -279,6 +279,9 @@ public class DataFromDB {
                         case "RUNNING":
                             count[1]++;
                             break;
+                        case "FAILED":
+                            count[2]++;
+                            break;
                         default:
                             LOG.warn("Не задан обработчик для статуса {}", x.getProcessState());
                     }
@@ -288,8 +291,8 @@ public class DataFromDB {
             dur[0] = 0L;
         }
 
-        if (count[3] > 0) {
-            dur[1] = dur[1] / count[3] * 1.00; // avg
+        if (count[4] > 0) {
+            dur[1] = dur[1] / count[4] * 1.00; // avg
             Percentile percentile90 = new Percentile();
             dur[2] = percentile90.evaluate(
                     dbDataList
@@ -304,6 +307,7 @@ public class DataFromDB {
         List<DBMetric> dbMetricList = new ArrayList<>();
         dbMetricList.add(new DBMetric(VarInList.DbCompleted, count[0]));
         dbMetricList.add(new DBMetric(VarInList.DbRunning, count[1]));
+        dbMetricList.add(new DBMetric(VarInList.DbFailed, count[2]));
         dbMetricList.add(new DBMetric(VarInList.DbDurMin, dur[0]));
         dbMetricList.add(new DBMetric(VarInList.DbDurAvg, dur[1]));
         dbMetricList.add(new DBMetric(VarInList.DbDur90, dur[2]));
@@ -329,9 +333,9 @@ public class DataFromDB {
                 "hpi.PROCESSSTATE, " +
                 "to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS') as sec, " +
                 "count(hpa.id) as cnt\n" +
-                "from " +
-                "join " +
-                "join " +
+                "from  hpi\n" +
+                "join  hpa on hpa.PROCESSINSTANCEID = hpi.id\n" +
+                "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "'\n" +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
 //                "and hpi.PROCESSSTATE = 'COMPLETED'\n" +
@@ -555,8 +559,8 @@ public class DataFromDB {
     public String getDoubleCheck(long startTime, long stopTime) {
         LOG.info("Поиск дублей в БД БПМ...");
         String sql = "select distinct PROCESSDEFINITIONKEY, PROCESSINSTANCEID, ACTIVITYID, min(STARTTIME) as STARTTIME, count(1) as cnt\n" +
-                "from " +
-                "where " +
+                "from  hai\n" +
+                "where hai.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "group by PROCESSDEFINITIONKEY, processinstanceid, ACTIVITYID, EXECUTIONID, ACTIVITYNAME\n" +
                 "having count(1) > 1\n" +

@@ -45,6 +45,12 @@ public class ErrorsGroup {
                         "to: [UNKNOWN] with request.init.timeout:"
                 },
                 "Request initialization timeout.message.id:  to: [UNKNOWN] with request.init.timeout:"));
+        
+        groupCommentList.add(new ErrorsGroupComment(
+                new String[]{"Send exception for message.id:",
+                        "Failed to update metadata after"
+                },
+                "Send exception for message.id:"));
     }
 
     public int getCount() { return groupCommentList.size();}

@@ -35,9 +35,9 @@ public class SqlSelectBuilder {
                 "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
                 "NVL(pa.ACTIVITYNAME,' ') as ACTIVITYNAME, \n" +
                 "pa.DURATIONINMILLIS as DUR \n" +
-                "from " +
-                "join \n" +
-                "join \n" +
+                "from  pi " +
+                "join  pa on pa.PROCESSINSTANCEID = pi.id \n" +
+                "join  pd on pd.id = pi.processdefinitionid \n" +
                 "where pi.processdefinitionkey = '" + key + "' " +
                 "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
@@ -60,8 +60,8 @@ public class SqlSelectBuilder {
 //                "        pi.starttime as mainStartTime,\n" +
 //                "        pi.endtime as mainEndTime,\n" +
 //                "        pi.DURATIONINMILLIS as mainDuration\n" +
-                "    from \n" +
-                "    join \n" +
+                "    from  pi \n" +
+                "    join  pd on pd.id = pi.processdefinitionid \n" +
                 "    \n" +
                 "    start with pi.superprocessinstanceid is null\n" +
                 "      and pi.PROCESSSTATE = 'COMPLETED'\n" +
@@ -124,8 +124,8 @@ public class SqlSelectBuilder {
                 "max(pa.DURATIONINMILLIS) AS MAX,\n" +
                 "ROUND(AVG(pa.DURATIONINMILLIS)) AS AVG\n" +
                 "from  pi\n" +
-                "join \n" +
-                "join \n" +
+                "join  pa on pa.PROCESSINSTANCEID = pi.id\n" +
+                "join  pd on pd.id = pi.processdefinitionid\n" +
                 "where pi.processdefinitionkey = '" + key + "'\n" +
                 "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
@@ -141,8 +141,8 @@ public class SqlSelectBuilder {
                 "   CONNECT_BY_ROOT (pi.durationinmillis) as root_process_duration,\n" +
                 "   pi.processstate,\n" +
                 "   pi.processinstanceid\n" +
-                "from \n" +
-                "join \n" +
+                "from  pi \n" +
+                "join  pd on pd.id = pi.processdefinitionid \n" +
                 "\n" +
                 "start with pi.superprocessinstanceid is null\n" +
                 (key.isEmpty() ? "" : "   and pi.processdefinitionkey = '" + key + "'\n") +
@@ -160,7 +160,7 @@ public class SqlSelectBuilder {
                 "   max(pa.DURATIONINMILLIS) as max,\n" +
                 "   round(avg(pa.DURATIONINMILLIS),3) as avg\n" +
                 "from process p\n" +
-                "join \n" +
+                "join  pa on pa.PROCESSINSTANCEID = p.processinstanceid\n" +
                 "where pa.CALLEDPROCESSINSTANCEID is null\n" +
                 "group by p.PROCESSSTATE, p.root_process_name, pa.ACTIVITYNAME\n" +
                 "order by PROCESSSTATE, root_process_name, ACTIVITYNAME";
@@ -186,9 +186,9 @@ public class SqlSelectBuilder {
                 "hpi.PROCESSSTATE, " +
                 "to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS') as sec, " +
                 "count(hpa.id) as cnt\n" +
-                "from \n" +
-                "join \n" +
-                "join \n" +
+                "from  hpi\n" +
+                "join  hpa on hpa.PROCESSINSTANCEID = hpi.id\n" +
+                "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "'\n" +
                 "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                 "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
 //                "and hpi.PROCESSSTATE = 'COMPLETED'\n" +

@@ -11,12 +11,13 @@ package ru.utils.load.data.graph;
     7  - countCallRs
     8  - dbCompleted
     9  - dbRunning
-    10 - dbLost
-    11 - dbDurMin
-    12 - dbDurAvg
-    13 - dbDur90
-    14 - dbDurMax
-    15 - errors
+    10 - dbFailed
+    11 - dbLost
+    12 - dbDurMin
+    13 - dbDurAvg
+    14 - dbDur90
+    15 - dbDurMax
+    16 - errors
 */
 public enum VarInList {
 
@@ -70,34 +71,39 @@ public enum VarInList {
             return 9;
         }
     },
-    DbLost {
+    DbFailed {
         public int getIndex() {
             return 10;
         }
     },
-    DbDurMin {
+    DbLost {
         public int getIndex() {
             return 11;
         }
     },
-    DbDurAvg {
+    DbDurMin {
         public int getIndex() {
             return 12;
         }
     },
-    DbDur90 {
+    DbDurAvg {
         public int getIndex() {
             return 13;
         }
     },
-    DbDurMax {
+    DbDur90 {
         public int getIndex() {
             return 14;
         }
     },
-    Errors {
+    DbDurMax {
         public int getIndex() {
             return 15;
+        }
+    },
+    Errors {
+        public int getIndex() {
+            return 16;
         }
     };
 

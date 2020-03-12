@@ -1,9 +1,6 @@
 package ru.utils.load.utils;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-import com.google.gson.stream.JsonReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.influxdb.BatchOptions;
@@ -19,8 +16,7 @@ import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
 import ru.utils.load.runnable.RunnableLoadAPI;
 
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -68,7 +64,8 @@ public class MultiRun {
         put("PATH_REPORT", "Reports/");
     }});
 
-    private List<TestPlans> testPlansList = new ArrayList<>();
+//    private List<TestPlans> testPlansList; // = new ArrayList<>();
+    private TestPlans[] testPlansArray;
     private List<MultiRunService> multiRunServiceList = new ArrayList<>();
     private GraphProperty graphProperty = new GraphProperty();
     private final boolean STOP_TEST_ON_ERROR;
@@ -102,16 +99,10 @@ public class MultiRun {
         FILE_TEST_PLAN = propertiesService.getString("FILE_TEST_PLAN");
         PATH_REPORT = propertiesService.getString("PATH_REPORT");
 
-        Gson gson = new GsonBuilder() // с форматированием
-                .setPrettyPrinting()
-                .create();
-        try (
-                JsonReader reader = new JsonReader(new InputStreamReader(
-                        new FileInputStream(FILE_TEST_PLAN),
-                        "UTF-8"));
-        ) {
-            testPlansList = gson.fromJson(reader, new TypeToken<List<TestPlans>>() {
-            }.getType());
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+//            testPlansList = mapper.readValue(new File(FILE_TEST_PLAN), new TypeReference<List<TestPlans>>() {});
+            testPlansArray = mapper.readValue(new File(FILE_TEST_PLAN), TestPlans[].class);
         } catch (Exception e) {
             LOG.error("Ошибка при чтении данных из файла {}\n", FILE_TEST_PLAN, e);
         }
@@ -151,7 +142,7 @@ public class MultiRun {
     pacing          - мс
 */
 
-            for (TestPlans testPlans : testPlansList) {
+            for (TestPlans testPlans : testPlansArray) {
                 if (testPlans.getClassName().equals(className)) {
                     for (TestPlan testPlan : testPlans.getTestPlanList()) {
                         apiMax++;
@@ -161,13 +152,13 @@ public class MultiRun {
                                 testPlan.getApiNum(),
                                 testPlan.getName(),
                                 testPlan.isAsync(),
-                                testPlan.getTestDuration(),
+                                testPlan.getTestDuration_min(),
                                 testPlan.getVuCountMin(),
                                 testPlan.getVuCountMax(),
-                                testPlan.getVuStepTime(),
-                                testPlan.getVuStepTimeDelay(),
+                                testPlan.getVuStepTime_sec(),
+                                testPlan.getVuStepTimeDelay_ms(),
                                 testPlan.getVuStepCount(),
-                                testPlan.getPacing(),
+                                testPlan.getPacing_ms(),
                                 testPlan.getPacingType(),
                                 WARM_DURATION,
                                 STOP_TEST_ON_ERROR,
@@ -390,7 +381,7 @@ public class MultiRun {
                     if (cnt > 0) {
                         LOG.error("####" +
                                 "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
-                                "\nselect count(1) as cnt : {}\n" +
+                                "\nselect count(1) as cnt from : {}\n" +
                                 "Дождитесь завершения обработки, либо выполните:\n" +
                                 "--очистка очереди\n" +
                                 "delete from ;\n" +

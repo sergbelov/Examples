@@ -90,15 +90,6 @@ public class PropertiesFileExample2 {
             }
         }
 
-
-//        List<MyClass> myClassList = propertiesService.getJsonList("MY_CLASS_JSON", new TypeToken<List<MyClass>>(){});
-
-        List<ClassA> list = propertiesService.getJsonList("CLASSA_LIST", new TypeReference<List<ClassA>>(){});
-        list.forEach(x -> {
-            System.out.println(x.getX());
-        });
-
-
         for (String s: propertiesService.getStringList("STRING_LIST")){
             System.out.println(s);
         }
@@ -106,6 +97,36 @@ public class PropertiesFileExample2 {
         for (int i: propertiesService.getIntList("INT_LIST")){
             System.out.println(i);
         }
+
+//        List<MyClass> myClassList = propertiesService.getJsonList("MY_CLASS_JSON", new TypeToken<List<MyClass>>(){});
+
+        System.out.println("List<ClassA> list = propertiesService.getJsonList( class");
+        List<ClassA> list = propertiesService.getJsonList(
+                "CLASSA_LIST",
+                PropertiesFileExample2.ClassA.class);
+
+        list.forEach(x -> {
+            System.out.println(x.getX());
+        });
+
+        System.out.println("List<ClassA> list = propertiesService.getJsonList( TypeReference");
+        list = propertiesService.getJsonList(
+                "CLASSA_LIST",
+                new TypeReference<List<ClassA>>(){});
+
+        list.forEach(x -> {
+            System.out.println(x.getX());
+        });
+
+        System.out.println("ClassA[] array = propertiesService.getJsonArray( TypeReference");
+        ClassA[] array = propertiesService.getJsonArray(
+                "CLASSA_LIST",
+                new TypeReference<ClassA[]>(){});
+
+        for (int i = 0; i < array.length; i++) {
+            System.out.println(array[i].getX());
+        }
+
 
         propertiesService.setProperty("NEW_PROPERTY", "NEW_VALUE " + datetimeFormat.format(System.currentTimeMillis()));
     }

@@ -1,7 +1,10 @@
 package ru.utils.files;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -12,8 +15,10 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import ru.examples.propertiesExample.PropertiesFileExample2;
 
 import java.io.*;
+import java.lang.annotation.Target;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -519,6 +524,18 @@ public class PropertiesService {
      */
     public <T> List<T> getJsonList(String key, TypeReference typeReference) {
         List<T> list = null;
+
+/*
+        AnnotationIntrospector introspector = new JacksonAnnotationIntrospector();
+        mapper.getDeserializationConfig().with(introspector);
+        mapper.getSerializationConfig().with(introspector);
+        T targetClass = null;
+        JavaType type = mapper.getTypeFactory().
+                constructCollectionType(
+                        List.class,
+                        targetClass.getClass());
+*/
+//
         try {
             list = mapper.readValue(get(key), typeReference);
         } catch (Exception e) {

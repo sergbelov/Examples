@@ -18,6 +18,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -560,6 +562,26 @@ public class PropertiesService {
                         List.class,
                         targetClass.getClass());
 */
+
+
+/*
+        Foo actualClass = new Foo<?>().inferedClass;
+        ParameterizedType type = (ParameterizedType)actualClass.getGenericSuperclass();
+        System.out.println(type);
+        Class parameter = (Class)type.getActualTypeArguments()[0];
+        System.out.println(parameter);
+*/
+
+/*
+        Foo<T> foo = new Foo<T>() {
+            @Override
+            public Class<?> getGenericClass() {
+                return super.getGenericClass();
+            }
+        };
+        System.out.println("foo.getClass(): " + foo.getClass().getGenericSuperclass().getClass());
+*/
+
         JavaType javaType = mapper.getTypeFactory().constructParametricType(
                 List.class,
                 classs);
@@ -629,4 +651,24 @@ public class PropertiesService {
         }
     }
 
+/*
+    public abstract class Foo<T> {
+
+        private Class<?> inferedClass;
+
+        public Class<?> getGenericClass(){
+            if(inferedClass == null){
+                Type mySuperclass = getClass().getGenericSuperclass();
+                Type tType = ((ParameterizedType)mySuperclass).getActualTypeArguments()[0];
+                String className = tType.toString().split(" ")[1];
+                try {
+                    inferedClass = Class.forName(className);
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            return inferedClass;
+        }
+    }
+*/
 }

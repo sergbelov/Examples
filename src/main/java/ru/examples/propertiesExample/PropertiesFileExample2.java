@@ -3,6 +3,7 @@ package ru.examples.propertiesExample;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
+import com.google.gson.reflect.TypeToken;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -100,7 +101,7 @@ public class PropertiesFileExample2 {
 
 //        List<MyClass> myClassList = propertiesService.getJsonList("MY_CLASS_JSON", new TypeToken<List<MyClass>>(){});
 
-        System.out.println("List<ClassA> list = propertiesService.getJsonList( class");
+        System.out.println("List<ClassA> list = propertiesService.getJsonList( ClassA.class");
         List<ClassA> list = propertiesService.getJsonList(
                 "CLASSA_LIST",
                 PropertiesFileExample2.ClassA.class);
@@ -109,7 +110,16 @@ public class PropertiesFileExample2 {
             System.out.println(x.getX());
         });
 
-        System.out.println("List<ClassA> list = propertiesService.getJsonList( TypeReference");
+        System.out.println("List<ClassA> list = propertiesService.getJsonList( TypeToken<List<ClassA>>(){}");
+        list = propertiesService.getJsonList(
+                "CLASSA_LIST",
+                new TypeToken<List<ClassA>>(){});
+
+        list.forEach(x -> {
+            System.out.println(x.getX());
+        });
+
+        System.out.println("List<ClassA> list = propertiesService.getJsonList( TypeReference<List<ClassA>>(){}");
         list = propertiesService.getJsonList(
                 "CLASSA_LIST",
                 new TypeReference<List<ClassA>>(){});
@@ -118,7 +128,8 @@ public class PropertiesFileExample2 {
             System.out.println(x.getX());
         });
 
-        System.out.println("ClassA[] array = propertiesService.getJsonArray( TypeReference");
+
+        System.out.println("ClassA[] array = propertiesService.getJsonArray( TypeReference<ClassA[]>(){}");
         ClassA[] array = propertiesService.getJsonArray(
                 "CLASSA_LIST",
                 new TypeReference<ClassA[]>(){});

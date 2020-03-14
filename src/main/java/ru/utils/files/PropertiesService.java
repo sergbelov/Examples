@@ -16,10 +16,8 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import ru.examples.propertiesExample.PropertiesFileExample2;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -527,7 +525,7 @@ public class PropertiesService {
      * Значение параметра в формате List<T>
      *
      * @param key
-     * @param typeToken
+     * @param typeToken TypeToken<List<T>>(){}
      * @param <T>
      * @return
      */
@@ -535,6 +533,7 @@ public class PropertiesService {
         Gson gson = new GsonBuilder().create();
         return gson.fromJson(get(key), typeToken.getType());
     }
+
 /*
     public List<?> getJsonList(String key) {
         Gson gson = new GsonBuilder().create();
@@ -574,10 +573,9 @@ public class PropertiesService {
 
     /**
      * Значение параметра в формате List<T>
-     *
-     * @param <T>
      * @param key
      * @param typeReference TypeReference<List<T>>(){}
+     * @param <T>
      * @return
      */
     public <T> List<T> getJsonList(String key, TypeReference typeReference) {

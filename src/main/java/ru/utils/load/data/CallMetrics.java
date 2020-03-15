@@ -1,4 +1,4 @@
-package ru.utils.load.data.metrics;
+package ru.utils.load.data;
 
 public class CallMetrics {
     /*

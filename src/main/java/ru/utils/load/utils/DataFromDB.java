@@ -4,7 +4,7 @@ import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import ru.utils.db.DBService;
 import ru.utils.load.data.DateTimeValues;
 import ru.utils.load.data.StatData;
-import ru.utils.load.data.graph.Metric;
+import ru.utils.load.data.Metric;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;

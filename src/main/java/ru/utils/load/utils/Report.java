@@ -11,8 +11,8 @@ import ru.utils.load.data.StatData;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
-import ru.utils.load.data.graph.Metric;
-import ru.utils.load.data.metrics.CallMetrics;
+import ru.utils.load.data.Metric;
+import ru.utils.load.data.CallMetrics;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -70,27 +70,10 @@ public class Report {
             4 - Статистика из БД БПМ
             5 - Ошибки
             6 - Количество шагов завершенных в секунду
+            7 - BpmsJobEntityImpl Count
+            8 - RetryPolicyJobEntityImpl Count
         */
 
-        /* ==== список метрик:
-            0  - durMin
-            1  - durAvg
-            2  - dur90
-            3  - durMax
-            4  - tps
-            5  - tpsRs
-            6  - countCall
-            7  - countCallRs
-            8  - dbCompleted
-            9  - dbRunning
-            10 - dbFailed
-            11 - dbLost
-            12 - dbDurMin
-            13 - dbDurAvg
-            14 - dbDur90
-            15 - dbDurMax
-            16 - errors
-         */
         LOG.info("{}: Формирование отчета...", multiRunService.getName());
 
         // формируем HTML - файл

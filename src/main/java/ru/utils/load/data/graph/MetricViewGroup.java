@@ -1,4 +1,6 @@
-package ru.utils.load.data.metrics;
+package ru.utils.load.data.graph;
+
+import ru.utils.load.data.graph.MetricView;
 
 import java.util.List;
 

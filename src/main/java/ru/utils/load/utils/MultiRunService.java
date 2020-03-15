@@ -10,8 +10,8 @@ import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.graph.Metric;
-import ru.utils.load.data.metrics.CallMetrics;
+import ru.utils.load.data.Metric;
+import ru.utils.load.data.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.*;
 
@@ -32,24 +32,6 @@ public class MultiRunService {
     private List<DateTimeValues> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов сервиса
 
-    /*  список метрик:
-        0  - durMin
-        1  - durAvg
-        2  - dur90
-        3  - durMax
-        4  - tps
-        5  - tpsRs
-        6  - countCall
-        7  - countCallRs
-        8  - dbCompleted
-        9  - dbRunning
-        10 - dbLost
-        11 - dbDurMin
-        12 - dbDurAvg
-        13 - dbDur90
-        14 - dbDurMax
-        15 - errors
-    */
     private List<DateTimeValues> metricsList = new ArrayList<>();
     private List<DateTimeValues> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
     private List<DateTimeValues> retryPolicyJobEntityImplCountList = new CopyOnWriteArrayList<>();
@@ -925,27 +907,7 @@ public class MultiRunService {
             }
         }
 
-        /*  добавляем полученные метрики в список
-            список метрик:
-            0  - durMin
-            1  - durAvg
-            2  - dur90
-            3  - durMax
-            4  - tps
-            5  - tpsRs
-            6  - countCall
-            7  - countCallRs
-            8  - dbCompleted
-            9  - dbRunning
-            10 - dbFailed
-            11 - dbLost
-            12 - dbDurMin
-            13 - dbDurAvg
-            14 - dbDur90
-            15 - dbDurMax
-            16 - errors
-        */
-
+        // добавляем полученные метрики в список
         Map<Metric, Number> map = new LinkedHashMap<>();
         map.put(Metric.DurMin, callMetrics.getDurMin());
         map.put(Metric.DurAvg, callMetrics.getDurAvg());

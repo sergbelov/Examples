@@ -1,8 +1,7 @@
 package ru.examples;
 
-import com.sun.javafx.font.Metrics;
 import ru.utils.load.data.DateTimeValues;
-import ru.utils.load.data.graph.Metric;
+import ru.utils.load.data.Metric;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

@@ -1,7 +1,5 @@
 package ru.utils.load.data;
 
-import ru.utils.load.data.graph.Metric;
-
 import java.util.*;
 
 /**

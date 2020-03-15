@@ -2,8 +2,7 @@ package ru.utils.load.data.graph;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.metrics.MetricView;
-import ru.utils.load.data.metrics.MetricViewGroup;
+import ru.utils.load.data.Metric;
 
 import java.util.ArrayList;
 import java.util.Arrays;

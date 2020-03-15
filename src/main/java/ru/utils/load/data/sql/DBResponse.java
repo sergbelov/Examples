@@ -1,6 +1,6 @@
 package ru.utils.load.data.sql;
 
-import ru.utils.load.data.graph.Metric;
+import ru.utils.load.data.Metric;
 
 import java.util.List;
 

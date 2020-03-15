@@ -3,9 +3,9 @@ package ru.utils.load.utils;
 import ru.utils.load.data.DateTimeValues;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.graph.Metric;
-import ru.utils.load.data.metrics.MetricView;
-import ru.utils.load.data.metrics.MetricViewGroup;
+import ru.utils.load.data.Metric;
+import ru.utils.load.data.graph.MetricView;
+import ru.utils.load.data.graph.MetricViewGroup;
 
 import java.text.*;
 import java.util.ArrayList;
@@ -120,7 +120,7 @@ public class Graph {
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
             for (MetricView metricView : metricViewGroup.getMetricViewList()) {
-//                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+//                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getMetric()));
                 yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getMetric()));
                 yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getMetric()));
             }

@@ -74,15 +74,15 @@ public class Graph {
         }
 */
 
-        MetricViewGroup metricViewGroup = multiRunService
+        GraphMetricGroup graphMetricGroup = multiRunService
                 .getMultiRun()
                 .getGraphProperty()
                 .getMetricViewGroup(title);
-        if (metricViewGroup == null) {
+        if (graphMetricGroup == null) {
             LOG.error("Не найден MetricViewGroup для {}", title);
         }
 
-        LOG.info("{}: Формирование графика {}", multiRunService.getName(), metricViewGroup.getTitle());
+        LOG.info("{}: Формирование графика {}", multiRunService.getName(), graphMetricGroup.getTitle());
 
         long xValueMin = 0L;
         try {
@@ -118,10 +118,10 @@ public class Graph {
         double yValueMin = 99999999999D;
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
-            for (MetricView metricView : metricViewGroup.getMetricViewList()) {
+            for (GraphMetric graphMetric : graphMetricGroup.getGraphMetricList()) {
 //                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getMetric()));
-                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getMetric()));
-                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getMetric()));
+                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
+                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
             }
 //            xValueMin = Math.min(xValueMin, metricsList.get(i).getTime());
 //            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
@@ -131,13 +131,13 @@ public class Graph {
             return "";
         }
 
-        StringBuilder sbResult = new StringBuilder("<!--" + metricViewGroup.getTitle() + "-->\n" +
+        StringBuilder sbResult = new StringBuilder("<!--" + graphMetricGroup.getTitle() + "-->\n" +
                 "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
                 "\t\t\t\t<text " +
                 "font-size=\"" + (fontSize * 2) + "\" " +
-                "x=\"" + (xSize / 2 - (metricViewGroup.getTitle().length() * xText) / 2) + "\" " +
+                "x=\"" + (xSize / 2 - (graphMetricGroup.getTitle().length() * xText) / 2) + "\" " +
                 "y=\"" + (yStart - fontSize * 2) + "\">" +
-                "" + metricViewGroup.getTitle() + "</text>\n" +
+                "" + graphMetricGroup.getTitle() + "</text>\n" +
                 "<!-- Область графика -->\n" +
                 "\t\t\t\t<rect " +
                 "stroke=\"#0f0f0f\" " +
@@ -150,11 +150,11 @@ public class Graph {
 
         // описание графиков
         double yCur = fontSize / 1.5;
-        for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {
-            if (!metricViewGroup.getMetricView(i).getTitle().isEmpty()) {
+        for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
+            if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
                 sbResult.append(
-                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + metricViewGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize * 4) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
-                        "\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + metricViewGroup.getMetricView(i).getTitle() + "</text>\n");
+                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + graphMetricGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize * 4) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
+                        "\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + graphMetricGroup.getMetricView(i).getTitle() + "</text>\n");
                 yCur = yCur + fontSize;
             }
         }
@@ -271,9 +271,9 @@ public class Graph {
         StringBuilder sbSignature = new StringBuilder("<!-- Метрики на графике -->\n"); // значения метрик на графике
         StringBuilder sbSignatureTitle = new StringBuilder("<!-- Всплывающие надписи -->\n"); // значения метрик на графике
 
-        StringBuilder[] sbGraph = new StringBuilder[metricViewGroup.getMetricsCount()]; // графики
-        for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
-            String curColor = metricViewGroup.getMetricView(m).getColor();
+        StringBuilder[] sbGraph = new StringBuilder[graphMetricGroup.getMetricsCount()]; // графики
+        for (int m = 0; m < graphMetricGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
+            String curColor = graphMetricGroup.getMetricView(m).getColor();
             sbGraph[m] = new StringBuilder();
             sbGraph[m].append("<!-- График" + (m + 1) + " -->\n" +
                     "\t\t\t\t<polyline " +
@@ -288,22 +288,22 @@ public class Graph {
             xCur = (metricsList.get(i).getTime() - xValueMin) * xRatio + xStart;
             // ступеньки
             if (step && i > 0) {
-                for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
+                for (int m = 0; m < graphMetricGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
                     sbGraph[m].append(xCur + "," + (yMax - Math.round((metricsList.get(i - 1).getDoubleValue(
-                            metricViewGroup
-                                .getMetricViewList()
+                            graphMetricGroup
+                                .getGraphMetricList()
                                 .get(m)
                                 .getMetric()) - yValueMin) * yRatio)) + " \n");
                 }
             }
 
             List<Double> yPrevList = new ArrayList<>();
-            for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
-                Metric metric = metricViewGroup // метрика в общем вписке
-                        .getMetricViewList()
+            for (int m = 0; m < graphMetricGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
+                Metric metric = graphMetricGroup // метрика в общем вписке
+                        .getGraphMetricList()
                         .get(m)
                         .getMetric();
-                String curColor = metricViewGroup.getMetricView(m).getColor();
+                String curColor = graphMetricGroup.getMetricView(m).getColor();
                 double y = yMax - Math.round((metricsList.get(i).getDoubleValue(metric) - yValueMin) * yRatio);
                 // график
                 sbGraph[m].append(xCur + "," + y + " \n");
@@ -335,8 +335,8 @@ public class Graph {
                 sbSignatureTitle.append("<g> " +
                         "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 5) + "\"/> " +
                         "<title>");
-                if (!metricViewGroup.getMetricView(m).getTitle().isEmpty()) {
-                    sbSignatureTitle.append(metricViewGroup.getMetricView(m).getTitle() + "; ");
+                if (!graphMetricGroup.getMetricView(m).getTitle().isEmpty()) {
+                    sbSignatureTitle.append(graphMetricGroup.getMetricView(m).getTitle() + "; ");
                 }
                 sbSignatureTitle.append("время: " + sdf1.format(metricsList.get(i).getTime()) + "; " +
                         "VU: " + multiRunService.getVuCount(metricsList.get(i).getTime()) + "; " +
@@ -344,7 +344,7 @@ public class Graph {
                         "</g>\n");
             }
         }
-        for (int i = 0; i < metricViewGroup.getMetricsCount(); i++) {
+        for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
             sbGraph[i].append("\"/>\n");
             sbResult.append(sbGraph[i].toString());
         }

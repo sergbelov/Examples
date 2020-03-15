@@ -6,12 +6,12 @@ import ru.utils.load.data.Metric;
  * Номер, наименование, цвет
  * отображаемой метрики из списка метрик (metricsList)
  */
-public class MetricView {
+public class GraphMetric {
     private Metric metric;
     private String title;
     private String color;
 
-    public MetricView(Metric metric, String title, String color) {
+    public GraphMetric(Metric metric, String title, String color) {
         this.metric = metric;
         this.title = title;
         this.color = color;

@@ -1,9 +1,9 @@
 package ru.utils.load.utils;
 
-import ru.utils.load.data.DateTimeValue;
+import ru.utils.load.data.DateTimeValues;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.graph.VarInList;
+import ru.utils.load.data.graph.Metric;
 import ru.utils.load.data.metrics.MetricView;
 import ru.utils.load.data.metrics.MetricViewGroup;
 
@@ -38,7 +38,7 @@ public class Graph {
     public String getSvgGraphLine(
             String title,
             MultiRunService multiRunService,
-            List<DateTimeValue> metricsList) {
+            List<DateTimeValues> metricsList) {
         return getSvgGraphLine(
                 title,
                 multiRunService,
@@ -61,7 +61,7 @@ public class Graph {
     public String getSvgGraphLine(
             String title,
             MultiRunService multiRunService,
-            List<DateTimeValue> metricsList,
+            List<DateTimeValues> metricsList,
             boolean yStartFrom0,
             boolean step,
             boolean printMetrics) {
@@ -121,8 +121,8 @@ public class Graph {
         for (int i = 1; i < metricsList.size(); i++) {
             for (MetricView metricView : metricViewGroup.getMetricViewList()) {
 //                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
-                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getNumInList()));
+                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(metricView.getMetric()));
+                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(metricView.getMetric()));
             }
 //            xValueMin = Math.min(xValueMin, metricsList.get(i).getTime());
 //            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
@@ -290,26 +290,26 @@ public class Graph {
             // ступеньки
             if (step && i > 0) {
                 for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
-                    int numInList = metricViewGroup
-                            .getMetricViewList()
-                            .get(m)
-                            .getNumInList();
-                    sbGraph[m].append(xCur + "," + (yMax - Math.round((metricsList.get(i - 1).getValue(numInList) - yValueMin) * yRatio)) + " \n");
+                    sbGraph[m].append(xCur + "," + (yMax - Math.round((metricsList.get(i - 1).getDoubleValue(
+                            metricViewGroup
+                                .getMetricViewList()
+                                .get(m)
+                                .getMetric()) - yValueMin) * yRatio)) + " \n");
                 }
             }
 
             List<Double> yPrevList = new ArrayList<>();
             for (int m = 0; m < metricViewGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
-                int numInList = metricViewGroup // номер метрики в общем вписке
+                Metric metric = metricViewGroup // метрика в общем вписке
                         .getMetricViewList()
                         .get(m)
-                        .getNumInList();
+                        .getMetric();
                 String curColor = metricViewGroup.getMetricView(m).getColor();
-                double y = yMax - Math.round((metricsList.get(i).getValue(numInList) - yValueMin) * yRatio);
+                double y = yMax - Math.round((metricsList.get(i).getDoubleValue(metric) - yValueMin) * yRatio);
                 // график
                 sbGraph[m].append(xCur + "," + y + " \n");
                 // значение отличается от предыдущего
-                if (i == 1 || metricsList.get(i - 1).getValue(numInList) != metricsList.get(i).getValue(numInList)) {
+                if (i == 1 || metricsList.get(i - 1).getDoubleValue(metric) != metricsList.get(i).getDoubleValue(metric)) {
                     // значение метрики
                     if (printMetrics) {
                         // надписи не пересекаются
@@ -327,7 +327,7 @@ public class Graph {
 //                                    "font-weight=\"bold\" " +
                                     "x=\"" + (xCur - xText) + "\" " +
                                     "y=\"" + (y - yText) + "\">" +
-                                    decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</text>\n");
+                                    decimalFormat.format(metricsList.get(i).getValue(metric)) + "</text>\n");
                             yPrevList.add(y);
                         }
                     }
@@ -341,7 +341,7 @@ public class Graph {
                 }
                 sbSignatureTitle.append("время: " + sdf1.format(metricsList.get(i).getTime()) + "; " +
                         "VU: " + multiRunService.getVuCount(metricsList.get(i).getTime()) + "; " +
-                        "значение: " + decimalFormat.format(metricsList.get(i).getValue(numInList)) + "</title> " +
+                        "значение: " + decimalFormat.format(metricsList.get(i).getValue(metric)) + "</title> " +
                         "</g>\n");
             }
         }

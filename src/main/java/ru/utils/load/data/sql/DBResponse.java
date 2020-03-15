@@ -1,6 +1,6 @@
 package ru.utils.load.data.sql;
 
-import ru.utils.load.data.graph.VarInList;
+import ru.utils.load.data.graph.Metric;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ public class DBResponse {
     public double getValue() {
         return getValue(0);
     }
-    public double getValue(VarInList varInList) { return getValue(varInList.name()); }
+    public double getValue(Metric metric) { return getValue(metric.name()); }
     public double getValue(String name) { return getValue(getNumberByName(name)); }
     public double getValue(int num) {
         if (num == -1){ return 0;}
@@ -40,11 +40,11 @@ public class DBResponse {
 
 
     public int getIntValue() { return getIntValue(0); }
-    public int getIntValue(VarInList varInList) { return getIntValue(varInList.name()); }
-    public int getIntValue(VarInList[] varInListArray) {
+    public int getIntValue(Metric metric) { return getIntValue(metric.name()); }
+    public int getIntValue(Metric[] metricArray) {
         int res = 0;
-        for (VarInList varInList: varInListArray) {
-            res = res + getIntValue(varInList.name());
+        for (Metric metric : metricArray) {
+            res = res + getIntValue(metric.name());
         }
         return res;
     }
@@ -58,11 +58,11 @@ public class DBResponse {
     public long getLongValue() {
         return getLongValue(0);
     }
-    public long getLongValue(VarInList varInList) { return getLongValue(varInList.name()); }
-    public long getLongValue(VarInList[] varInListArray) {
+    public long getLongValue(Metric metric) { return getLongValue(metric.name()); }
+    public long getLongValue(Metric[] metricArray) {
         long res = 0;
-        for (VarInList varInList: varInListArray) {
-            res = res + getLongValue(varInList.name());
+        for (Metric metric : metricArray) {
+            res = res + getLongValue(metric.name());
         }
         return res;
     }
@@ -76,11 +76,11 @@ public class DBResponse {
     public float getFloatValue() {
         return getFloatValue(0);
     }
-    public float getFloatValue(VarInList varInList) { return getFloatValue(varInList.name()); }
-    public float getFloatValue(VarInList[] varInListArray) {
+    public float getFloatValue(Metric metric) { return getFloatValue(metric.name()); }
+    public float getFloatValue(Metric[] metricArray) {
         float res = 0;
-        for (VarInList varInList: varInListArray) {
-            res = res + getFloatValue(varInList.name());
+        for (Metric metric : metricArray) {
+            res = res + getFloatValue(metric.name());
         }
         return res;
     }
@@ -94,11 +94,11 @@ public class DBResponse {
     public double getDoubleValue() {
         return getDoubleValue(0);
     }
-    public double getDoubleValue(VarInList varInList) { return getDoubleValue(varInList.name()); }
-    public double getDoubleValue(VarInList[] varInListArray) {
+    public double getDoubleValue(Metric metric) { return getDoubleValue(metric.name()); }
+    public double getDoubleValue(Metric[] metricArray) {
         double res = 0;
-        for (VarInList varInList: varInListArray) {
-            res = res + getIntValue(varInList.name());
+        for (Metric metric : metricArray) {
+            res = res + getIntValue(metric.name());
         }
         return res;
     }

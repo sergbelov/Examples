@@ -4,13 +4,13 @@ import org.influxdb.InfluxDB;
 import ru.utils.db.DBService;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.data.Call;
-import ru.utils.load.data.DateTimeValue;
+import ru.utils.load.data.DateTimeValues;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.graph.VarInList;
+import ru.utils.load.data.graph.Metric;
 import ru.utils.load.data.metrics.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.*;
@@ -18,9 +18,7 @@ import ru.utils.load.runnable.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,7 +29,7 @@ public class MultiRunService {
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
-    private List<DateTimeValue> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
+    private List<DateTimeValues> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов сервиса
 
     /*  список метрик:
@@ -52,9 +50,9 @@ public class MultiRunService {
         14 - dbDurMax
         15 - errors
     */
-    private List<DateTimeValue> metricsList = new ArrayList<>();
-    private List<DateTimeValue> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
-    private List<DateTimeValue> retryPolicyJobEntityImplCountList = new CopyOnWriteArrayList<>();
+    private List<DateTimeValues> metricsList = new ArrayList<>();
+    private List<DateTimeValues> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
+    private List<DateTimeValues> retryPolicyJobEntityImplCountList = new CopyOnWriteArrayList<>();
 
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
     private List<ErrorRsGroup> errorRsGroupList = new ArrayList<>(); // количество ошибок по типам
@@ -233,19 +231,19 @@ public class MultiRunService {
         return executorService;
     }
 
-    public List<DateTimeValue> getVuList() {
+    public List<DateTimeValues> getVuList() {
         return vuList;
     }
 
-    public List<DateTimeValue> getMetricsList() {
+    public List<DateTimeValues> getMetricsList() {
         return metricsList;
     }
 
-    public List<DateTimeValue> getBpmsJobEntityImplCountList() {
+    public List<DateTimeValues> getBpmsJobEntityImplCountList() {
         return bpmsJobEntityImplCountList;
     }
 
-    public List<DateTimeValue> getRetryPolicyJobEntityImplCountList() {
+    public List<DateTimeValues> getRetryPolicyJobEntityImplCountList() {
         return retryPolicyJobEntityImplCountList;
     }
 
@@ -412,7 +410,7 @@ public class MultiRunService {
      * @param count
      */
     public void vuListAdd(long time, int count) {
-        vuList.add(new DateTimeValue(time, count));
+        vuList.add(new DateTimeValues(time, count));
     }
 
 
@@ -507,7 +505,7 @@ public class MultiRunService {
             if (vuList.get(i).getTime() > time) {
                 break;
             } else {
-                res = vuList.get(i).getIntValue();
+                res = vuList.get(i).getValue();
             }
         }
         return res;
@@ -835,7 +833,7 @@ public class MultiRunService {
             LOG.error("{}\n", name, e);
         }
         testStopTime = System.currentTimeMillis();
-        vuList.add(new DateTimeValue(testStopTime, getVuCount())); // сбросим VU на конец теста
+        vuList.add(new DateTimeValues(testStopTime, getVuCount())); // сбросим VU на конец теста
         LOG.info("{}: testStopTime: {}", name, sdf1.format(testStopTime));
 
         executorServiceAwaitAndAddVU.shutdown();
@@ -947,35 +945,30 @@ public class MultiRunService {
             15 - dbDurMax
             16 - errors
         */
-        metricsList.add(new DateTimeValue(
-                stopTime,
-                Arrays.asList(
-                        callMetrics.getDurMin(),
-                        callMetrics.getDurAvg(),
-                        callMetrics.getDur90(),
-                        callMetrics.getDurMax(),
 
-                        callMetrics.getTps(),
-                        callMetrics.getTpsRs(),
+        Map<Metric, Number> map = new LinkedHashMap<>();
+        map.put(Metric.DurMin, callMetrics.getDurMin());
+        map.put(Metric.DurAvg, callMetrics.getDurAvg());
+        map.put(Metric.Dur90, callMetrics.getDur90());
+        map.put(Metric.DurMax, callMetrics.getDurMax());
+        map.put(Metric.Tps, callMetrics.getTps());
+        map.put(Metric.TpsRs, callMetrics.getTpsRs());
+        map.put(Metric.CountCall, callMetrics.getCountCall());
+        map.put(Metric.CountCallRs, callMetrics.getCountCallRs());
+        map.put(Metric.DbCompleted, dbResponse.getIntValue(Metric.DbCompleted));
+        map.put(Metric.DbRunning, dbResponse.getIntValue(Metric.DbRunning));
+        map.put(Metric.DbFailed, dbResponse.getIntValue(Metric.DbFailed));
+        map.put(Metric.DbLost, callMetrics.getCountCall() - (dbResponse.getIntValue(new Metric[]{
+                        Metric.DbCompleted,
+                        Metric.DbRunning,
+                        Metric.DbFailed})));
+        map.put(Metric.DbDurMin, dbResponse.getDoubleValue(Metric.DbDurMin));
+        map.put(Metric.DbDurAvg, dbResponse.getDoubleValue(Metric.DbDurAvg));
+        map.put(Metric.DbDur90, dbResponse.getDoubleValue(Metric.DbDur90));
+        map.put(Metric.DbDurMax, dbResponse.getDoubleValue(Metric.DbDurMax));
+        map.put(Metric.Errors, countError);
 
-                        callMetrics.getCountCall(),
-                        callMetrics.getCountCallRs(),
-
-                        dbResponse.getIntValue(VarInList.DbCompleted),
-                        dbResponse.getIntValue(VarInList.DbRunning),
-                        dbResponse.getIntValue(VarInList.DbFailed),
-                        callMetrics.getCountCall() - (dbResponse.getIntValue(new VarInList[]{
-                                VarInList.DbCompleted,
-                                VarInList.DbRunning,
-                                VarInList.DbFailed})),
-
-                        dbResponse.getDoubleValue(VarInList.DbDurMin),
-                        dbResponse.getDoubleValue(VarInList.DbDurAvg),
-                        dbResponse.getDoubleValue(VarInList.DbDur90),
-                        dbResponse.getDoubleValue(VarInList.DbDurMax),
-
-                        countError)));
-
+        metricsList.add(new DateTimeValues(stopTime, map));
         prevStartTimeStatistic = stopTime + 1;
     }
 

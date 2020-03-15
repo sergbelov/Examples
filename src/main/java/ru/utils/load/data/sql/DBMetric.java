@@ -1,6 +1,6 @@
 package ru.utils.load.data.sql;
 
-import ru.utils.load.data.graph.VarInList;
+import ru.utils.load.data.graph.Metric;
 
 /**
  * Значение поля из sql select
@@ -9,8 +9,8 @@ public class DBMetric {
     private String name;
     private Number value;
 
-    public DBMetric(VarInList varInList, Number value) {
-        this.name = varInList.name();
+    public DBMetric(Metric metric, Number value) {
+        this.name = metric.name();
         this.value = value;
     }
     public DBMetric(String name, Number value) {

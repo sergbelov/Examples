@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
-import ru.utils.load.data.DateTimeValue;
+import ru.utils.load.data.DateTimeValues;
 import ru.utils.load.utils.MultiRunService;
 
 import java.sql.Connection;
@@ -27,7 +27,7 @@ public class RunnableSqlSelectCount implements Runnable {
     private final String sql;                       // sql - запрос
     private final long timeStep;                    // временной интервал между снятиями метрик (мс)
     private MultiRunService multiRunService;        //
-    private List<DateTimeValue> sqlSelectCountList; // list для сохранеиня метрик
+    private List<DateTimeValues> sqlSelectCountList; // list для сохранеиня метрик
     private final int countForBreak;                // произойдет прерываени нагрузки при достижении данного значения ( > 0)
     private InfluxDB influxDB;
 
@@ -37,7 +37,7 @@ public class RunnableSqlSelectCount implements Runnable {
             String sql,
             long timeStep,
             MultiRunService multiRunService,
-            List<DateTimeValue> sqlSelectCountList,
+            List<DateTimeValues> sqlSelectCountList,
             int countForBreak,
             InfluxDB influxDB
     ) {
@@ -66,7 +66,7 @@ public class RunnableSqlSelectCount implements Runnable {
                         if (resultSet.next()) {
                             int cnt = resultSet.getInt("cnt");
                             long time = System.currentTimeMillis();
-                            sqlSelectCountList.add(new DateTimeValue(time, cnt));
+                            sqlSelectCountList.add(new DateTimeValues(time, cnt));
                             LOG.info("{} (VU:{} Threads:{}): {} - {}",
                                     name,
                                     multiRunService.getVuCount(),

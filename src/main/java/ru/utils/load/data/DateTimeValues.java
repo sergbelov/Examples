@@ -1,5 +1,7 @@
 package ru.utils.load.data;
 
+import ru.utils.load.data.graph.Metric;
+
 import java.util.*;
 
 /**
@@ -8,36 +10,53 @@ import java.util.*;
 public class DateTimeValues {
     private long periodBegin;
     private long periodEnd;
-    private Map<String, Number> values = new LinkedHashMap<>();
+    private Map<Metric, Number> values = new LinkedHashMap<>();
 
-    public DateTimeValues(long time, Map<String, Number> values) {
+    public DateTimeValues(long time) {
+        this.periodBegin = time;
+        this.periodEnd = time;
+    }
+
+    public DateTimeValues(long periodEnd, Number value) {
+        this.periodEnd = periodEnd;
+        this.values.put(Metric.key, value);
+    }
+
+    public DateTimeValues(long periodBegin, long periodEnd, Number value) {
+        this.periodBegin = periodBegin;
+        this.periodEnd = periodEnd;
+        this.values.put(Metric.key, value);
+    }
+
+    public DateTimeValues(long time, Metric metric, Number value) {
+        this.periodBegin = time;
+        this.periodEnd = time;
+        values.put(metric, value);
+    }
+
+    public DateTimeValues(long periodBegin, long periodEnd, Metric metric, Number value) {
+        this.periodBegin = periodBegin;
+        this.periodEnd = periodEnd;
+        values.put(metric, value);
+    }
+
+    public DateTimeValues(long time, Map<Metric, Number> values) {
         this.periodBegin = time;
         this.periodEnd = time;
         this.values = values;
     }
 
-    public DateTimeValues(long periodBegin, long periodEnd, Map<String, Number> values) {
+    public DateTimeValues(long periodBegin, long periodEnd, Map<Metric, Number> values) {
         this.periodBegin = periodBegin;
         this.periodEnd = periodEnd;
         this.values = values;
     }
 
-    public DateTimeValues(long periodEnd, Number value) {
-        this.periodEnd = periodEnd;
-        this.values.put("key", value);
+    public void setValue(Metric metric, Number value){
+        values.put(metric, value);
     }
 
-    public DateTimeValues(long periodBegin, long periodEnd, int value) {
-        this.periodBegin = periodBegin;
-        this.periodEnd = periodEnd;
-        this.values.put("key", value);
-    }
-
-    public void setValue(String key, Number value){
-        values.put(key, value);
-    }
-
-    public void setValues(Map<String, Number> values){
+    public void setValues(Map<Metric, Number> values){
         this.values = values;
     }
 
@@ -57,23 +76,55 @@ public class DateTimeValues {
         return periodEnd;
     }
 
-    public <T> T getValue(String key){
-        return (T) values.get(key);
+    public <T> T getValue(){
+        return (T) values.get(Metric.key);
     }
 
-    public Map<String, Number> getValues() {
+    public <T> T getValue(Metric metric){
+        return (T) values.get(metric);
+    }
+
+    public int getIntValue(){ return values.get(Metric.key).intValue();}
+    public long getLongValue(){ return values.get(Metric.key).longValue();}
+    public double getDoubleValue(){ return values.get(Metric.key).doubleValue();}
+
+    public int getIntValue(Metric metric){ return values.get(metric).intValue();}
+    public long getLongValue(Metric metric){ return values.get(metric).longValue();}
+    public double getDoubleValue(Metric metric){ return values.get(metric).doubleValue();}
+
+    public int getIntValue(Metric[] metrics){
+        int valueSum = 0;
+        for (Metric metric : metrics) {
+            Number number = getValue(metric);
+            valueSum = valueSum + number.intValue();
+        }
+        return valueSum;
+    }
+    public long getLongValue(Metric[] metrics){
+        long valueSum = 0;
+        for (Metric metric : metrics) {
+            Number number = getValue(metric);
+            valueSum = valueSum + number.longValue();
+        }
+        return valueSum;
+    }
+    public double getDoubleValue(Metric[] metrics){
+        double valueSum = 0.00;
+        for (Metric metric : metrics) {
+            Number number = getValue(metric);
+            valueSum = valueSum + number.doubleValue();
+        }
+        return valueSum;
+    }
+
+    public Map<Metric, Number> getValues() {
         return values;
     }
 
-    public <T> T getValueSum(String[] keys){
-        Double valueSum = 0.00;
-        for (String key : keys) {
-            valueSum = valueSum + (Double) getValue(key);
-        }
-        return (T) valueSum;
+    public boolean compare(Metric metric1, Metric metric2){
+        return getValue(metric1) == getValue(metric2);
     }
-
-    public boolean compare(String key1, String key2){
-        return getValue(key1) == getValue(key2);
+    public boolean compare(Metric metric, Metric[] metricArray){
+        return getDoubleValue(metric) == getDoubleValue(metricArray);
     }
 }

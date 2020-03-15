@@ -25,7 +25,7 @@
         "vuCountMin": 5,
         "vuCountMax": 50,
         "vuStepTime_sec": 5,
-        "vuStepTimeDelay_ms": 0,
+        "vuStepTimeDelay_ms": 500,
         "vuStepCount": 5,
         "pacing_ms": 2000,
         "pacingType": 1,

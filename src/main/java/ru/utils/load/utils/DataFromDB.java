@@ -2,9 +2,9 @@ package ru.utils.load.utils;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import ru.utils.db.DBService;
-import ru.utils.load.data.DateTimeValue;
+import ru.utils.load.data.DateTimeValues;
 import ru.utils.load.data.StatData;
-import ru.utils.load.data.graph.VarInList;
+import ru.utils.load.data.graph.Metric;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;
@@ -43,7 +43,7 @@ public class DataFromDB {
 
     private DBService dbService = null;
     private List<DBData> dbDataList = new CopyOnWriteArrayList<>();
-    private List<DateTimeValue> countEndInSecList = new ArrayList<>();
+    private List<DateTimeValues> countEndInSecList = new ArrayList<>();
     private long waitStartTime;
     private long waitStopTime;
     private Integer waitCountStart = null;
@@ -69,7 +69,7 @@ public class DataFromDB {
     /**
      * @return
      */
-    public List<DateTimeValue> getCountEndInSecList() {
+    public List<DateTimeValues> getCountEndInSecList() {
         return countEndInSecList;
     }
 
@@ -158,7 +158,7 @@ public class DataFromDB {
             String key,
             long startTime,
             long stopTime,
-            List<DateTimeValue> bpmsJobEntityImplCountList
+            List<DateTimeValues> bpmsJobEntityImplCountList
     ) {
         int maxDelay = 10; // ждем не более минут
         if (dbService != null) {
@@ -186,7 +186,9 @@ public class DataFromDB {
                     ResultSet resultSet = dbService.executeQuery(statement, sql);
                     if (resultSet.next()) { // есть задачи в статусе Running
                         int cnt = resultSet.getInt("cnt");
-                        bpmsJobEntityImplCountList.add(new DateTimeValue(System.currentTimeMillis(), cnt));
+                        bpmsJobEntityImplCountList.add(new DateTimeValues(
+                                System.currentTimeMillis(),
+                                cnt));
                         if (cnt > 0) {
                             if (waitCountStart == null) { // начальный размер очереди
                                 waitCountStart = cnt;
@@ -305,13 +307,13 @@ public class DataFromDB {
         }
 
         List<DBMetric> dbMetricList = new ArrayList<>();
-        dbMetricList.add(new DBMetric(VarInList.DbCompleted, count[0]));
-        dbMetricList.add(new DBMetric(VarInList.DbRunning, count[1]));
-        dbMetricList.add(new DBMetric(VarInList.DbFailed, count[2]));
-        dbMetricList.add(new DBMetric(VarInList.DbDurMin, dur[0]));
-        dbMetricList.add(new DBMetric(VarInList.DbDurAvg, dur[1]));
-        dbMetricList.add(new DBMetric(VarInList.DbDur90, dur[2]));
-        dbMetricList.add(new DBMetric(VarInList.DbDurMax, dur[3]));
+        dbMetricList.add(new DBMetric(Metric.DbCompleted, count[0]));
+        dbMetricList.add(new DBMetric(Metric.DbRunning, count[1]));
+        dbMetricList.add(new DBMetric(Metric.DbFailed, count[2]));
+        dbMetricList.add(new DBMetric(Metric.DbDurMin, dur[0]));
+        dbMetricList.add(new DBMetric(Metric.DbDurAvg, dur[1]));
+        dbMetricList.add(new DBMetric(Metric.DbDur90, dur[2]));
+        dbMetricList.add(new DBMetric(Metric.DbDurMax, dur[3]));
         return new DBResponse(sql, dbMetricList);
     }
 
@@ -361,7 +363,7 @@ public class DataFromDB {
                 countAll = countAll + cnt;
                 if (processstate.equals("COMPLETED")) {
                     long time = sdf2.parse(resultSet.getString("sec")).getTime();
-                    countEndInSecList.add(new DateTimeValue(time, cnt));
+                    countEndInSecList.add(new DateTimeValues(time, cnt));
                     countAllCompleted = countAllCompleted + cnt;
                     countMin = Math.min(countMin, cnt); // min
                     countAvg = countAvg + cnt;          // avg
@@ -386,7 +388,7 @@ public class DataFromDB {
             count90 = (int) percentile90.evaluate(
                     countEndInSecList
                             .stream()
-                            .mapToDouble(d -> d.getIntValue())
+                            .mapToDouble(d -> d.getValue())
                             .toArray(), 90);
         } else {
             countAvg = 0; // avg

@@ -83,7 +83,7 @@ public class GraphProperty {
     }
 
     public MetricViewGroup getMetricViewGroup(int num) {
-        return  metricViewGroupList.get(num);
+        return metricViewGroupList.get(num);
     }
 
 }

@@ -1,11 +1,10 @@
-package ru.utils.load.utils;
+package ru.utils.load.data.graph;
 
 import ru.utils.load.data.DateTimeValues;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.load.data.Metric;
-import ru.utils.load.data.graph.MetricView;
-import ru.utils.load.data.graph.MetricViewGroup;
+import ru.utils.load.utils.MultiRunService;
 
 import java.text.*;
 import java.util.ArrayList;

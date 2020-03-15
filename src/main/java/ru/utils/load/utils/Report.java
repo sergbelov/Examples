@@ -13,6 +13,7 @@ import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
 import ru.utils.load.data.Metric;
 import ru.utils.load.data.CallMetrics;
+import ru.utils.load.data.graph.Graph;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

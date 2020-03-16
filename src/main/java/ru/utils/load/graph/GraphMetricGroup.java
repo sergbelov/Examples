@@ -1,4 +1,4 @@
-package ru.utils.load.data.graph;
+package ru.utils.load.graph;
 
 import java.util.List;
 

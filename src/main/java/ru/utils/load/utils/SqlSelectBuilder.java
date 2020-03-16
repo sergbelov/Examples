@@ -89,7 +89,7 @@ public class SqlSelectBuilder {
 //                "    pa.endtime as EndTime,\n" +
                 "    pa.DURATIONINMILLIS as duration,\n" +
                 "    case when pa.CALLEDPROCESSINSTANCEID is null then 1 else 0 end as lastStepInLevel\n" +
-                "from process p\n" +
+                "from  p\n" +
                 "join  pa on pa.PROCESSINSTANCEID = p.processinstanceid\n" +
                 "order by root_process_id, StartTime";
 

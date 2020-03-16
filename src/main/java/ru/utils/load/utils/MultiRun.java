@@ -11,7 +11,7 @@ import org.influxdb.dto.Point;
 import ru.utils.db.DBService;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
-import ru.utils.load.data.graph.GraphProperty;
+import ru.utils.load.graph.GraphProperty;
 import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
 import ru.utils.load.runnable.RunnableLoadAPI;
@@ -370,7 +370,7 @@ public class MultiRun {
 
 //            if (1==1){return true;}
             // проверка занятости БПМ
-            String sql = "select count(1) as cnt from ";
+            String sql = "select count(1) as cnt ";
             try {
                 boolean res = true;
                 Connection connection = dbService.getConnection();
@@ -381,11 +381,11 @@ public class MultiRun {
                     if (cnt > 0) {
                         LOG.error("####" +
                                 "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
-                                "\nselect count(1) as cnt from : {}\n" +
+                                "\nselect count(1) as cnt : {}\n" +
                                 "Дождитесь завершения обработки, либо выполните:\n" +
                                 "--очистка очереди\n" +
-                                "delete from ;\n" +
-                                "delete from ;\n" +
+                                "delete ;\n" +
+                                "delete ;\n" +
                                 "--не нужно чистить delete from ;\n" +
                                 "delete from ;", cnt);
                         res = false;

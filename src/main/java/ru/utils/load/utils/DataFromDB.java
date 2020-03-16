@@ -252,8 +252,8 @@ public class DataFromDB {
                         "group by pdi.key, hpi.processstate",
 
                 "select pdi.key, count(1) as cnt, min(hpi.DURATIONINMILLIS), max(hpi.DURATIONINMILLIS), avg(hpi.DURATIONINMILLIS) " +
-                        "from hpi " +
-                        "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
+                        "from  hpi " +
+                        "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
                         "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
                         "and hpi.processstate = 'COMPLETED' " +
@@ -307,13 +307,13 @@ public class DataFromDB {
         }
 
         List<DBMetric> dbMetricList = new ArrayList<>();
-        dbMetricList.add(new DBMetric(Metric.DbCompleted, count[0]));
-        dbMetricList.add(new DBMetric(Metric.DbRunning, count[1]));
-        dbMetricList.add(new DBMetric(Metric.DbFailed, count[2]));
-        dbMetricList.add(new DBMetric(Metric.DbDurMin, dur[0]));
-        dbMetricList.add(new DBMetric(Metric.DbDurAvg, dur[1]));
-        dbMetricList.add(new DBMetric(Metric.DbDur90, dur[2]));
-        dbMetricList.add(new DBMetric(Metric.DbDurMax, dur[3]));
+        dbMetricList.add(new DBMetric(Metric.DB_COMPLETED, count[0]));
+        dbMetricList.add(new DBMetric(Metric.DB_RUNNING, count[1]));
+        dbMetricList.add(new DBMetric(Metric.DB_FAILED, count[2]));
+        dbMetricList.add(new DBMetric(Metric.DB_DUR_MIN, dur[0]));
+        dbMetricList.add(new DBMetric(Metric.DB_DUR_AVG, dur[1]));
+        dbMetricList.add(new DBMetric(Metric.DB_DUR_90, dur[2]));
+        dbMetricList.add(new DBMetric(Metric.DB_DUR_MAX, dur[3]));
         return new DBResponse(sql, dbMetricList);
     }
 
@@ -388,7 +388,7 @@ public class DataFromDB {
             count90 = (int) percentile90.evaluate(
                     countEndInSecList
                             .stream()
-                            .mapToDouble(d -> d.getValue())
+                            .mapToDouble(d -> d.getIntValue())
                             .toArray(), 90);
         } else {
             countAvg = 0; // avg
@@ -501,7 +501,7 @@ public class DataFromDB {
             durMin.set(0);
         }
         if (countMain.get() > 0) {
-//            LOG.info("{} {}", durAvg.get(), countMain.get()); // ToDo: ???
+//            LOG.info("{} {}", durAvg.get(), countMain.get());
             durAvg.set(durAvg.get() / countMain.get() * 1.00); // avg
             Percentile percentile90 = new Percentile();
             dur90 = (int) percentile90.evaluate(

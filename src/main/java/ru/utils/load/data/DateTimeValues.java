@@ -5,7 +5,7 @@ import java.util.*;
 /**
  * Метрики на момент времени
  */
-public class DateTimeValues {
+public class DateTimeValues implements Comparable<DateTimeValues>{
     private long periodBegin;
     private long periodEnd;
     private Map<Metric, Number> values = new LinkedHashMap<>();
@@ -17,13 +17,13 @@ public class DateTimeValues {
 
     public DateTimeValues(long periodEnd, Number value) {
         this.periodEnd = periodEnd;
-        this.values.put(Metric.key, value);
+        this.values.put(Metric.KEY, value);
     }
 
     public DateTimeValues(long periodBegin, long periodEnd, Number value) {
         this.periodBegin = periodBegin;
         this.periodEnd = periodEnd;
-        this.values.put(Metric.key, value);
+        this.values.put(Metric.KEY, value);
     }
 
     public DateTimeValues(long time, Metric metric, Number value) {
@@ -75,16 +75,16 @@ public class DateTimeValues {
     }
 
     public <T> T getValue(){
-        return (T) values.get(Metric.key);
+        return (T) values.get(Metric.KEY);
     }
 
     public <T> T getValue(Metric metric){
         return (T) values.get(metric);
     }
 
-    public int getIntValue(){ return values.get(Metric.key).intValue();}
-    public long getLongValue(){ return values.get(Metric.key).longValue();}
-    public double getDoubleValue(){ return values.get(Metric.key).doubleValue();}
+    public int getIntValue(){ return values.get(Metric.KEY).intValue();}
+    public long getLongValue(){ return values.get(Metric.KEY).longValue();}
+    public double getDoubleValue(){ return values.get(Metric.KEY).doubleValue();}
 
     public int getIntValue(Metric metric){ return values.get(metric).intValue();}
     public long getLongValue(Metric metric){ return values.get(metric).longValue();}
@@ -120,9 +120,18 @@ public class DateTimeValues {
     }
 
     public boolean compare(Metric metric1, Metric metric2){
-        return getValue(metric1) == getValue(metric2);
+        return getDoubleValue(metric1) == getDoubleValue(metric2);
     }
     public boolean compare(Metric metric, Metric[] metricArray){
         return getDoubleValue(metric) == getDoubleValue(metricArray);
     }
+
+    @Override
+    public int compareTo(DateTimeValues o) {
+        if (this == o) return 0;
+        int compare = (int) (this.getPeriodBegin() - o.getPeriodBegin());
+        if (compare != 0) return compare;
+        return (int) (this.getPeriodEnd() - o.getPeriodEnd());
+    }
+
 }

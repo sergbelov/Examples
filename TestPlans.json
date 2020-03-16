@@ -6,11 +6,11 @@
         "apiNum": 0,
         "name": "MultiLoad_Template1",
         "async": false,
-        "testDuration_min": 1,
+        "testDuration_min": 20,
         "vuCountMin": 5,
         "vuCountMax": 50,
-        "vuStepTime_sec": 5,
-        "vuStepTimeDelay_ms": 0,
+        "vuStepTime_sec": 10,
+        "vuStepTimeDelay_ms": 1000,
         "vuStepCount": 5,
         "pacing_ms": 1000,
         "pacingType": 0,
@@ -41,7 +41,7 @@
         "vuStepTime_sec": 5,
         "vuStepTimeDelay_ms": 500,
         "vuStepCount": 10,
-        "pacing_ms": 2000,
+        "pacing_ms": 3000,
         "pacingType": 1,
         "keyBpm": "process03"
       }

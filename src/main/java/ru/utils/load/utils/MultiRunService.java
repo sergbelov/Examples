@@ -331,7 +331,7 @@ public class MultiRunService {
         StringBuilder res = new StringBuilder("\n<h3>Параметры<h3>\n" +
                 "<table border=\"1\"><tbody>\n");
         res.append("<tr><td>Синхронный вызов сервиса</td><td>")
-                .append(async ? "Нет" : "Да") // ToDo
+                .append(async ? "Нет" : "Да")
                 .append("</td></tr>\n")
                 .append("<td>Длительность теста (мин)</td><td>")
                 .append(testDuration)
@@ -743,7 +743,7 @@ public class MultiRunService {
                 while (!multiRun.isWarmingCompleted()) { // ждем завершения прогрева всех сервисов
                 }
             }
-            LOG.info("{}: Прогрев всех сервисов завершен, подаем нагрузку...", name);
+            LOG.info("{}: Прогрев всех сервисов завершен, подача нагрузки...", name);
         }
 
         int vuCountMinMem = vuCountMin;
@@ -790,7 +790,7 @@ public class MultiRunService {
                     this,
                     bpmsJobEntityImplCountList,
                     1000,
-                    influxDB)); // ToDo:
+                    influxDB));
 
             // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
             sql = "select count(1) as cnt " +
@@ -805,7 +805,7 @@ public class MultiRunService {
                     this,
                     retryPolicyJobEntityImplCountList,
                     100000,
-                    influxDB)); // ToDo:
+                    influxDB));
 
         }
 
@@ -857,6 +857,7 @@ public class MultiRunService {
             // сбор статистики после снятия нагрузки
             prevStartTimeStatistic = testStartTime;
             long statisticsStepTime = (long) Math.max((stopTime - startTime) / 600.00, 1000); // шаг вывода метрик
+            statisticsStepTime = (long) Math.max(statisticsStepTime, pacing); // ToDo:
             statisticsStepTime = (long) (Math.ceil(statisticsStepTime / 1000.00) * 1000); // шаг кратен 1 сек (в большую сторону)
             while (startTime < stopTime) {
                 startTime = startTime + statisticsStepTime;
@@ -909,26 +910,26 @@ public class MultiRunService {
 
         // добавляем полученные метрики в список
         Map<Metric, Number> map = new LinkedHashMap<>();
-        map.put(Metric.DurMin, callMetrics.getDurMin());
-        map.put(Metric.DurAvg, callMetrics.getDurAvg());
-        map.put(Metric.Dur90, callMetrics.getDur90());
-        map.put(Metric.DurMax, callMetrics.getDurMax());
-        map.put(Metric.Tps, callMetrics.getTps());
-        map.put(Metric.TpsRs, callMetrics.getTpsRs());
-        map.put(Metric.CountCall, callMetrics.getCountCall());
-        map.put(Metric.CountCallRs, callMetrics.getCountCallRs());
-        map.put(Metric.DbCompleted, dbResponse.getIntValue(Metric.DbCompleted));
-        map.put(Metric.DbRunning, dbResponse.getIntValue(Metric.DbRunning));
-        map.put(Metric.DbFailed, dbResponse.getIntValue(Metric.DbFailed));
-        map.put(Metric.DbLost, callMetrics.getCountCall() - (dbResponse.getIntValue(new Metric[]{
-                        Metric.DbCompleted,
-                        Metric.DbRunning,
-                        Metric.DbFailed})));
-        map.put(Metric.DbDurMin, dbResponse.getDoubleValue(Metric.DbDurMin));
-        map.put(Metric.DbDurAvg, dbResponse.getDoubleValue(Metric.DbDurAvg));
-        map.put(Metric.DbDur90, dbResponse.getDoubleValue(Metric.DbDur90));
-        map.put(Metric.DbDurMax, dbResponse.getDoubleValue(Metric.DbDurMax));
-        map.put(Metric.Errors, countError);
+        map.put(Metric.DUR_MIN, callMetrics.getDurMin());
+        map.put(Metric.DUR_AVG, callMetrics.getDurAvg());
+        map.put(Metric.DUR_90, callMetrics.getDur90());
+        map.put(Metric.DUR_MAX, callMetrics.getDurMax());
+        map.put(Metric.TPS, callMetrics.getTps());
+        map.put(Metric.TPS_RS, callMetrics.getTpsRs());
+        map.put(Metric.COUNT_CALL, callMetrics.getCountCall());
+        map.put(Metric.COUNT_CALL_RS, callMetrics.getCountCallRs());
+        map.put(Metric.DB_COMPLETED, dbResponse.getIntValue(Metric.DB_COMPLETED));
+        map.put(Metric.DB_RUNNING, dbResponse.getIntValue(Metric.DB_RUNNING));
+        map.put(Metric.DB_FAILED, dbResponse.getIntValue(Metric.DB_FAILED));
+        map.put(Metric.DB_LOST, callMetrics.getCountCall() - (dbResponse.getIntValue(new Metric[]{
+                        Metric.DB_COMPLETED,
+                        Metric.DB_RUNNING,
+                        Metric.DB_FAILED})));
+        map.put(Metric.DB_DUR_MIN, dbResponse.getDoubleValue(Metric.DB_DUR_MIN));
+        map.put(Metric.DB_DUR_AVG, dbResponse.getDoubleValue(Metric.DB_DUR_AVG));
+        map.put(Metric.DB_DUR_90, dbResponse.getDoubleValue(Metric.DB_DUR_90));
+        map.put(Metric.DB_DUR_MAX, dbResponse.getDoubleValue(Metric.DB_DUR_MAX));
+        map.put(Metric.ERRORS, countError);
 
         metricsList.add(new DateTimeValues(stopTime, map));
         prevStartTimeStatistic = stopTime + 1;
@@ -947,6 +948,7 @@ public class MultiRunService {
         double[] tps = {0.00, 0.00};                    // 0-tps, 1-tpsRs
         callList.stream()
                 .filter(e -> (e.getStartTime() >= startTime && e.getStartTime() <= stopTime))
+                .sorted()
                 .forEach(x -> {
                     countCall[0]++;
                     if (x.getDuration() != null) {
@@ -974,8 +976,8 @@ public class MultiRunService {
             dur[1] = 0; // avg
         }
 
-        tps[0] = countCall[0] / ((stopTime - (startTime)) / 1000.00); // + ToDo
-        tps[1] = countCall[1] / ((stopTime - (startTime)) / 1000.00); // + ToDo
+        tps[0] = countCall[0] / ((stopTime - (startTime)) / 1000.00);
+        tps[1] = countCall[1] / ((stopTime - (startTime)) / 1000.00);
 /*
         LOG.info("getDataForPeriod (stream): count: {}, countRs: {}, min: {}, avg: {}, 90%: {}, max: {}, tps: {}, tpsRs: {}",
                 countCall[0],
@@ -998,7 +1000,6 @@ public class MultiRunService {
         6  - countCall
         7  - countCallRs
      */
-
         return new CallMetrics(
                 dur[0],
                 dur[1],

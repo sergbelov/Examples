@@ -1,4 +1,4 @@
-package ru.utils.load.data.graph;
+package ru.utils.load.graph;
 
 import ru.utils.load.data.DateTimeValues;
 import org.apache.logging.log4j.LogManager;
@@ -119,9 +119,11 @@ public class Graph {
         double yValueMax = 0.00;
         for (int i = 1; i < metricsList.size(); i++) {
             for (GraphMetric graphMetric : graphMetricGroup.getGraphMetricList()) {
+                if (metricsList.get(i).getValue(graphMetric.getMetric()) != null) {
 //                LOG.trace("{}", metricsList.get(i).getDoubleValue(metricView.getMetric()));
-                yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
-                yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
+                    yValueMin = Math.min(yValueMin, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
+                    yValueMax = Math.max(yValueMax, metricsList.get(i).getDoubleValue(graphMetric.getMetric()));
+                }
             }
 //            xValueMin = Math.min(xValueMin, metricsList.get(i).getTime());
 //            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());

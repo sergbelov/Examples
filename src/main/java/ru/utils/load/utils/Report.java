@@ -13,7 +13,7 @@ import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
 import ru.utils.load.data.Metric;
 import ru.utils.load.data.CallMetrics;
-import ru.utils.load.data.graph.Graph;
+import ru.utils.load.graph.Graph;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -149,7 +149,7 @@ public class Report {
         sbHtml.append(getTpsAvg());
 
         // Response time
-        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DurMax) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DUR_MAX) > 0) {
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine("Response time",
                             multiRunService,
@@ -174,20 +174,20 @@ public class Report {
                     .append("<tr><td>")
                     .append(multiRunService.getName())
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DurMin)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DUR_MIN)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DurAvg)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DUR_AVG)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.Dur90)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DUR_90)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DurMax)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DUR_MAX)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCallRs)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL_RS)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall) -
-                            multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCallRs)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL) -
+                            multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL_RS)))
                     .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
         }
 
@@ -195,9 +195,9 @@ public class Report {
         StatData countStepCompleteInSec = null;
         StatData transitionsTime = null;
         if (multiRunService.getMetricsList().get(0).getIntValue(new Metric[]{
-                Metric.DbCompleted,
-                Metric.DbRunning,
-                Metric.DbFailed}) > 0) {
+                Metric.DB_COMPLETED,
+                Metric.DB_RUNNING,
+                Metric.DB_FAILED}) > 0) {
 
             // длительность выполнения (информация из БД)
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
@@ -224,21 +224,21 @@ public class Report {
                     .append("<tr><td>")
                     .append(multiRunService.getName())
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DbDurMin)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_MIN)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DbDurAvg)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_AVG)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DbDur90)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_90)))
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DbDurMax)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_MAX)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).compare(Metric.CountCall, Metric.DbCompleted)) {
+            if (multiRunService.getMetricsList().get(0).compare(Metric.COUNT_CALL, Metric.DB_COMPLETED)) {
                 sbHtml.append("<td class=\"td_green\">");
             } else {
                 sbHtml.append("<td>");
             }
-            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbCompleted)));
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_COMPLETED)));
             sbHtml.append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
             // Статистика из БД БПМ
@@ -264,46 +264,46 @@ public class Report {
                     .append("<tr><td>")
                     .append(multiRunService.getName())
                     .append("</td><td>")
-                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall)))
+                    .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).compare(Metric.CountCall, Metric.DbCompleted)) {
+            if (multiRunService.getMetricsList().get(0).compare(Metric.COUNT_CALL, Metric.DB_COMPLETED)) {
                 sbHtml.append("<td class=\"td_green\">");
             } else {
                 sbHtml.append("<td>");
             }
-            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbCompleted)))
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_COMPLETED)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DbRunning) > 0) {
+            if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_RUNNING) > 0) {
                 sbHtml.append("<td class=\"td_yellow\">");
             } else {
                 sbHtml.append("<td>");
             }
-            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbRunning)))
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_RUNNING)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DbFailed) > 0) {
+            if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_FAILED) > 0) {
                 sbHtml.append("<td class=\"td_red\">");
             } else {
                 sbHtml.append("<td>");
             }
-            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbFailed)))
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_FAILED)))
                     .append("</td>");
 
-            if (multiRunService.getMetricsList().get(0).compare(Metric.CountCall, new Metric[]{
-                    Metric.DbCompleted,
-                    Metric.DbRunning,
-                    Metric.DbFailed})) {
+            if (multiRunService.getMetricsList().get(0).compare(Metric.COUNT_CALL, new Metric[]{
+                    Metric.DB_COMPLETED,
+                    Metric.DB_RUNNING,
+                    Metric.DB_FAILED})) {
                 sbHtml.append("<td>");
             } else {
                 sbHtml.append("<td class=\"td_red\">");
             }
-            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall) -
+            sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL) -
                     multiRunService.getMetricsList().get(0).getIntValue(new Metric[]{
-                            Metric.DbCompleted,
-                            Metric.DbRunning,
-                            Metric.DbFailed})))
+                            Metric.DB_COMPLETED,
+                            Metric.DB_RUNNING,
+                            Metric.DB_FAILED})))
                     .append("</td></tr>\n</tbody></table>\n\t\t</div>\n");
 
             // Длительность процессов из БД БПМ
@@ -426,55 +426,55 @@ public class Report {
                 .append("</td><td>")
                 .append(timeMillisToString(multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()))
                 .append("</td><td>")
-                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall)))
+                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL)))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).compare(Metric.CountCall, Metric.DbCompleted)) {
+        if (multiRunService.getMetricsList().get(0).compare(Metric.COUNT_CALL, Metric.DB_COMPLETED)) {
             sbHtml.append("<td class=\"td_green\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbCompleted)))
+        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_COMPLETED)))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DbRunning) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_RUNNING) > 0) {
             sbHtml.append("<td class=\"td_yellow\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbRunning)))
+        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_RUNNING)))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DbFailed) > 0) {
+        if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_FAILED) > 0) {
             sbHtml.append("<td class=\"td_red\">");
         } else {
             sbHtml.append("<td>");
         }
-        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DbFailed)))
+        sbHtml.append(decimalFormat.format(multiRunService.getMetricsList().get(0).getIntValue(Metric.DB_FAILED)))
                 .append("</td>");
 
-        if (multiRunService.getMetricsList().get(0).compare(Metric.CountCall, new Metric[]{
-                Metric.DbCompleted,
-                Metric.DbRunning,
-                Metric.DbFailed})) {
+        if (multiRunService.getMetricsList().get(0).compare(Metric.COUNT_CALL, new Metric[]{
+                Metric.DB_COMPLETED,
+                Metric.DB_RUNNING,
+                Metric.DB_FAILED})) {
             sbHtml.append("<td>");
         } else {
             sbHtml.append("<td class=\"td_red\">");
         }
         sbHtml.append(decimalFormat.format(
-                multiRunService.getMetricsList().get(0).getIntValue(Metric.CountCall) -
+                multiRunService.getMetricsList().get(0).getIntValue(Metric.COUNT_CALL) -
                         (multiRunService.getMetricsList().get(0).getIntValue(new Metric[]{
-                                Metric.DbCompleted,
-                                Metric.DbRunning,
-                                Metric.DbFailed}))))
+                                Metric.DB_COMPLETED,
+                                Metric.DB_RUNNING,
+                                Metric.DB_FAILED}))))
                 .append("</td><td>")
                 .append(decimalFormat.format(tpsMax))
                 .append(" / ")
                 .append(vuCountMax)
                 .append("</td><td>")
-                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.Dur90)))
+                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DUR_90)))
                 .append("</td><td>")
-                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DbDur90)))
+                .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_90)))
                 .append("</td><td>");
 
         if (countStepCompleteInSec != null) { // Количество шагов завершенных в секунду
@@ -797,49 +797,74 @@ public class Report {
      * @return
      */
     public String getTpsAvg() {
-        double tps = 0;
-        double tpsRs = 0;
-        int vuCount = 0;
-        int vuCountRs = 0;
-        int vuStartIndex = 0;
-        int step = 4999;
-        while (multiRunService.getVuList().get(vuStartIndex).getIntValue() == 0 && vuStartIndex < multiRunService.getVuList().size()) {
-            vuStartIndex++;
-        }
-        long startTime = multiRunService.getVuList().get(vuStartIndex).getTime();
-        int vuCountMem = multiRunService.getVuList().get(vuStartIndex).getIntValue();
-        vuStartIndex++;
-        for (int v = vuStartIndex; v < multiRunService.getVuList().size(); v++) {
-            if (multiRunService.getVuList().get(v).getIntValue() != vuCountMem) {
-                long stopTime = multiRunService.getVuList().get(v).getTime() - 1;
-                if ((stopTime - startTime) > 999) {
-                    double tpsCur = 0, tpsCurRs = 0;
-                    if ((stopTime - startTime) > step) {
-                        // нужно найти стабильный максимум
-                        CallMetrics callMetrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
-                        tpsCur = callMetrics.getTps();
-                        tpsCurRs = callMetrics.getTpsRs();
-                    } else {
-                        CallMetrics callMetrics = multiRunService.getMetricsForPeriod(startTime, stopTime);
-                        tpsCur = callMetrics.getTps();
-                        tpsCurRs = callMetrics.getTpsRs();
-                    }
+        int step = 2999;
+        double[] tps = {0.00};
+        double[] tpsRs = {0.00};
+        int[] vuCount = {0};
+        int[] vuCountRs = {0};
+        long[] prevTime = {0L};
+        int[] prevCount = {-1};
 
-                    if (tpsCur > tps) {
-                        tps = tpsCur;
-                        vuCount = vuCountMem;
+        multiRunService.getVuList()
+                .stream()
+                .sorted()
+                .forEach(x -> {
+                    if (prevCount[0] != x.getIntValue()){
+                        if (prevCount[0] > 0 && (x.getTime() - prevTime[0] - 1) > step){
+//                            CallMetrics callMetrics = multiRunService.getMetricsForPeriod(prevTime[0], x.getTime()-1);
+//                            double tpsCur = callMetrics.getTps();
+//                            double tpsCurRs = callMetrics.getTpsRs();
+
+                            // среднее значение TPS
+                            long start = prevTime[0];
+                            long stop = x.getTime()-1;
+                            long stop1;
+                            double tpsCur = 0.00;
+                            double tpsRsCur = 0.00;
+                            int periodCount = 0;
+                            while (start <= stop) {
+                                periodCount++;
+                                stop1 = start + 1000;
+                                stop1 = Math.min(stop1, stop);
+                                CallMetrics callMetrics = multiRunService.getMetricsForPeriod(start, stop1);
+                                LOG.trace("{}: {}-{}: {}, {} {}",
+                                        multiRunService.getName(),
+                                        sdf1.format(start),
+                                        sdf1.format(stop1),
+                                        prevCount[0],
+                                        callMetrics.getTps(),
+                                        callMetrics.getTpsRs());
+
+                                tpsCur = tpsCur + callMetrics.getTps();
+                                tpsRsCur = tpsRsCur + callMetrics.getTpsRs();
+                                start = stop1 + 1;
+                            }
+                            tpsCur = tpsCur / periodCount;
+                            tpsRsCur = tpsRsCur / periodCount;
+
+                            if (tpsCur > tps[0]) {
+                                tps[0] = tpsCur;
+                                vuCount[0] = prevCount[0];
+                            }
+                            if (tpsRsCur > tpsRs[0]) {
+                                tpsRs[0] = tpsRsCur;
+                                vuCountRs[0] = prevCount[0];
+                            }
+                            LOG.debug("{}: VU ({} - {}): {}; tps:{}; tpsRs:{}",
+                                    multiRunService.getName(),
+                                    sdf1.format(prevTime[0]),
+                                    sdf1.format(x.getTime()-1),
+                                    prevCount[0],
+                                    tps[0],
+                                    tpsRs[0]);
+                        }
+                        prevTime[0] = x.getTime();
+                        prevCount[0] = x.getIntValue();
                     }
-                    if (tpsCurRs > tpsRs) {
-                        tpsRs = tpsCurRs;
-                        vuCountRs = vuCountMem;
-                    }
-                    startTime = stopTime + 1;
-                    vuCountMem = multiRunService.getVuList().get(v).getIntValue();
-                }
-            }
-        }
-        tpsMax = tps;
-        vuCountMax = vuCount;
+                });
+
+        tpsMax = tps[0];
+        vuCountMax = vuCount[0];
         StringBuilder res = new StringBuilder("<table><tbody>\n" +
                 "<tr><th rowspan=\"2\">Сервис</th>" +
                 "<th colspan=\"2\">tps отправлено</th>" +
@@ -848,13 +873,13 @@ public class Report {
                 "<tr><td>");
         res.append(multiRunService.getName())
                 .append("</td><td>")
-                .append(decimalFormat.format(tps))
+                .append(decimalFormat.format(tps[0]))
                 .append("</td><td>")
-                .append(decimalFormat.format(vuCount))
+                .append(decimalFormat.format(vuCount[0]))
                 .append("</td><td>")
-                .append(decimalFormat.format(tpsRs))
+                .append(decimalFormat.format(tpsRs[0]))
                 .append("</td><td>")
-                .append(decimalFormat.format(vuCountRs))
+                .append(decimalFormat.format(vuCountRs[0]))
                 .append("</td></tr>\n</tbody></table>\n");
         return res.toString();
     }
@@ -869,7 +894,7 @@ public class Report {
         if (list != null) {
             for (int i = 0; i < list.size(); i++) {
                 for (Map.Entry<Metric, Number> map : list.get(i).getValues().entrySet() ) {
-                    if ((double) map.getValue() != 0) {
+                    if (list.get(i).getDoubleValue(map.getKey()) != 0 ) {
                         return false;
                     }
                 }

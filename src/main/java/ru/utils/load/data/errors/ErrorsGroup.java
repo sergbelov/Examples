@@ -51,6 +51,14 @@ public class ErrorsGroup {
                         "Failed to update metadata after"
                 },
                 "Send exception for message.id:"));
+
+        groupCommentList.add(new ErrorsGroupComment(
+                new String[]{"### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"},
+                "### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"));
+
+        groupCommentList.add(new ErrorsGroupComment(
+                new String[]{"Could not open JDBC Connection for transaction; nested exception is java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"},
+                "Could not open JDBC Connection for transaction; nested exception is java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"));
     }
 
     public int getCount() { return groupCommentList.size();}

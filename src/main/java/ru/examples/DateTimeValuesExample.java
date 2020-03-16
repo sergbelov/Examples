@@ -15,23 +15,23 @@ public class DateTimeValuesExample {
         final DateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
 
         Metric[] metrics = {
-                Metric.DurMin,
-                Metric.DurAvg,
-                Metric.Dur90,
-                Metric.DurMax,
-                Metric.Tps,
-                Metric.TpsRs,
-                Metric.CountCall,
-                Metric.CountCallRs,
-                Metric.DbCompleted,
-                Metric.DbRunning,
-                Metric.DbFailed,
-                Metric.DbLost,
-                Metric.DbDurMin,
-                Metric.DbDurAvg,
-                Metric.DbDur90,
-                Metric.DbDurMax,
-                Metric.Errors};
+                Metric.DUR_MIN,
+                Metric.DUR_AVG,
+                Metric.DUR_90,
+                Metric.DUR_MAX,
+                Metric.TPS,
+                Metric.TPS_RS,
+                Metric.COUNT_CALL,
+                Metric.COUNT_CALL_RS,
+                Metric.DB_COMPLETED,
+                Metric.DB_RUNNING,
+                Metric.DB_FAILED,
+                Metric.DB_LOST,
+                Metric.DB_DUR_MIN,
+                Metric.DB_DUR_AVG,
+                Metric.DB_DUR_90,
+                Metric.DB_DUR_MAX,
+                Metric.ERRORS};
 
         List<DateTimeValues> dateTimeValuesList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {

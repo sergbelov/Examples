@@ -8,6 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -18,7 +20,6 @@ import java.io.IOException;
  *
  * @author Belov Sergey
  */
-
 public class MultiLoad implements ScriptRun {
     private static final Logger LOG = LogManager.getLogger(MultiLoad.class);
     private MultiRun multiRun = new MultiRun();
@@ -26,7 +27,6 @@ public class MultiLoad implements ScriptRun {
     /**
      * Инициализация скрипта
      *
-     * @throws IOException
      */
     public void init() throws IOException {
 //        initialize();
@@ -90,14 +90,16 @@ public class MultiLoad implements ScriptRun {
         String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
 
 // иммитация вызова API
-        long delay = (long) ((Math.random() * 900) + 100);
-//        delay = 2000;
+//        long delay = (long) ((Math.random() * 900) + multiRun.getMultiRunService(apiNum).getVuCount() * 100);
+        long delay = 900 + multiRun.getMultiRunService(apiNum).getVuCount() * 100;
+        delay = ThreadLocalRandom.current().nextLong(delay);
+
         try {
-            Thread.sleep(delay);
+            TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        generateError(apiNum);
+//        generateError(apiNum);
     }
 
 
@@ -108,9 +110,10 @@ public class MultiLoad implements ScriptRun {
         String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
 
 // иммитация вызова API
-        long delay = (long) ((Math.random() * 1900) + 100);
+        long delay = ThreadLocalRandom.current().nextLong(1900) + 100;
+
         try {
-            Thread.sleep(delay);
+            TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -128,7 +131,7 @@ public class MultiLoad implements ScriptRun {
     private void generateError(int apiNum) throws Exception{
 // имитация возникновения ошибки
         long range = multiRun.getMultiRunService(apiNum).getTestStopTime() - System.currentTimeMillis();
-        int rnd = (int) (Math.random() * range);
+        int rnd = (int)ThreadLocalRandom.current().nextLong(range);
         if (rnd < 5) { // типо ошибка
 //        if (rnd % 2 == 0) { // типо ошибка
             String text = "\n(c)Спокойствие, только спокойствие...\n" +

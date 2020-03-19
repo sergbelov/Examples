@@ -35,6 +35,7 @@ public class RunnableAwaitAndAddVU implements Runnable {
         LOG.info("Старт потока {}", name);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             multiRunService.startGroupVU(); // старт новой группы VU (если нужно)
+
         }
         while (multiRunService.getThreadCount() > 0){} // ждем завершения работы заданий
         countDownLatch.countDown();

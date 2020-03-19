@@ -30,8 +30,8 @@ public class GraphProperty {
                         new GraphMetric(Metric.DUR_AVG, "средняя длительность (мс)", "#9f9f00"),
                         new GraphMetric(Metric.DUR_90, "90 перцентиль (мс)", "#009f00"),
                         new GraphMetric(Metric.DUR_MAX, "максимальная длительность (мс)", "#ff0000"))));
-        // 2 - Длительность выполнения (информация из БД)
-        graphMetricGroupList.add(new GraphMetricGroup("Длительность выполнения (информация из БД)",
+        // 2 - Длительность выполнения процесса (информация из БД)
+        graphMetricGroupList.add(new GraphMetricGroup("Длительность выполнения процесса (информация из БД)",
                 Arrays.asList(
                         new GraphMetric(Metric.DB_DUR_MIN, "минимальная длительность (мс)", "#00009f"),
                         new GraphMetric(Metric.DB_DUR_AVG, "средняя длительность (мс)", "#9f9f00"),

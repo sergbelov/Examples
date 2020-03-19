@@ -5,45 +5,47 @@
       {
         "apiNum": 0,
         "name": "MultiLoad_Template1",
+        "keyBpm": "process01",
         "async": false,
-        "testDuration_min": 20,
+        "testDuration_min": 5,
         "vuCountMin": 5,
         "vuCountMax": 50,
         "vuStepTime_sec": 10,
         "vuStepTimeDelay_ms": 1000,
-        "vuStepCount": 5,
-        "pacing_ms": 1000,
-        "pacingType": 0,
-        "keyBpm": "process01"
+        "vuStepCount": 10,
+        "pacing_ms": 5000,
+        "pacingType": 1,
+        "responseTimeMax_ms": 10000
       },
-
       {
         "apiNum": 1,
         "name": "MultiLoad_Template2",
+        "keyBpm": "process02",
         "async": false,
-        "testDuration_min": 15,
+        "testDuration_min": 2,
         "vuCountMin": 5,
         "vuCountMax": 50,
         "vuStepTime_sec": 5,
-        "vuStepTimeDelay_ms": 500,
+        "vuStepTimeDelay_ms": 0,
         "vuStepCount": 5,
         "pacing_ms": 2000,
         "pacingType": 1,
-        "keyBpm": "process02"
+        "responseTimeMax_ms": 10000
       },
       {
         "apiNum": 2,
         "name": "MultiLoad_Template3",
+        "keyBpm": "process03",
         "async": true,
         "testDuration_min": 1,
         "vuCountMin": 5,
         "vuCountMax": 50,
         "vuStepTime_sec": 5,
-        "vuStepTimeDelay_ms": 500,
+        "vuStepTimeDelay_ms": 10,
         "vuStepCount": 10,
-        "pacing_ms": 3000,
+        "pacing_ms": 2000,
         "pacingType": 1,
-        "keyBpm": "process03"
+        "responseTimeMax_ms": 10000
       }
     ]
   }

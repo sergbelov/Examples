@@ -15,6 +15,7 @@ import ru.utils.load.runnable.RunnableDbSelectTransitionsTime;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -22,10 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import com.google.common.util.concurrent.AtomicDouble;
@@ -132,7 +130,8 @@ public class DataFromDB {
                     stop,
                     countDownLatch,
                     dbService,
-                    dbDataList));
+                    dbDataList,
+                    sqlSelectBuilder));
             start = stop + 1;
         }
 
@@ -160,21 +159,12 @@ public class DataFromDB {
             long stopTime,
             List<DateTimeValues> bpmsJobEntityImplCountList
     ) {
+        String title = "Ожидание выполнения начатых задач";
         int maxDelay = 10; // ждем не более минут
         if (dbService != null) {
-            LOG.info("{}: Ожидаем завершения начатых задач (не более {} мин)...", key, maxDelay);
-/*
-        String sql = "select count(1) as cnt " +
-                "from hpi " +
-                "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and hpi.processstate = 'RUNNING' " +
-                "group by pdi.key, hpi.processstate";
-*/
-        String sql = "select count(1) as cnt " +
-                "from  j " +
-                "join  pdi on pdi.id = j.processdefinitionid and pdi.key = '" + key + "'";
+            LOG.info("{}: {} (не более {} мин)...", key, title, maxDelay);
+//            String sql = sqlSelectBuilder.getRunningProcess(key, startTime, stopTime);
+            String sql = sqlSelectBuilder.getBpmsJobEntityImpl(key);
             try {
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
@@ -199,7 +189,11 @@ public class DataFromDB {
                                 replay = 0; // значение изменилось сбрасываем счетчик
                             }
                             prevCnt = cnt;
-                            LOG.info("{}: Ожидаем завершения начатых задач... {} {}", key, cnt, (replay > 0 ? "(" + replay + ")" : ""));
+                            LOG.info("{}: {}... {} {}",
+                                    key,
+                                    title,
+                                    cnt,
+                                    (replay > 0 ? "(" + replay + ")" : ""));
                         } else {
                             replay = 3;
                         }
@@ -208,7 +202,7 @@ public class DataFromDB {
                     }
                     resultSet.close();
                     if (replay < 3) {
-                        Thread.sleep(20000);
+                        TimeUnit.MILLISECONDS.sleep(20000);
                     }
                 }
                 statement.close();
@@ -219,7 +213,7 @@ public class DataFromDB {
             } catch (Exception e) {
                 LOG.error("", e);
             }
-            LOG.info("{}: Ожидание начатых задач завершено", key);
+            LOG.info("{}: Ожидание выполнения начатых задач завершено", key);
         }
     }
 
@@ -243,22 +237,7 @@ public class DataFromDB {
         }
 */
         LOG.debug("Статистика из БД BPM {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
-        String[] sql = {
-                "select pdi.key, hpi.processstate, count(1) as cnt " +
-                        "from hpi " +
-                        "join pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
-                        "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                        "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                        "group by pdi.key, hpi.processstate",
-
-                "select pdi.key, count(1) as cnt, min(hpi.DURATIONINMILLIS), max(hpi.DURATIONINMILLIS), avg(hpi.DURATIONINMILLIS) " +
-                        "from  hpi " +
-                        "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
-                        "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                        "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                        "and hpi.processstate = 'COMPLETED' " +
-                        "group by pdi.key"
-        };
+        String[] sql = {sqlSelectBuilder.getProcessesState(key, startTime, stopTime), sqlSelectBuilder.getProcessesDuration(key, startTime, stopTime)};
 
         int[] count = {0, 0, 0, 0, 0};; // 0-COMPLETED, 1-RUNNING; 2-FAILED; 3-All; 4-All end
         double[] dur = {999999999999999999L, 0L, 0L, 0L}; // 0-min, 1-avg, 2-90%, 3-max
@@ -319,7 +298,6 @@ public class DataFromDB {
 
     /**
      * Количество шагов завершенных в секунду
-     *
      * @param key
      * @param startTime
      * @param stopTime
@@ -330,20 +308,8 @@ public class DataFromDB {
             long startTime,
             long stopTime
     ) {
-        LOG.debug("Количество шагов завершенных в секунду {} - {}", sdf1.format(startTime), sdf1.format(stopTime));
-        String sql = "select\n" +
-                "hpi.PROCESSSTATE, " +
-                "to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS') as sec, " +
-                "count(hpa.id) as cnt\n" +
-                "from  hpi\n" +
-                "join  hpa on hpa.PROCESSINSTANCEID = hpi.id\n" +
-                "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "'\n" +
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-//                "and hpi.PROCESSSTATE = 'COMPLETED'\n" +
-                "group by to_char(hpa.endtime,'DD-MM-YYYY HH24:MI:SS'), hpi.PROCESSSTATE\n" +
-                "order by 2, 1";
-
+        String title = "Количество шагов завершенных в секунду";
+        String sql = sqlSelectBuilder.getStepStopInSec(key, startTime, stopTime);
         int countStep = 0;
         int countAll = 0;
         int countAllCompleted = 0;
@@ -351,9 +317,10 @@ public class DataFromDB {
         int countMax = 0;
         int count90 = 0;
         double countAvg = 0.00;
+        int row = 0;
 
         try {
-            LOG.debug("Обработка данных SQL БПМ (количество шагов завершенных в секунду)...\n{}", sql);
+            LOG.debug("Обработка данных SQL ({})...\n{}", title, sql);
             Connection connection = dbService.getConnection();
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
@@ -374,7 +341,7 @@ public class DataFromDB {
             resultSet.close();
             statement.close();
             connection.close();
-            LOG.debug("Обработка данных SQL БПМ (количество шагов завершенных в секунду) завершена.");
+            LOG.debug("Обработка данных SQL ({}) завершена.", title);
         } catch (Exception e) {
             LOG.error("", e);
         }
@@ -418,18 +385,23 @@ public class DataFromDB {
                     Arrays.asList(
                             countAll,
                             countAllCompleted),
-                    "\n<br><table><caption>Количество шагов завершенных в секунду<br>" + sql + "</caption>" +
+
+                "\n<br><table style=\"width: 50%;\"" + (row > 10 ? " class=\"scroll\"" : "") + ">\n" +
                     "<thead>\n" +
-                    "<tr><th rowspan=\"2\">Всего шагов</th>" +
+                    "<tr><th colspan=\"6\">" + title + "</th></tr>\n" +
+                    "<tr><td colspan=\"6\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
+                    "</thead>\n" +
+                    "<tbody>\n" +
+                    "<tr style=\"font-size: 10px;\">" +
+                    "<th rowspan=\"2\">Всего шагов</th>" +
                     "<th rowspan=\"2\">Всего шагов<br>COMPLETED</th>" +
                     "<th colspan=\"4\">Завершено в секунду</th></tr>" +
                     "<tr><th>MIN</th>" +
                     "<th>AVG</th>" +
                     "<th>90%</th>" +
                     "<th>MAX</th></tr>\n" +
-                    "</thead>\n<tbody>\n" +
                     res.toString() +
-                    "</tbody></table>\n");
+                    "\n</tbody>\n</table>\n");
         } else {
             return null;
         }
@@ -448,6 +420,7 @@ public class DataFromDB {
             long startTime,
             long stopTime
     ) {
+        String title = "Время затраченное на переходы между задачами процесса";
         long start = startTime;
         long stop;
         long step;
@@ -512,7 +485,7 @@ public class DataFromDB {
         } else {
             durAvg.set(0); // avg
         }
-        LOG.info("Обработка данных SQL БПМ (Время затраченное на переходы между задачами процесса) завершена.");
+        LOG.info("Обработка данных SQL ({}) завершена.", title);
         if (countMain.get() > 0) {
             String sql = sqlSelectBuilder.getTransitionTime(key, startTime, stopTime);
             StringBuilder res = new StringBuilder();
@@ -528,23 +501,28 @@ public class DataFromDB {
                     .append(decimalFormat.format(durMax.get()))
                     .append("</td></tr>");
 
+            int row = 0;
             return new StatData(
                     durMin.get(),
                     durAvg.get(),
                     dur90,
                     durMax.get(),
                     Arrays.asList(countMain.get()),
-                    "\n<br><table><caption>Время затраченное на переходы между задачами процесса<br>" + sql + "</caption>" +
+                    "\n<br><table style=\"width: 50%;\"" + (row > 10 ? " class=\"scroll\"" : "") + ">\n" +
                     "<thead>\n" +
-                    "<tr><th rowspan=\"2\">Всего запросов<br>COMPLETED</th>" +
+                    "<tr><th colspan=\"5\">" + title + "</th></tr>\n" +
+                    "<tr><td colspan=\"5\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
+                    "</thead>\n" +
+                    "<tbody>\n" +
+                    "<tr style=\"font-size: 10px;\">" +
+                    "<th rowspan=\"2\">Всего запросов<br>COMPLETED</th>" +
                     "<th colspan=\"4\">Длительность переходов (мс)</th></tr>" +
                     "<tr><th>MIN</th>" +
                     "<th>AVG</th>" +
                     "<th>90%</th>" +
                     "<th>MAX</th></tr>\n" +
-                    "</thead>\n<tbody>\n" +
                     res.toString() +
-                    "</tbody></table>\n");
+                    "\n</tbody>\n</table>\n");
         } else {
             return null;
         }
@@ -558,19 +536,13 @@ public class DataFromDB {
      * @param stopTime
      * @return
      */
-    public String getDoubleCheck(long startTime, long stopTime) {
-        LOG.info("Поиск дублей в БД БПМ...");
-        String sql = "select distinct PROCESSDEFINITIONKEY, PROCESSINSTANCEID, ACTIVITYID, min(STARTTIME) as STARTTIME, count(1) as cnt\n" +
-                "from  hai\n" +
-                "where hai.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "group by PROCESSDEFINITIONKEY, processinstanceid, ACTIVITYID, EXECUTIONID, ACTIVITYNAME\n" +
-                "having count(1) > 1\n" +
-                "order by 4";
+    public String getDuplicateCheck(long startTime, long stopTime) {
+        String title = "Поиск дублей в БД БПМ";
+        String sql = sqlSelectBuilder.getDuplicateCheck("", startTime, stopTime);
         int row = 0;
         StringBuilder res = new StringBuilder();
         try {
-            LOG.debug("Обработка данных SQL БПМ (дубли)...\n{}", sql);
+            LOG.debug("Обработка данных SQL ({})...\n{}", title, sql);
             Connection connection = dbService.getConnection();
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
@@ -629,7 +601,7 @@ public class DataFromDB {
             resultSet.close();
             statement.close();
             connection.close();
-            LOG.debug("Обработка данных SQL БПМ (дубли) завершена.");
+            LOG.debug("Обработка данных SQL ({}) завершена.", title);
         } catch (Exception e) {
             LOG.error("", e);
         }
@@ -643,37 +615,39 @@ public class DataFromDB {
 */
 
         if (row > 0) {
-            return "\n<br><table" + (row > 5 ? " class=\"scroll\"" : "") + ">" +
-                    "<caption>Дубли в БД БПМ<br>" + sql + "</caption>" +
+            return "\n<br><table " + (row > 10 ? "style=\"width: 95%;\" class=\"scroll\"" : "") + ">\n" +
                     "<thead>\n" +
-                    "<tr><th width=\"40\"></th>" +
-                    "<th width=\"300\">PROCESSDEFINITIONKEY</th>" +
-                    "<th width=\"300\">PROCESSINSTANCEID</th>" +
-                    "<th width=\"300\">ACTIVITYID</th>" +
-                    "<th width=\"200\">STARTTIME(min)</th>" +
-                    "<th width=\"90\">Количество</th></tr>\n" +
-                    "</thead>\n<tbody>\n" +
+                    "<tr><th colspan=\"6\">" + title + "</th></tr>\n" +
+                    "<tr><td colspan=\"6\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
+                    "</thead>\n" +
+                    "<tbody>\n" +
+                    "<tr style=\"font-size: 10px;\">" +
+                    "<th></th>" +
+                    "<th>PROCESSDEFINITIONKEY</th>" +
+                    "<th>PROCESSINSTANCEID</th>" +
+                    "<th>ACTIVITYID</th>" +
+                    "<th>STARTTIME(min)</th>" +
+                    "<th>Количество</th></tr>\n" +
                     res.toString() +
-                    "</tbody></table>\n";
+                    "\n</tbody>\n</table>\n";
         } else {
             return "";
         }
     }
 
     /**
-     * Статистика по длительности выполнения задач
-     *
+     * Длительность выполнения задач
      * @param startTime
      * @param stopTime
      * @return
      */
-    public String getProcessDuration(String key, long startTime, long stopTime) {
-        LOG.info("Статистика по длительности выполнения задач...");
-        String sql = sqlSelectBuilder.getProcessDuration(key, startTime, stopTime);
+    public String getTaskDuration(String key, long startTime, long stopTime) {
+        String title = "Длительность выполнения задач (информация из БД)";
+        String sql = sqlSelectBuilder.getTaskDuration(key, startTime, stopTime);
         int row = 0;
         StringBuilder res = new StringBuilder();
         try {
-            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения задач)...\n{}", sql);
+            LOG.debug("Обработка данных SQL ({})...\n{}", title, sql);
             Connection connection = dbService.getConnection();
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
@@ -709,15 +683,20 @@ public class DataFromDB {
             resultSet.close();
             statement.close();
             connection.close();
-            LOG.debug("Обработка данных SQL БПМ (статистика по длительности выполнения задач) завершена.");
+            LOG.debug("Обработка данных SQL ({}) завершена.", title);
         } catch (Exception e) {
             LOG.error("", e);
         }
 
         if (row > 0) {
-            return "\n<br><table><caption>Статистика по длительности выполнения задач<br\n" + sql + "\n</caption>" +
+            return "\n<br><table style=\"width: 95%;\"" + (row > 10 ? " class=\"scroll\"" : "") + ">\n" +
                     "<thead>\n" +
-                    "<tr><th></th>" +
+                    "<tr><th colspan=\"8\">" + title + "</th></tr>\n" +
+                    "<tr><td colspan=\"8\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
+                    "</thead>\n" +
+                    "<tbody>\n" +
+                    "<tr style=\"font-size: 10px;\">" +
+                    "<th></th>" +
                     "<th>MAIN_PROCESS</th>" +
                     "<th>PROCESSSTATE</th>" +
                     "<th>ACTIVITYNAME</th>" +
@@ -725,13 +704,44 @@ public class DataFromDB {
                     "<th>MIN</th>" +
                     "<th>MAX</th>" +
                     "<th>AVG</th></tr>\n" +
-                    "</thead>\n<tbody>\n" +
                     res.toString() +
-                    "</tbody></table>\n";
+                    "\n</tbody>\n</table>\n";
         } else {
             return "";
         }
     }
 
+    /**
+     * Количество записей
+     * @param sql
+     * @return
+     */
+    public int getCount(String sql) {
+        return getCount(sql, dbService);
+    }
+
+    /**
+     * Количество записей
+     * @param sql
+     * @param dbService
+     * @return
+     */
+    public int getCount(String sql, DBService dbService) {
+        int cnt = -1;
+        try {
+            Connection connection = dbService.getConnection();
+            Statement statement = dbService.createStatement(connection);
+            ResultSet resultSet = dbService.executeQuery(statement, sql);
+            if (resultSet.next()) { // есть задачи в статусе Running
+                cnt = resultSet.getInt("cnt");
+            }
+            resultSet.close();
+            statement.close();
+            connection.close();
+        } catch (Exception e) {
+            LOG.error("Ошибка при выполении запроса:\n{}", sql, e);
+        }
+        return cnt;
+    }
 
 }

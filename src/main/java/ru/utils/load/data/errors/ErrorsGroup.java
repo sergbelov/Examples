@@ -25,8 +25,10 @@ public class ErrorsGroup {
                 "processId = xxx (in bpmn model) java.lang.NullPointerException"));
 
         groupCommentList.add(new ErrorsGroupComment(
-                new String[]{"### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after",
-                        "### Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"},
+                new String[]{"### Error getting a new connection.",
+                        "Cause: java.sql.SQLTransientConnectionException: ",
+                        "### Cause: java.sql.SQLTransientConnectionException: ",
+                        "master - Connection is not available, request timed out after"},
                 "### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out"));
 
         groupCommentList.add(new ErrorsGroupComment(
@@ -51,10 +53,6 @@ public class ErrorsGroup {
                         "Failed to update metadata after"
                 },
                 "Send exception for message.id:"));
-
-        groupCommentList.add(new ErrorsGroupComment(
-                new String[]{"### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"},
-                "### Error getting a new connection. Cause: java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"));
 
         groupCommentList.add(new ErrorsGroupComment(
                 new String[]{"Could not open JDBC Connection for transaction; nested exception is java.sql.SQLTransientConnectionException: master - Connection is not available, request timed out after"},

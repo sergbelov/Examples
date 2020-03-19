@@ -35,7 +35,6 @@ public class MultiRun {
     private static PropertiesService propertiesService = new PropertiesService(new LinkedHashMap<String, String>() {{
         put("STOP_TEST_ON_ERROR", "true");
         put("COUNT_ERROR_FOR_STOP_TEST", "100");
-
         put("WARM_DURATION", "60");
 
         put("DB_URL", "");
@@ -160,6 +159,7 @@ public class MultiRun {
                                 testPlan.getVuStepCount(),
                                 testPlan.getPacing_ms(),
                                 testPlan.getPacingType(),
+                                testPlan.getResponseTimeMax_ms(),
                                 WARM_DURATION,
                                 STOP_TEST_ON_ERROR,
                                 COUNT_ERROR_FOR_STOP_TEST,
@@ -300,7 +300,7 @@ public class MultiRun {
             startTime= sdf2.parse("01-01-2020 00:00:00").getTime();
             stopTime= sdf2.parse("10-02-2020 23:59:59").getTime();
         } catch (ParseException e) {
-            e.printStackTrace();
+            LOG.error("", e);
         }
         LOG.info("\n{}", dataFromSQL.getDoubleCheck(startTime, stopTime));
         if (1==1) {
@@ -368,9 +368,10 @@ public class MultiRun {
                 3,
                 0)) {
 
+            SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
 //            if (1==1){return true;}
             // проверка занятости БПМ
-            String sql = "select count(1) as cnt ";
+            String sql = sqlSelectBuilder.getBpmsJobEntityImpl();
             try {
                 boolean res = true;
                 Connection connection = dbService.getConnection();
@@ -379,15 +380,13 @@ public class MultiRun {
                 if (resultSet.next()) { // есть задачи в статусе Running
                     int cnt = resultSet.getInt("cnt");
                     if (cnt > 0) {
-                        LOG.error("####" +
-                                "\nПодача нагрузки не имеет смысла, в очереди есть не завершенные процессы" +
-                                "\nselect count(1) as cnt : {}\n" +
-                                "Дождитесь завершения обработки, либо выполните:\n" +
-                                "--очистка очереди\n" +
-                                "delete ;\n" +
-                                "delete ;\n" +
-                                "--не нужно чистить delete from ;\n" +
-                                "delete from ;", cnt);
+                        LOG.error("####\n" +
+                                "Подача нагрузки не имеет смысла, в очереди есть не завершенные процессы\n" +
+                                "{}: {}\n" +
+                                "Дождитесь завершения обработки, либо выполните:\n {}",
+                                sql,
+                                cnt,
+                                sqlSelectBuilder.getClearRunningProcess());
                         res = false;
                     }
                 }

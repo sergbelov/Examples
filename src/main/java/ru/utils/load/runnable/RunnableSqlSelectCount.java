@@ -67,12 +67,20 @@ public class RunnableSqlSelectCount implements Runnable {
                             int cnt = resultSet.getInt("cnt");
                             long time = System.currentTimeMillis();
                             sqlSelectCountList.add(new DateTimeValues(time, cnt));
-                            LOG.info("{} (VU:{} Threads:{}): {} - {}",
+                            LOG.info("{} (VU:{} Threads:{}) {}: {}",
+                                    name,
+                                    multiRunService.getVuCount(),
+                                    multiRunService.getThreadCount(),
+                                    type,
+                                    cnt);
+/*
+                            LOG.debug("{} (VU:{} Threads:{}): {} - {}",
                                     name,
                                     multiRunService.getVuCount(),
                                     multiRunService.getThreadCount(),
                                     cnt,
                                     sql);
+*/
 
                             if (influxDB != null) {
                                 try {
@@ -101,9 +109,9 @@ public class RunnableSqlSelectCount implements Runnable {
                     start = System.currentTimeMillis() + timeStep;
                 }
                 try {
-                    Thread.sleep(100);
+                    TimeUnit.MILLISECONDS.sleep(100);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    LOG.error("", e);
                 }
             }
             try {

@@ -47,6 +47,7 @@ public class MultiRunService {
 
     private AtomicBoolean running = new AtomicBoolean(true); // тест продолжается
     private AtomicBoolean warming = new AtomicBoolean(true); // прогрев
+    private AtomicBoolean allowedAddVU = new AtomicBoolean(true); // разрешено добавление новых VU
 
     private AtomicInteger numberRequest = new AtomicInteger(0);
 
@@ -78,6 +79,8 @@ public class MultiRunService {
 
     private long pacing = 1000;    // задержка перед выполнением следующей итерации (ms)
     private int pacingType = 1;    // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
+
+    private long responseTimeMax_ms = 10000; // максимально допустимое значение Response time (мс)
 
     private boolean stopTestOnError = false; // прерывать тест при большом количестве ошибок
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
@@ -113,6 +116,7 @@ public class MultiRunService {
             int vuStepCount,
             long pacing,
             int pacingType,
+            long responseTimeMax_ms,
             int warmDuration,
             boolean stopTestOnError,
             int countErrorForStopTest,
@@ -141,6 +145,7 @@ public class MultiRunService {
         this.vuStepCount = vuStepCount;
         this.pacing = pacing;
         this.pacingType = pacingType;
+        this.responseTimeMax_ms = responseTimeMax_ms;
         this.warmDuration = warmDuration;
         this.stopTestOnError = stopTestOnError;
         this.countErrorForStopTest = countErrorForStopTest;
@@ -261,9 +266,9 @@ public class MultiRunService {
         return testStopTimeReal;
     }
 
-    public long getPacing() {
-        return pacing;
-    }
+    public long getPacing() {return pacing;}
+
+    public long getResponseTimeMax_ms() {return responseTimeMax_ms;}
 
     public int getPacingType() {
         return pacingType;
@@ -342,6 +347,9 @@ public class MultiRunService {
                 .append("<tr><td>Режим задержки:<br>0 - задержка от момента старта операции (без ожидания выполнения);<br>1 - задержка от момента старта операции (с учетом ожидания выполения);<br>2 - задержка от момента завершения выполнения операции;</td><td>")
                 .append(pacingType)
                 .append("</td></tr>\n")
+                .append("<tr><td>Максимально допустимое значение Response time (мс)</td><td>")
+                .append(responseTimeMax_ms)
+                .append("</td></tr>\n")
                 .append("<tr><td>Начальное количество VU</td><td>")
                 .append(vuCountMin)
                 .append("</td></tr>\n")
@@ -416,13 +424,14 @@ public class MultiRunService {
                 baseScript.start(apiNum);
                 stop = System.currentTimeMillis();
                 callList.add(new Call(start, stop)); // фиксируем вызов
+
             } catch (Exception e) {
                 callList.add(new Call(start)); // фиксируем вызов
 //                errorListAdd(name, e, thread);
                 errorListAdd(name, start, e, thread);
             }
         }
-        if (!warming.get()) { // не сохраняем во время прогрева
+        if (!warming.get()) { // не сохраняем мерики во время прогрева
             if (influxDB != null) {
                 executorService.submit(new RunnableSaveToInfluxDbCall(
                         start,
@@ -549,25 +558,25 @@ public class MultiRunService {
      */
     public void startGroupVU() {
         // настало время увеличения количества VU
-        if (isRunning() && System.currentTimeMillis() < testStopTime) {
+        if (isRunning() && allowedAddVU.get() && System.currentTimeMillis() < testStopTime) {
             if (isTimeAddVU() || getVuCount() < vuCountMin) { // первоначальная инициализация или настало время увеличения количества VU
                 if (!isStartedAllVU()) { // не все VU стартовали
                     int vu = getVuCount();
                     int step = (vu == 0 ? vuCountMin : Math.min(vuStepCount, vuCountMax - vu));
                     for (int u = 0; u < step; u++) {
                         if ((vu = startVU()) > -1) {
-                            executorService.submit(new RunnableVU(vu, this));
+                            executorService.submit(new RunnableVU(vu, this)); // запускаем поток
                             if (vuStepTimeDelay > 0) { // фиксируем каждого пользователя
                                 vuListAdd(); // фиксация активных VU
                                 try {
-                                    Thread.sleep(vuStepTimeDelay); // задержка перед стартом очередного пользователя
+                                    TimeUnit.MILLISECONDS.sleep(vuStepTimeDelay); // задержка перед стартом очередного пользователя
                                 } catch (InterruptedException e) {
-                                    e.printStackTrace();
+                                    LOG.error("", e);
                                 }
                             }
                         }
                     }
-                    LOG.info("{}: текущее количество VU {} из {}",
+                    LOG.info("{}: текущее количество VU {} ({})",
                             name,
                             vu,
                             vuCountMax);
@@ -644,6 +653,14 @@ public class MultiRunService {
      */
     public boolean isRunning() {
         return running.get();
+    }
+
+    /**
+     * Разрешен или нет старт норвых VU
+     * @param allowed
+     */
+    public void setAllowedAddVU(boolean allowed){
+        allowedAddVU.set(allowed);
     }
 
     /**
@@ -736,6 +753,7 @@ public class MultiRunService {
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
+        SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
 
         if (!warming) { // После прогрева нагрузка сервисов должна начаться одновременно
             if (!multiRun.isWarmingCompleted()) {
@@ -777,15 +795,12 @@ public class MultiRunService {
                 this));
 
         if (!warming && dbService != null) {
+
             // опрашиваем размерность таблицы BpmsJobEntityImpl (тротлинг)
-            String sql = "select count(1) as cnt " +
-                    "from  j " +
-                    "join  pdi on pdi.id = j.processdefinitionid " +
-                    "and pdi.key = '" + keyBpm + "'";
             executorService.submit(new RunnableSqlSelectCount(
                     name,
                     "BpmsJobEntityImpl",
-                    sql,
+                    sqlSelectBuilder.getBpmsJobEntityImpl(keyBpm),
                     5000,
                     this,
                     bpmsJobEntityImplCountList,
@@ -793,20 +808,15 @@ public class MultiRunService {
                     influxDB));
 
             // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
-            sql = "select count(1) as cnt " +
-                    "from  r " +
-                    "join  pdi on pdi.id = r.processdefinitionid " +
-                    "and pdi.key = '" + keyBpm + "'";
             executorService.submit(new RunnableSqlSelectCount(
                     name,
                     "RetryPolicyJobEntityImpl",
-                    sql,
+                    sqlSelectBuilder.getRetryPolicyJobEntityImpl(keyBpm),
                     5000,
                     this,
                     retryPolicyJobEntityImplCountList,
                     100000,
                     influxDB));
-
         }
 
         try {
@@ -922,9 +932,9 @@ public class MultiRunService {
         map.put(Metric.DB_RUNNING, dbResponse.getIntValue(Metric.DB_RUNNING));
         map.put(Metric.DB_FAILED, dbResponse.getIntValue(Metric.DB_FAILED));
         map.put(Metric.DB_LOST, callMetrics.getCountCall() - (dbResponse.getIntValue(new Metric[]{
-                        Metric.DB_COMPLETED,
-                        Metric.DB_RUNNING,
-                        Metric.DB_FAILED})));
+                Metric.DB_COMPLETED,
+                Metric.DB_RUNNING,
+                Metric.DB_FAILED})));
         map.put(Metric.DB_DUR_MIN, dbResponse.getDoubleValue(Metric.DB_DUR_MIN));
         map.put(Metric.DB_DUR_AVG, dbResponse.getDoubleValue(Metric.DB_DUR_AVG));
         map.put(Metric.DB_DUR_90, dbResponse.getDoubleValue(Metric.DB_DUR_90));
@@ -1011,4 +1021,25 @@ public class MultiRunService {
                 countCall[1]);
     }
 
+    /**
+     * Уменьшение длительности теста на step ms
+     * @param step
+     */
+    public void durationDec(int step) {
+        if (!isWarming()) {
+            testStopTime = testStopTime - step;
+            LOG.info("### {}: тест до {}", name, sdf1.format(testStopTime));
+        }
+    }
+
+    /**
+     * Увеличение дли тельности теста на step ms
+     * @param step
+     */
+    public void durationInc(int step) {
+        if (!isWarming()) {
+            testStopTime = testStopTime + step;
+            LOG.info("### {}: тест до {}", name, sdf1.format(testStopTime));
+        }
+    }
 }

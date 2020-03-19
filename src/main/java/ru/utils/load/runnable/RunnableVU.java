@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RunnableVU implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
@@ -55,9 +56,9 @@ public class RunnableVU implements Runnable {
      */
     private void sleep(long delay) {
         try {
-            Thread.sleep(delay);
+            TimeUnit.MILLISECONDS.sleep(delay);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOG.error("", e);
         }
     }
 

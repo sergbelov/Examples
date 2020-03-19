@@ -3,6 +3,7 @@ package ru.utils.load.data.testplan;
 public class TestPlan {
     int apiNum;                // Порядковый номер сервиса внутри сценария (класса)
     String name;               // Наименование сервиса
+    String keyBpm;             // задача в БД БПМ
     boolean async;             // Асинхронный вызов
     int testDuration_min;      // Длительность теста в минутах
     int vuCountMin;            // Стартовое количество виртуальных пользователей
@@ -12,7 +13,7 @@ public class TestPlan {
     int vuStepCount;           // Шаг увеличения VU
     long pacing_ms;            // Длительность операции (мс)
     int pacingType;            // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
-    String keyBpm;             // задача в БД БПМ
+    long responseTimeMax_ms;   // Максимально допустимое значение Response time (мс)
 
     public TestPlan() {
     }
@@ -20,6 +21,7 @@ public class TestPlan {
     public TestPlan(
             int apiNum,
             String name,
+            String keyBpm,
             boolean async,
             int testDuration_min,
             int vuCountMin,
@@ -29,9 +31,12 @@ public class TestPlan {
             int vuStepCount,
             long pacing_ms,
             int pacingType,
-            String keyBpm) {
+            long responseTimeMax_ms
+    ) {
+
         this.apiNum = apiNum;
         this.name = name;
+        this.keyBpm = keyBpm;
         this.async = async;
         this.testDuration_min = testDuration_min;
         this.vuCountMin = vuCountMin;
@@ -41,13 +46,17 @@ public class TestPlan {
         this.vuStepCount = vuStepCount;
         this.pacing_ms = pacing_ms;
         this.pacingType = pacingType;
-        this.keyBpm = keyBpm;
+        this.responseTimeMax_ms = responseTimeMax_ms;
     }
 
     public int getApiNum() { return apiNum; }
 
     public String getName() {
         return name;
+    }
+
+    public String getKeyBpm() {
+        return keyBpm;
     }
 
     public boolean isAsync() { return async; }
@@ -82,7 +91,5 @@ public class TestPlan {
         return pacingType;
     }
 
-    public String getKeyBpm() {
-        return keyBpm;
-    }
+    public long getResponseTimeMax_ms() { return responseTimeMax_ms; }
 }

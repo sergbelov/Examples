@@ -14,23 +14,39 @@ public class GuiControl extends JFrame {
     private static final Logger LOG = LogManager.getLogger(GuiControl.class);
 
     private MultiRun multiRun;
-    private JButton bStopButton;
+    private JButton bVUDec;
+    private JButton bVUInc;
+    private JButton bDurationDec;
+    private JButton bDurationInc;
+    private JButton bStop;
 
     public GuiControl(MultiRun multiRun) {
         this.multiRun = multiRun;
 //        setType(Type.UTILITY);
         setTitle("Нагрузка...");
-        setSize(250, 70);
+        setSize(400, 200);
 //        setLocation(100, 50);
         setLocationRelativeTo(null); // по центру экрана
         setResizable(false);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        JPanel jPanel = new JPanel(new GridLayout(1, 1, 10, 10));
+        JPanel jPanel = new JPanel(new GridLayout(5, 1, 5, 5));
         jPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         GuiControlEngine listener = new GuiControlEngine(this);
-        bStopButton = new JButton("Прекратить подачу нагрузки");
-        bStopButton.addActionListener(listener);
-        jPanel.add(bStopButton);
+        bVUDec = new JButton("Остановить один поток");
+        bVUDec.addActionListener(listener);
+        bVUInc = new JButton("Добавить один поток");
+        bVUInc.addActionListener(listener);
+        bDurationDec = new JButton("Уменьшить длительность теста на 5 минут");
+        bDurationDec.addActionListener(listener);
+        bDurationInc = new JButton("Увеличить длительность теста на 5 минут");
+        bDurationInc.addActionListener(listener);
+        bStop = new JButton("Прекратить подачу нагрузки");
+        bStop.addActionListener(listener);
+        jPanel.add(bVUDec);
+        jPanel.add(bVUInc);
+        jPanel.add(bDurationDec);
+        jPanel.add(bDurationInc);
+        jPanel.add(bStop);
         setContentPane(jPanel);
         setIcon("load.png");
         setVisible(true);
@@ -47,7 +63,21 @@ public class GuiControl extends JFrame {
         public void actionPerformed(ActionEvent evt) {
             Object eventSource = evt.getSource(); // Получаем источник события
 
-            if (eventSource == bStopButton) { // прерываем нагрузку
+            if (eventSource == bVUDec) { // остановка потока
+
+            } else if (eventSource == bVUInc) { // добавление потока
+
+            } else if (eventSource == bDurationDec) { // уменьшение длительности теста
+                for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
+                    multiRunService.durationDec(5 * 60 * 1000);
+                }
+
+            } else if (eventSource == bDurationInc) { // увеличение длительности теста
+                for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
+                    multiRunService.durationInc(5 * 60 * 1000);
+                }
+
+            } else if (eventSource == bStop) { // прерываем нагрузку
                 if (JOptionPane.showOptionDialog(guiControl,
                         "Прекратить подачу нагрузки?",
                         "Подтверждение",
@@ -58,8 +88,12 @@ public class GuiControl extends JFrame {
                         options[0]) == 0) {
 
                     if (multiRun.isWarmingCompleted()) {
-                        bStopButton.setEnabled(false);
-                        bStopButton.setText("Остановка нагрузки...");
+                        bVUDec.setEnabled(false);
+                        bVUInc.setEnabled(false);
+                        bDurationDec.setEnabled(false);
+                        bDurationInc.setEnabled(false);
+                        bStop.setEnabled(false);
+                        bStop.setText("Остановка нагрузки...");
                         for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
                             multiRunService.stop("Прерывание нажатием на кнопку");
                         }

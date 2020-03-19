@@ -42,17 +42,37 @@ public class Graph {
                 title,
                 multiRunService,
                 metricsList,
+                null,
                 true,
                 false,
                 false);
     }
+
+    public String getSvgGraphLine(
+            String title,
+            MultiRunService multiRunService,
+            List<DateTimeValues> metricsList,
+            boolean yStartFrom0,
+            boolean step,
+            boolean printMetrics) {
+        return getSvgGraphLine(
+                title,
+                multiRunService,
+                metricsList,
+                null,
+                yStartFrom0,
+                step,
+                printMetrics);
+    }
+
     /**
      * Линейный график (несколько показателей)
      * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
-     *
-     * @param multiRunService
-     * @param title
-     * @param metricsList
+     * @param title             наименование графика
+     * @param multiRunService   класс с информацией
+     * @param metricsList       список метрик
+     * @param norms             минимальное и максимальное значение (горизонтальные линии)
+     * @param yStartFrom0       минимальное значение по оси Y равно 0
      * @param step
      * @param printMetrics
      * @return
@@ -61,6 +81,7 @@ public class Graph {
             String title,
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
+            double[] norms,
             boolean yStartFrom0,
             boolean step,
             boolean printMetrics) {
@@ -206,6 +227,20 @@ public class Graph {
                     decimalFormat.format(yValue) + "</text>\n");
             yCur = yCur - yStep;
             yValue = yValue + yRatioValue;
+        }
+
+        // Граница допустимых значений
+        if (norms != null && norms.length > 0){
+            sbResult.append("<!-- Граница допустимых значений -->\n");
+            for (double d: norms) {
+                double y = yMax - Math.round((d - yValueMin) * yRatio);
+                sbResult.append("\t\t\t\t<polyline " +
+                        "fill=\"none\" " +
+                        "stroke=\"#ffa0a0\" " +
+//                        "stroke-dasharray=\"" + xText + "\" " +
+                        "stroke-width=\"" + (lineSize * 5) + "\" " +
+                        "points=\"" + xStart + "," + y + "  " + xMax + "," + y + "\"/>\n");
+            }
         }
 
         // ось X

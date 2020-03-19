@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.utils.db.DBService;
 import ru.utils.load.data.sql.DBData;
+import ru.utils.load.utils.SqlSelectBuilder;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -28,6 +29,7 @@ public class RunnableDbSelectData implements Runnable {
     private CountDownLatch countDownLatch;
     private DBService dbService;
     private List<DBData> dbDataList;
+    private SqlSelectBuilder sqlSelectBuilder;
 
     public RunnableDbSelectData(
             int cnt,
@@ -36,7 +38,8 @@ public class RunnableDbSelectData implements Runnable {
             long stopTime,
             CountDownLatch countDownLatch,
             DBService dbService,
-            List<DBData> dbDataList
+            List<DBData> dbDataList,
+            SqlSelectBuilder sqlSelectBuilder
     ) {
         this.name = "SQL Select Data_" + cnt + " (" + sdf1.format(startTime) + " - " + sdf1.format(stopTime) + ")";
         LOG.trace("Инициализация потока {}", name);
@@ -46,17 +49,14 @@ public class RunnableDbSelectData implements Runnable {
         this.countDownLatch = countDownLatch;
         this.dbService = dbService;
         this.dbDataList = dbDataList;
+        this.sqlSelectBuilder = sqlSelectBuilder;
     }
 
     @Override
     public void run() {
         LOG.debug("Старт потока {}", name);
         if (dbService != null) {
-        String sql = "select hpi.starttime, hpi.endtime, hpi.processstate " +
-                "from  hpi " +
-                "join  pdi on pdi.id = hpi.processdefinitionid and pdi.key = '" + key + "' " +
-                "where hpi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF') " +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')";
+        String sql = sqlSelectBuilder.getProcesses(key, startTime, stopTime);
             try {
                 int row = 0;
                 LOG.debug("{}: Запрос данных из БД БПМ...\n{}", name, sql);

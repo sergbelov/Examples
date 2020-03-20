@@ -27,6 +27,7 @@ public class MultiLoad implements ScriptRun {
     /**
      * Инициализация скрипта
      *
+     * @throws IOException
      */
     public void init() throws IOException {
 //        initialize();
@@ -87,12 +88,15 @@ public class MultiLoad implements ScriptRun {
      * Вызов API 0
      */
     public void start0(int apiNum) throws Exception {
-        String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
+        String processDefinitionKey = multiRun.getMultiRunService(apiNum).getProcessDefinitionKey();
 
 // иммитация вызова API
+/*
 //        long delay = (long) ((Math.random() * 900) + multiRun.getMultiRunService(apiNum).getVuCount() * 100);
         long delay = 900 + multiRun.getMultiRunService(apiNum).getVuCount() * 100;
         delay = ThreadLocalRandom.current().nextLong(delay);
+*/
+        long delay = ThreadLocalRandom.current().nextLong(900) + 100;
 
         try {
             TimeUnit.MILLISECONDS.sleep(delay);
@@ -107,7 +111,7 @@ public class MultiLoad implements ScriptRun {
      * Вызов API 1
      */
     public void start1(int apiNum) throws Exception {
-        String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
+        String processDefinitionKey = multiRun.getMultiRunService(apiNum).getProcessDefinitionKey();
 
 // иммитация вызова API
         long delay = ThreadLocalRandom.current().nextLong(1900) + 100;
@@ -124,13 +128,13 @@ public class MultiLoad implements ScriptRun {
      * Вызов API 2
      */
     public void start2(int apiNum) throws Exception {
-        String processName = multiRun.getMultiRunService(apiNum).getKeyBpm();
+        String processDefinitionKey = multiRun.getMultiRunService(apiNum).getProcessDefinitionKey();
         generateError(apiNum);
     }
 
     private void generateError(int apiNum) throws Exception{
 // имитация возникновения ошибки
-        long range = multiRun.getMultiRunService(apiNum).getTestStopTime() - System.currentTimeMillis();
+        long range = Math.abs(multiRun.getMultiRunService(apiNum).getTestStopTime() - System.currentTimeMillis());
         int rnd = (int)ThreadLocalRandom.current().nextLong(range);
         if (rnd < 5) { // типо ошибка
 //        if (rnd % 2 == 0) { // типо ошибка

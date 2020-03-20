@@ -16,7 +16,7 @@ public class RunnableTaskVU implements Runnable {
 
     public RunnableTaskVU(int thread, MultiRunService multiRunService) {
         this.thread = thread;
-        this.name = multiRunService.getName() + " RunnableVU" + thread + "_Task";
+        this.name = multiRunService.getName() + " VU" + thread + "_Task";
         LOG.trace("Инициализация потока {}", name);
         this.multiRunService = multiRunService;
     }

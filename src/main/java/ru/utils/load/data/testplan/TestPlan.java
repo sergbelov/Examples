@@ -1,19 +1,19 @@
 package ru.utils.load.data.testplan;
 
 public class TestPlan {
-    int apiNum;                // Порядковый номер сервиса внутри сценария (класса)
-    String name;               // Наименование сервиса
-    String keyBpm;             // задача в БД БПМ
-    boolean async;             // Асинхронный вызов
-    int testDuration_min;      // Длительность теста в минутах
-    int vuCountMin;            // Стартовое количество виртуальных пользователей
-    int vuCountMax;            // Максимальное количество виртуальных пользователей
-    int vuStepTime_sec;        // Временной шаг для увеличения VU (сек)
-    int vuStepTimeDelay_ms;    // Задержка между стартами каждого VU (мс)
-    int vuStepCount;           // Шаг увеличения VU
-    long pacing_ms;            // Длительность операции (мс)
-    int pacingType;            // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
-    long responseTimeMax_ms;   // Максимально допустимое значение Response time (мс)
+    int apiNum;                  // Порядковый номер сервиса внутри сценария (класса)
+    String name;                 // Наименование сервиса
+    String processDefinitionKey; // ProcessDefinitionKey
+    boolean async;               // Асинхронный вызов
+    int testDuration_min;        // Длительность теста в минутах
+    int vuCountMin;              // Стартовое количество виртуальных пользователей
+    int vuCountMax;              // Максимальное количество виртуальных пользователей
+    int vuStepTime_sec;          // Временной шаг для увеличения VU (сек)
+    int vuStepTimeDelay_ms;      // Задержка между стартами каждого VU (мс)
+    int vuStepCount;             // Шаг увеличения VU
+    long pacing_ms;              // Длительность операции (мс)
+    int pacingType;              // 0 - задержка от момента старта операции (без ожидания выполнения); 1 - задержка от момента старта операции (с учетом ожидания выполения); 2 - задержка от момента завершения выполнения операции;
+    long responseTimeMax_ms;     // Максимально допустимое значение Response time (мс)
 
     public TestPlan() {
     }
@@ -21,7 +21,7 @@ public class TestPlan {
     public TestPlan(
             int apiNum,
             String name,
-            String keyBpm,
+            String processDefinitionKey,
             boolean async,
             int testDuration_min,
             int vuCountMin,
@@ -36,7 +36,7 @@ public class TestPlan {
 
         this.apiNum = apiNum;
         this.name = name;
-        this.keyBpm = keyBpm;
+        this.processDefinitionKey = processDefinitionKey;
         this.async = async;
         this.testDuration_min = testDuration_min;
         this.vuCountMin = vuCountMin;
@@ -55,8 +55,8 @@ public class TestPlan {
         return name;
     }
 
-    public String getKeyBpm() {
-        return keyBpm;
+    public String getProcessDefinitionKey() {
+        return processDefinitionKey;
     }
 
     public boolean isAsync() { return async; }

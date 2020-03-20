@@ -89,7 +89,7 @@ public class RunnableSqlSelectCount implements Runnable {
                                             .tag("type", type)
                                             .tag("thread", String.valueOf(1))
                                             .tag("api", multiRunService.getName())
-                                            .tag("key", multiRunService.getKeyBpm())
+                                            .tag("key", multiRunService.getProcessDefinitionKey())
                                             .addField("i", 1)
                                             .addField("count", cnt)
                                             .build();

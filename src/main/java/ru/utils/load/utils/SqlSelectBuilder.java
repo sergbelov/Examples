@@ -34,7 +34,7 @@ public class SqlSelectBuilder {
         String sql = "select count(1) as cnt " +
                 "from  j " +
                 (key != null && !key.isEmpty() ?
-                        "join BPMS.BpmsProcessDefinitionEntityImpl pdi on pdi.id = j.processdefinitionid " +
+                        "join  pdi on pdi.id = j.processdefinitionid " +
                                 "and pdi.key = '" + key + "'" :
                         "");
         LOG.debug("Количество записей в BpmsJobEntityImpl (очередь, активные процессы)...\n{}", sql);
@@ -63,11 +63,12 @@ public class SqlSelectBuilder {
      * @return
      */
     public String getClearRunningProcess() {
-        String sql = "-- Очистка очереди (выполнять пока очередь не очиститься полностью)\n" +
+        String sql = "-- очистка очереди (выполнять пока очередь не очиститься полностью)" +
+                "delete from ; \n" +
                 "delete from ;\n" +
+                "--Не нужно чистить delete from ;\n" +
                 "delete from ;\n" +
-                "-- Не нужно чистить delete from ;\n" +
-                "delete from ;\n" +
+                "select count(1) from ;\n" +
                 "--update  set processstate = 'FAILED' where processstate = 'RUNNING'; \n" +
                 "--commit;";
         LOG.debug("Запросы для очистки очереди...\n{}", sql);

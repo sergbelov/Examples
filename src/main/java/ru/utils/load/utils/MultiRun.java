@@ -170,7 +170,7 @@ public class MultiRun {
                                 SPLUNK_URL,
                                 CSM_URL,
                                 dbService,
-                                testPlan.getKeyBpm(),
+                                testPlan.getProcessDefinitionKey(),
                                 PATH_REPORT,
                                 influxDB,
                                 propertiesService.getString("InfluxDB.DB_NAME"),

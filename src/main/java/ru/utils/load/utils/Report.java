@@ -99,7 +99,7 @@ public class Report {
                         "\t\t</style>\n" +
                         "\t</head>\n" +
                         "\t<body>\n" +
-                        "<h2>" + multiRunService.getName() + " (" + multiRunService.getKeyBpm() +
+                        "<h2>" + multiRunService.getName() + " (" + multiRunService.getProcessDefinitionKey() +
                         ") период " + sdf1.format(multiRunService.getTestStartTimeReal()) +
                         " - " + sdf1.format(multiRunService.getTestStopTimeReal()) + " (" +
                         timeMillisToString(multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()) +
@@ -227,7 +227,7 @@ public class Report {
                     "<th>COMPLETED</th>\n")
                     .append("<tr><td>")
 //                    .append(multiRunService.getName())
-                    .append(multiRunService.getKeyBpm())
+                    .append(multiRunService.getProcessDefinitionKey())
                     .append("</td><td>")
                     .append(decimalFormat.format(multiRunService.getMetricsList().get(0).getDoubleValue(Metric.DB_DUR_MIN)))
                     .append("</td><td>")
@@ -250,7 +250,7 @@ public class Report {
             sbHtml.append(multiRunService
                     .getDataFromDB()
                     .getTaskDuration(
-                            multiRunService.getKeyBpm(),
+                            multiRunService.getProcessDefinitionKey(),
                             multiRunService.getTestStartTime(),
                             multiRunService.getTestStopTime()));
 
@@ -327,7 +327,7 @@ public class Report {
             countStepCompleteInSec = multiRunService
                     .getDataFromDB()
                     .getCountStepCompleteInSec(
-                            multiRunService.getKeyBpm(),
+                            multiRunService.getProcessDefinitionKey(),
                             multiRunService.getTestStartTime(),
                             multiRunService.getTestStopTime());
 
@@ -371,7 +371,7 @@ public class Report {
             transitionsTime = multiRunService
                     .getDataFromDB()
                     .getTransitionsTime(
-                            multiRunService.getKeyBpm(),
+                            multiRunService.getProcessDefinitionKey(),
                             multiRunService.getTestStartTime(),
                             multiRunService.getTestStopTime());
             if (transitionsTime != null) {

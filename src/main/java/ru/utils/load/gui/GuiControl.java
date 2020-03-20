@@ -36,9 +36,9 @@ public class GuiControl extends JFrame {
         bVUDec.addActionListener(listener);
         bVUInc = new JButton("Добавить один поток");
         bVUInc.addActionListener(listener);
-        bDurationDec = new JButton("Уменьшить длительность теста на 5 минут");
+        bDurationDec = new JButton("Уменьшить продолжительность теста на 5 минут");
         bDurationDec.addActionListener(listener);
-        bDurationInc = new JButton("Увеличить длительность теста на 5 минут");
+        bDurationInc = new JButton("Увеличить продолжительность теста на 5 минут");
         bDurationInc.addActionListener(listener);
         bStop = new JButton("Прекратить подачу нагрузки");
         bStop.addActionListener(listener);
@@ -64,8 +64,14 @@ public class GuiControl extends JFrame {
             Object eventSource = evt.getSource(); // Получаем источник события
 
             if (eventSource == bVUDec) { // остановка потока
+                for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
+                    multiRunService.vuDec();
+                }
 
             } else if (eventSource == bVUInc) { // добавление потока
+                for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {
+                    multiRunService.vuInc();
+                }
 
             } else if (eventSource == bDurationDec) { // уменьшение длительности теста
                 for (MultiRunService multiRunService : multiRun.getMultiRunServiceList()) {

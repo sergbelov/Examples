@@ -3,15 +3,12 @@ package ru.utils.load.utils;
 import org.influxdb.InfluxDB;
 import ru.utils.db.DBService;
 import ru.utils.load.ScriptRun;
-import ru.utils.load.data.Call;
-import ru.utils.load.data.DateTimeValues;
+import ru.utils.load.data.*;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.utils.load.data.Metric;
-import ru.utils.load.data.CallMetrics;
 import ru.utils.load.data.sql.DBResponse;
 import ru.utils.load.runnable.*;
 
@@ -22,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MultiRunService {
     private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
@@ -30,6 +28,7 @@ public class MultiRunService {
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
 
     private List<DateTimeValues> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
+    private List<VU> vuListActive = new CopyOnWriteArrayList<>(); // активность потоков
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов сервиса
 
     private List<DateTimeValues> metricsList = new ArrayList<>();
@@ -56,7 +55,7 @@ public class MultiRunService {
     private int apiNum;
     private String name;
     private long testStartTime;
-    private long testStopTime;
+    private AtomicLong testStopTime = new AtomicLong(0);
     private long testStartTimeReal;
     private long testStopTimeReal;
     private long nextTimeAddVU;
@@ -92,7 +91,7 @@ public class MultiRunService {
     private String splunkUrl; // Спланк (URL)
     private String csmUrl; // CSM (URL)
 
-    private String keyBpm;
+    private String processDefinitionKey;
 
     private String pathReport;
 
@@ -127,7 +126,7 @@ public class MultiRunService {
             String splunkUrl,
             String csmUrl,
             DBService dbService,
-            String keyBpm,
+            String processDefinitionKey,
             String pathReport,
             InfluxDB influxDB,
             String influxDbBaseName,
@@ -155,7 +154,7 @@ public class MultiRunService {
         this.grafanaTsUrl = grafanaTsUrl;
         this.splunkUrl = splunkUrl;
         this.csmUrl = csmUrl;
-        this.keyBpm = keyBpm;
+        this.processDefinitionKey = processDefinitionKey;
         this.pathReport = pathReport;
 
         if (!checkParam()) { // ошибка в параметрах
@@ -238,8 +237,8 @@ public class MultiRunService {
         return callList;
     }
 
-    public String getKeyBpm() {
-        return keyBpm;
+    public String getProcessDefinitionKey() {
+        return processDefinitionKey;
     }
 
     public List<ErrorRs> getErrorList() {
@@ -255,7 +254,7 @@ public class MultiRunService {
     }
 
     public long getTestStopTime() {
-        return testStopTime;
+        return testStopTime.get();
     }
 
     public long getTestStartTimeReal() {
@@ -266,9 +265,13 @@ public class MultiRunService {
         return testStopTimeReal;
     }
 
-    public long getPacing() {return pacing;}
+    public long getPacing() {
+        return pacing;
+    }
 
-    public long getResponseTimeMax_ms() {return responseTimeMax_ms;}
+    public long getResponseTimeMax_ms() {
+        return responseTimeMax_ms;
+    }
 
     public int getPacingType() {
         return pacingType;
@@ -420,6 +423,7 @@ public class MultiRunService {
                 errorListAdd(name, start, e, thread);
             }
         } else { // синхронный вызов, ждем завершения выполнения
+//            vuListActiveCall(start, thread);
             try {
                 baseScript.start(apiNum);
                 stop = System.currentTimeMillis();
@@ -558,7 +562,7 @@ public class MultiRunService {
      */
     public void startGroupVU() {
         // настало время увеличения количества VU
-        if (isRunning() && allowedAddVU.get() && System.currentTimeMillis() < testStopTime) {
+        if (isRunning() && allowedAddVU.get() && System.currentTimeMillis() < testStopTime.get()) {
             if (isTimeAddVU() || getVuCount() < vuCountMin) { // первоначальная инициализация или настало время увеличения количества VU
                 if (!isStartedAllVU()) { // не все VU стартовали
                     int vu = getVuCount();
@@ -657,9 +661,10 @@ public class MultiRunService {
 
     /**
      * Разрешен или нет старт норвых VU
+     *
      * @param allowed
      */
-    public void setAllowedAddVU(boolean allowed){
+    public void setAllowedAddVU(boolean allowed) {
         allowedAddVU.set(allowed);
     }
 
@@ -771,9 +776,9 @@ public class MultiRunService {
         if (warming) {
             vuCountMin = 5;
             vuCountMax = 5;
-            testStopTime = testStartTime + warmDuration * 1000L; // время завершения теста (прогрев 60 секунд)
+            testStopTime.set(testStartTime + warmDuration * 1000L); // время завершения прогрева (параметр в сек)
         } else {
-            testStopTime = testStartTime + testDuration * 60000L; // время завершения теста
+            testStopTime.set(testStartTime + testDuration * 60000L); // время завершения теста (параметр в мин)
         }
         nextTimeAddVU = testStartTime + vuStepTime * 1000L; // время следующего увеличения количества VU (при запуске необходимо инициировать стартовое количество)
 
@@ -784,7 +789,7 @@ public class MultiRunService {
                 name,
                 (isWarming() ? " (Прогрев)" : ""),
                 sdf1.format(testStartTime),
-                sdf1.format(testStopTime),
+                sdf1.format(testStopTime.get()),
                 sdf1.format(nextTimeAddVU));
 
         vuListAdd(testStartTime, 0); // игнорируем нулевой элемент при формировании графиков
@@ -800,7 +805,7 @@ public class MultiRunService {
             executorService.submit(new RunnableSqlSelectCount(
                     name,
                     "BpmsJobEntityImpl",
-                    sqlSelectBuilder.getBpmsJobEntityImpl(keyBpm),
+                    sqlSelectBuilder.getBpmsJobEntityImpl(processDefinitionKey),
                     5000,
                     this,
                     bpmsJobEntityImplCountList,
@@ -811,7 +816,7 @@ public class MultiRunService {
             executorService.submit(new RunnableSqlSelectCount(
                     name,
                     "RetryPolicyJobEntityImpl",
-                    sqlSelectBuilder.getRetryPolicyJobEntityImpl(keyBpm),
+                    sqlSelectBuilder.getRetryPolicyJobEntityImpl(processDefinitionKey),
                     5000,
                     this,
                     retryPolicyJobEntityImplCountList,
@@ -824,22 +829,22 @@ public class MultiRunService {
         } catch (InterruptedException e) {
             LOG.error("{}\n", name, e);
         }
-        testStopTime = System.currentTimeMillis();
-        vuList.add(new DateTimeValues(testStopTime, getVuCount())); // сбросим VU на конец теста
-        LOG.info("{}: testStopTime: {}", name, sdf1.format(testStopTime));
+        testStopTime.set(System.currentTimeMillis());
+        vuList.add(new DateTimeValues(testStopTime.get(), getVuCount())); // сбросим VU на конец теста
+        LOG.info("{}: testStopTime: {}", name, sdf1.format(testStopTime.get()));
 
         executorServiceAwaitAndAddVU.shutdown();
         executorService.shutdown();
 
         testStartTimeReal = testStartTime;
-        testStopTimeReal = testStopTime;
+        testStopTimeReal = testStopTime.get();
         // округлим до секунд период теста
         try {
             testStartTime = sdf2.parse(sdf2.format(testStartTime)).getTime(); // в меньшую сторону
         } catch (ParseException e) {
             LOG.error("Ошибка в формате даты", e);
         }
-        testStopTime = (long) (Math.ceil(testStopTime / 1000.00) * 1000); // в большую сторну
+        testStopTime.set((long) (Math.ceil(testStopTime.get()) / 1000.00) * 1000); // в большую сторну
 
         if (warming) {
             vuCountMin = vuCountMinMem;
@@ -849,18 +854,18 @@ public class MultiRunService {
         } else {
             // даем время завершиться начатым заданиям (кто не успел я не виноват)
             dataFromDB.waitCompleteProcess(
-                    keyBpm,
+                    processDefinitionKey,
                     testStartTime,
-                    testStopTime,
+                    testStopTime.get(),
                     bpmsJobEntityImplCountList);
 
             LOG.info("{}: Сбор статистики...", name);
 
             long startTime = testStartTime;
-            long stopTime = testStopTime;
+            long stopTime = testStopTime.get();
 
             // данные из БД БПМ за период
-            getDataFromDB().getDataFromDbSelect(keyBpm, startTime, stopTime);
+            getDataFromDB().getDataFromDbSelect(processDefinitionKey, startTime, stopTime);
             // статистику за весь период сохраним нулевым элементом
             getStatistics(startTime, stopTime);
 
@@ -899,7 +904,7 @@ public class MultiRunService {
 
         // статистика выполнения процессов в БПМ
         DBResponse dbResponse = dataFromDB.getStatisticsFromDb(
-                keyBpm,
+                processDefinitionKey,
                 startTime,
                 stopTime);
 
@@ -910,7 +915,7 @@ public class MultiRunService {
         // ошибки (при сборе статистики за весь период не фиксируем )
         LOG.debug("{}: группировка ошибок {} - {}", name, sdf1.format(startTime), sdf1.format(stopTime));
         int countError = 0;
-        if (startTime != testStartTime || stopTime != testStopTime) {
+        if (startTime != testStartTime || stopTime != testStopTime.get()) {
             for (int i = 0; i < errorList.size(); i++) {
                 if (errorList.get(i).getTime() >= startTime && errorList.get(i).getTime() <= stopTime) {
                     countError++;
@@ -1022,24 +1027,149 @@ public class MultiRunService {
     }
 
     /**
-     * Уменьшение длительности теста на step ms
-     * @param step
+     * Добавляем поток
+     *
+     * @param thread
      */
-    public void durationDec(int step) {
-        if (!isWarming()) {
-            testStopTime = testStopTime - step;
-            LOG.info("### {}: тест до {}", name, sdf1.format(testStopTime));
+    public void vuListActiveAdd(int thread) {
+//        int index = getVuListActiveIndex(thread);
+//        if (index > -1){
+//            vuListActive.get(index).setActive(true);
+//        } else {
+            vuListActive.add(new VU(thread));
+//        }
+    }
+
+
+    /**
+     * Удаляем поток
+     *
+     * @param thread
+     */
+    public void vuListActiveDel(int thread) {
+        int index = getVuListActiveIndex(thread);
+        if (index > -1){
+            vuListActive.remove(index);
         }
     }
 
     /**
-     * Увеличение дли тельности теста на step ms
+     * Очередной вызов из потока
+     *
+     * @param thread
+     */
+    public void vuListActiveCall(long start, int thread) {
+        int index = getVuListActiveIndex(thread);
+        if (index > -1) {
+            vuListActive.get(index).setLastCallTime(start);
+        }
+    }
+
+    /**
+     * Разрешена активность данного VU
+     *
+     * @param thread
+     * @return
+     */
+    public boolean isActiveVU(int thread) {
+        int index = getVuListActiveIndex(thread);
+        if (index > -1){
+            return vuListActive.get(index).isActive();
+        }
+        return true; // если не найден, пусть работает
+    }
+
+    /**
+     * Поиск потока в списке
+     *
+     * @param thread
+     * @return
+     */
+    public int getVuListActiveIndex(int thread){
+        for (int i = 0; i < vuListActive.size() ; i++) {
+            if (vuListActive.get(i).getNum() == thread){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Количество активных потоков
+     * @return
+     */
+    public int getVUActiveCount(){
+        int count = 0;
+        for (int i = 0; i < vuListActive.size(); i++) {
+            if (vuListActive.get(i).isActive()){
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Уменьшение количества VU (-1)
+     * не уменьшаем до 0
+     */
+    public void vuDec(){
+        if (!isWarming()) {
+            allowedAddVU.set(false);
+            if (getVuCount() > 1 && getVUActiveCount() > 1 && isRunning() && System.currentTimeMillis() < testStopTime.get()) {
+                for (int t = 0; t < vuListActive.size(); t++) {
+                    if (vuListActive.get(t).isActive()) {
+                        vuListActive.get(t).setActive(false);
+                        break;
+                    }
+                }
+            }
+            String[] s = {""};
+            vuListActive.forEach(x -> {
+                s[0] = s[0] + x.getNum() + ": " + x.isActive() + "; ";
+            });
+            LOG.info("{}: {}", name, s[0]);
+        }
+    }
+
+    /**
+     * Увеличение количества VU (+1)
+     */
+    public void vuInc() {
+        if (!isWarming()) {
+            allowedAddVU.set(false);
+            if (isRunning() && System.currentTimeMillis() < testStopTime.get()) {
+                int vu = vuCount.incrementAndGet();
+                executorService.submit(new RunnableVU(vu, this)); // запускаем поток
+                vuListAdd(); // фиксация активных VU
+                String[] s = {""};
+                vuListActive.forEach(x -> {
+                    s[0] = s[0] + x.getNum() + ": " + x.isActive() + "; ";
+                });
+                LOG.info("{}: {}", name, s[0]);
+            }
+        }
+    }
+
+    /**
+     * Уменьшение длительности теста на step ms
+     * @param step
+     */
+    public void durationDec(int step) {
+        if (System.currentTimeMillis() < testStopTime.get() && !isWarming() && isRunning() && (testStopTime.get() - step) > System.currentTimeMillis()) {
+            testStopTime.set(testStopTime.get() - step);
+            LOG.info("\n### {}: длительность теста уменьшена до {}", name, sdf1.format(testStopTime.get()));
+        }
+    }
+
+    /**
+     * Увеличение длительности теста на step ms
      * @param step
      */
     public void durationInc(int step) {
-        if (!isWarming()) {
-            testStopTime = testStopTime + step;
-            LOG.info("### {}: тест до {}", name, sdf1.format(testStopTime));
+        if (System.currentTimeMillis() < testStopTime.get() && !isWarming() && isRunning() ) {
+            testStopTime.set(testStopTime.get() + step);
+            LOG.info("\n### {}: длительность теста увеличена до {}", name, sdf1.format(testStopTime.get()));
         }
     }
+
 }

@@ -39,7 +39,7 @@ public class RunnableSaveToInfluxDbError implements Runnable {
                         .tag("type", "error")
                         .tag("thread", String.valueOf(thread))
                         .tag("api", multiRunService.getName())
-                        .tag("key", multiRunService.getKeyBpm())
+                        .tag("key", multiRunService.getProcessDefinitionKey())
                         .addField("i", 1)
                         .build();
                 influxDB.write(point);

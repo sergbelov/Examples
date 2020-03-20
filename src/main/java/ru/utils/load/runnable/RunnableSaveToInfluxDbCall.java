@@ -47,7 +47,7 @@ public class RunnableSaveToInfluxDbCall implements Runnable {
                             .tag("type", "call")
                             .tag("thread", String.valueOf(thread))
                             .tag("api", multiRunService.getName())
-                            .tag("key", multiRunService.getKeyBpm())
+                            .tag("key", multiRunService.getProcessDefinitionKey())
                             .addField("i", 1)
                             .addField("duration", dur)
                             .build();
@@ -57,7 +57,7 @@ public class RunnableSaveToInfluxDbCall implements Runnable {
                             .tag("type", "call")
                             .tag("thread", String.valueOf(thread))
                             .tag("api", multiRunService.getName())
-                            .tag("key", multiRunService.getKeyBpm())
+                            .tag("key", multiRunService.getProcessDefinitionKey())
                             .addField("i", 1)
                             .build();
                 }

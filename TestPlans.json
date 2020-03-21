@@ -13,9 +13,9 @@
         "vuStepTime_sec": 10,
         "vuStepTimeDelay_ms": 1000,
         "vuStepCount": 10,
-        "pacing_ms": 5000,
+        "pacing_ms": 1000,
         "pacingType": 1,
-        "responseTimeMax_ms": 10000
+        "responseTimeMax_ms": 1000
       },
       {
         "apiNum": 1,
@@ -30,7 +30,7 @@
         "vuStepCount": 5,
         "pacing_ms": 2000,
         "pacingType": 1,
-        "responseTimeMax_ms": 10000
+        "responseTimeMax_ms": 1950
       },
       {
         "apiNum": 2,
@@ -45,7 +45,7 @@
         "vuStepCount": 10,
         "pacing_ms": 2000,
         "pacingType": 1,
-        "responseTimeMax_ms": 10000
+        "responseTimeMax_ms": 2000
       }
     ]
   }

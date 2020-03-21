@@ -18,9 +18,9 @@ import java.util.concurrent.TimeUnit;
  * Created by Belov Sergey
  * Количество записей по заданному SQL - запросу
  */
-public class RunnableSqlSelectCount implements Runnable {
+public class RunnableDbSelectCount implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableSqlSelectCount.class);
+    private static final Logger LOG = LogManager.getLogger(RunnableDbSelectCount.class);
 
     private final String name;                      // наименование потока
     private final String type;                      // тип метрики
@@ -31,7 +31,7 @@ public class RunnableSqlSelectCount implements Runnable {
     private final int countForBreak;                // произойдет прерываени нагрузки при достижении данного значения ( > 0)
     private InfluxDB influxDB;
 
-    public RunnableSqlSelectCount(
+    public RunnableDbSelectCount(
             String name,
             String type,
             String sql,

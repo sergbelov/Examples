@@ -56,7 +56,7 @@ public class RunnableDbSelectData implements Runnable {
     public void run() {
         LOG.debug("Старт потока {}", name);
         if (dbService != null) {
-        String sql = sqlSelectBuilder.getProcesses(key, startTime, stopTime);
+            String sql = sqlSelectBuilder.getProcesses(key, startTime, stopTime);
             try {
                 int row = 0;
                 LOG.debug("{}: Запрос данных из БД БПМ...\n{}", name, sql);

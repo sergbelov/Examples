@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Belov Sergey
@@ -35,9 +36,19 @@ public class RunnableAwaitAndAddVU implements Runnable {
         LOG.info("Старт потока {}", name);
         while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             multiRunService.startGroupVU(); // старт новой группы VU (если нужно)
-
+            try {
+                TimeUnit.MILLISECONDS.sleep(10);
+            } catch (InterruptedException e) {
+                LOG.error("", e);
+            }
         }
-        while (multiRunService.getThreadCount() > 0){} // ждем завершения работы заданий
+        while (multiRunService.getThreadCount() > 0){ // ждем завершения работы заданий
+            try {
+                TimeUnit.MILLISECONDS.sleep(10);
+            } catch (InterruptedException e) {
+                LOG.error("", e);
+            }
+        }
         countDownLatch.countDown();
         LOG.info("Остановка потока {}", name);
     }

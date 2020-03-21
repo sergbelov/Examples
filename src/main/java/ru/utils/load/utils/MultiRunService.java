@@ -802,7 +802,7 @@ public class MultiRunService {
         if (!warming && dbService != null) {
 
             // опрашиваем размерность таблицы BpmsJobEntityImpl (тротлинг)
-            executorService.submit(new RunnableSqlSelectCount(
+            executorService.submit(new RunnableDbSelectCount(
                     name,
                     "BpmsJobEntityImpl",
                     sqlSelectBuilder.getBpmsJobEntityImpl(processDefinitionKey),
@@ -813,7 +813,7 @@ public class MultiRunService {
                     influxDB));
 
             // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
-            executorService.submit(new RunnableSqlSelectCount(
+            executorService.submit(new RunnableDbSelectCount(
                     name,
                     "RetryPolicyJobEntityImpl",
                     sqlSelectBuilder.getRetryPolicyJobEntityImpl(processDefinitionKey),

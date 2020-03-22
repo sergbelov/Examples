@@ -29,6 +29,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
     private boolean dbServiceIn = false;
     private DBService dbService = null;
     private DBType dbType = null;
+    private String dbUrl;
     private String dbHost;
     private String dbBase;
     private int dbPort = 1521;
@@ -94,6 +95,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
         private Level loggerLevel = null;
         private DBService dbService = null;
         private DBType dbType = null;
+        private String dbUrl;
         private String dbHost;
         private String dbBase;
         private int dbPort = 1521;
@@ -112,6 +114,11 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
 
         public Builder dbType(DBType val) {
             dbType = val;
+            return this;
+        }
+
+        public Builder dbUrl(String val) {
+            dbUrl = val;
             return this;
         }
 
@@ -149,6 +156,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
         loggerLevel = builder.loggerLevel;
         dbService = builder.dbService;
         dbType = builder.dbType;
+        dbUrl = builder.dbUrl;
         dbHost = builder.dbHost;
         dbBase = builder.dbBase;
         dbPort = builder.dbPort;
@@ -197,6 +205,7 @@ public class UserAuthorizationService implements UserAuthorizationServiceI {
         if (dbService == null) {
             dbService = new DBService.Builder()
                     .dbType(dbType)
+                    .dbUrl(dbUrl)
                     .dbHost(dbHost)
                     .dbBase(dbBase)
                     .dbPort(dbPort)

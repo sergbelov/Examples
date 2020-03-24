@@ -4,16 +4,14 @@ package ru.utils.load.data;
  * Информация по потоку VU
  */
 public class VU {
-    final int num;        // номер потока
-    final long startTime; // время старта
-    boolean active;       // активен или нет
-    long lastCallTime;    // время последнего вызова
+    final int num;   // номер потока
+    boolean active;  // разрешена активность
+    boolean stopped; // отсановлен
 
-
-    public VU(int num){
+    public VU(int num) {
         this.num = num;
         this.active = true;
-        this.startTime = System.currentTimeMillis();
+        this.stopped = false;
     }
 
     public int getNum() {
@@ -24,19 +22,22 @@ public class VU {
         return active;
     }
 
-    public long getStartTime() {
-        return startTime;
+    public void deactivate() {
+        this.active = false;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public boolean isStopped() {
+        return stopped;
     }
 
-    public long getLastCallTime() {
-        return lastCallTime;
+    public void stopped() {
+        this.stopped = true;
     }
 
-    public void setLastCallTime(long lastCallTime) {
-        this.lastCallTime = lastCallTime;
+    public void activate(){
+        this.active = true;
+        this.stopped = false;
     }
+
+
 }

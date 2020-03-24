@@ -29,6 +29,7 @@ public class MultiRunService {
 
     private List<DateTimeValues> vuList = new CopyOnWriteArrayList<>(); // количество виртуальных пользователей на момент времени
     private List<VU> vuListActive = new CopyOnWriteArrayList<>(); // активность потоков
+
     private List<Call> callList = new CopyOnWriteArrayList<>(); // список вызовов сервиса
 
     private List<DateTimeValues> metricsList = new ArrayList<>();
@@ -42,7 +43,6 @@ public class MultiRunService {
     private ExecutorService executorService;
 
     private AtomicInteger threadCount; // // счетчик потоков
-    private AtomicInteger vuCount; // текущее количество VU
 
     private AtomicBoolean running = new AtomicBoolean(true); // тест продолжается
     private AtomicBoolean warming = new AtomicBoolean(true); // прогрев
@@ -317,14 +317,14 @@ public class MultiRunService {
     }
 
     /**
-     * Новый поток
+     * запущен новый поток
      */
     public int startThread() {
         return threadCount.incrementAndGet();
     }
 
     /**
-     * Завершен поток
+     * остановлен поток
      */
     public int stopThread() {
         return threadCount.decrementAndGet();
@@ -336,12 +336,12 @@ public class MultiRunService {
      * @return
      */
     public String getParams() {
-        StringBuilder res = new StringBuilder("\n<h3>Параметры<h3>\n" +
+        StringBuilder res = new StringBuilder("\n<h3>Параметры</h3>\n" +
                 "<table border=\"1\"><tbody>\n");
         res.append("<tr><td>Синхронный вызов сервиса</td><td>")
                 .append(async ? "Нет" : "Да")
                 .append("</td></tr>\n")
-                .append("<td>Длительность теста (мин)</td><td>")
+                .append("<tr><td>Длительность теста (мин)</td><td>")
                 .append(testDuration)
                 .append("</td></tr>\n")
                 .append("<tr><td>Задержка перед выполнением следующей операции (мс)</td><td>")
@@ -512,24 +512,19 @@ public class MultiRunService {
      * @return
      */
     public int getVuCount() {
-        return vuCount.get();
-    }
-
-    /**
-     * Старт нового VU
-     */
-    public int startVU() {
-        if (vuCount.get() < vuCountMax) {
-            return vuCount.incrementAndGet();
-        }
-        return -1;
+        return (int) vuListActive
+                .stream()
+                .filter(x -> (!x.isStopped()))
+                .count();
     }
 
     /**
      * Остановка VU
      */
-    public int stopVU() {
-        return vuCount.decrementAndGet();
+    public void stopVU(int thread) {
+        int index = getVuListActiveIndex(thread);
+        vuListActive.get(index).stopped();
+        vuListAdd();
     }
 
 
@@ -539,7 +534,7 @@ public class MultiRunService {
      * @return
      */
     public boolean isStartedAllVU() {
-        return vuCount.get() < vuCountMax ? false : true;
+        return getVuCount() < vuCountMax ? false : true;
     }
 
 
@@ -549,12 +544,11 @@ public class MultiRunService {
      * @return
      */
     public boolean isTimeAddVU() {
-        boolean r = false;
         if (System.currentTimeMillis() > nextTimeAddVU) {
             nextTimeAddVU = System.currentTimeMillis() + vuStepTime * 1000L; // время следующего увеличения количества VU
-            r = true;
+            return true;
         }
-        return r;
+        return false;
     }
 
     /**
@@ -568,10 +562,9 @@ public class MultiRunService {
                     int vu = getVuCount();
                     int step = (vu == 0 ? vuCountMin : Math.min(vuStepCount, vuCountMax - vu));
                     for (int u = 0; u < step; u++) {
-                        if ((vu = startVU()) > -1) {
-                            executorService.submit(new RunnableVU(vu, this)); // запускаем поток
-                            if (vuStepTimeDelay > 0) { // фиксируем каждого пользователя
-                                vuListAdd(); // фиксация активных VU
+                        if (allowedAddVU.get() && getVuCount() < vuCountMax && System.currentTimeMillis() < testStopTime.get()) {
+                            executorService.submit(new RunnableVU(this)); // запускаем новый поток
+                            if (vuStepTimeDelay > 0) {
                                 try {
                                     TimeUnit.MILLISECONDS.sleep(vuStepTimeDelay); // задержка перед стартом очередного пользователя
                                 } catch (InterruptedException e) {
@@ -582,11 +575,8 @@ public class MultiRunService {
                     }
                     LOG.info("{}: текущее количество VU {} ({})",
                             name,
-                            vu,
+                            getVuCount(),
                             vuCountMax);
-                    if (vuStepTimeDelay == 0) { // фиксируем всю группу
-                        vuListAdd(); // фиксация активных VU
-                    }
                 }
             }
         }
@@ -657,15 +647,6 @@ public class MultiRunService {
      */
     public boolean isRunning() {
         return running.get();
-    }
-
-    /**
-     * Разрешен или нет старт норвых VU
-     *
-     * @param allowed
-     */
-    public void setAllowedAddVU(boolean allowed) {
-        allowedAddVU.set(allowed);
     }
 
     /**
@@ -749,11 +730,11 @@ public class MultiRunService {
         this.running.set(true);
         this.warming.set(warming);
         vuList.clear();
+        vuListActive.clear();
         errorList.clear();
         bpmsJobEntityImplCountList.clear();
         retryPolicyJobEntityImplCountList.clear();
         threadCount = new AtomicInteger(0);
-        vuCount = new AtomicInteger(0);
         CountDownLatch countDownLatch = new CountDownLatch(1);
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
@@ -1026,44 +1007,29 @@ public class MultiRunService {
                 countCall[1]);
     }
 
-    /**
-     * Добавляем поток
-     *
-     * @param thread
-     */
-    public void vuListActiveAdd(int thread) {
-//        int index = getVuListActiveIndex(thread);
-//        if (index > -1){
-//            vuListActive.get(index).setActive(true);
-//        } else {
-            vuListActive.add(new VU(thread));
-//        }
-    }
-
 
     /**
-     * Удаляем поток
+     * Свободный номер потока
      *
-     * @param thread
+     * @return
      */
-    public void vuListActiveDel(int thread) {
-        int index = getVuListActiveIndex(thread);
-        if (index > -1){
-            vuListActive.remove(index);
+    public int vuListActiiveFreeNum(){
+        int num = -1;
+        for (int i = 0; i < vuListActive.size(); i++) { // ищем свободный номер
+            if (vuListActive.get(i).isStopped()){
+                num = vuListActive.get(i).getNum();
+                vuListActive.get(i).activate();
+                break;
+            }
         }
+        if (num == -1){ // нет свободных номеров, добавим новый
+            num = vuListActive.size()+1;
+            vuListActive.add(new VU(num));
+        }
+        vuListAdd();
+        return num;
     }
 
-    /**
-     * Очередной вызов из потока
-     *
-     * @param thread
-     */
-    public void vuListActiveCall(long start, int thread) {
-        int index = getVuListActiveIndex(thread);
-        if (index > -1) {
-            vuListActive.get(index).setLastCallTime(start);
-        }
-    }
 
     /**
      * Разрешена активность данного VU
@@ -1086,7 +1052,7 @@ public class MultiRunService {
      * @return
      */
     public int getVuListActiveIndex(int thread){
-        for (int i = 0; i < vuListActive.size() ; i++) {
+        for (int i = 0; i < vuListActive.size(); i++) {
             if (vuListActive.get(i).getNum() == thread){
                 return i;
             }
@@ -1099,13 +1065,10 @@ public class MultiRunService {
      * @return
      */
     public int getVUActiveCount(){
-        int count = 0;
-        for (int i = 0; i < vuListActive.size(); i++) {
-            if (vuListActive.get(i).isActive()){
-                count++;
-            }
-        }
-        return count;
+        return (int) vuListActive
+                .stream()
+                .filter(x -> x.isActive())
+                .count();
     }
 
     /**
@@ -1115,19 +1078,21 @@ public class MultiRunService {
     public void vuDec(){
         if (!isWarming()) {
             allowedAddVU.set(false);
-            if (getVuCount() > 1 && getVUActiveCount() > 1 && isRunning() && System.currentTimeMillis() < testStopTime.get()) {
-                for (int t = 0; t < vuListActive.size(); t++) {
-                    if (vuListActive.get(t).isActive()) {
-                        vuListActive.get(t).setActive(false);
-                        break;
+            if (isRunning() && System.currentTimeMillis() < testStopTime.get()) {
+                if (getVuCount() > 1 && getVUActiveCount() > 1) {
+                    for (int t = 0; t < vuListActive.size(); t++) {
+                        if (vuListActive.get(t).isActive()) {
+                            vuListActive.get(t).deactivate();
+                            break;
+                        }
                     }
                 }
+                String[] s = {""};
+                vuListActive.forEach(x -> {
+                    s[0] = s[0] + x.getNum() + ": " + x.isActive() + "; ";
+                });
+                LOG.debug("{}: {}", name, s[0]);
             }
-            String[] s = {""};
-            vuListActive.forEach(x -> {
-                s[0] = s[0] + x.getNum() + ": " + x.isActive() + "; ";
-            });
-            LOG.info("{}: {}", name, s[0]);
         }
     }
 
@@ -1138,14 +1103,12 @@ public class MultiRunService {
         if (!isWarming()) {
             allowedAddVU.set(false);
             if (isRunning() && System.currentTimeMillis() < testStopTime.get()) {
-                int vu = vuCount.incrementAndGet();
-                executorService.submit(new RunnableVU(vu, this)); // запускаем поток
-                vuListAdd(); // фиксация активных VU
+                executorService.submit(new RunnableVU(this)); // запускаем новый поток
                 String[] s = {""};
                 vuListActive.forEach(x -> {
                     s[0] = s[0] + x.getNum() + ": " + x.isActive() + "; ";
                 });
-                LOG.info("{}: {}", name, s[0]);
+                LOG.debug("{}: {}", name, s[0]);
             }
         }
     }
@@ -1155,7 +1118,7 @@ public class MultiRunService {
      * @param step
      */
     public void durationDec(int step) {
-        if (System.currentTimeMillis() < testStopTime.get() && !isWarming() && isRunning() && (testStopTime.get() - step) > System.currentTimeMillis()) {
+        if (!isWarming() && isRunning() && System.currentTimeMillis() < testStopTime.get() && (testStopTime.get() - step) > System.currentTimeMillis()) {
             testStopTime.set(testStopTime.get() - step);
             LOG.info("\n### {}: длительность теста уменьшена до {}", name, sdf1.format(testStopTime.get()));
         }
@@ -1166,7 +1129,7 @@ public class MultiRunService {
      * @param step
      */
     public void durationInc(int step) {
-        if (System.currentTimeMillis() < testStopTime.get() && !isWarming() && isRunning() ) {
+        if (!isWarming() && isRunning() && System.currentTimeMillis() < testStopTime.get()) {
             testStopTime.set(testStopTime.get() + step);
             LOG.info("\n### {}: длительность теста увеличена до {}", name, sdf1.format(testStopTime.get()));
         }

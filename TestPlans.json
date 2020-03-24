@@ -10,7 +10,7 @@
         "testDuration_min": 5,
         "vuCountMin": 5,
         "vuCountMax": 50,
-        "vuStepTime_sec": 10,
+        "vuStepTime_sec": 20,
         "vuStepTimeDelay_ms": 1000,
         "vuStepCount": 10,
         "pacing_ms": 1000,
@@ -30,7 +30,7 @@
         "vuStepCount": 5,
         "pacing_ms": 2000,
         "pacingType": 1,
-        "responseTimeMax_ms": 1950
+        "responseTimeMax_ms": 1000
       },
       {
         "apiNum": 2,
@@ -45,7 +45,7 @@
         "vuStepCount": 10,
         "pacing_ms": 2000,
         "pacingType": 1,
-        "responseTimeMax_ms": 2000
+        "responseTimeMax_ms": 1000
       }
     ]
   }

@@ -103,6 +103,12 @@ public class Graph {
             LOG.error("Не найден MetricViewGroup для {}", title);
         }
 
+        // номер графика в списке
+        int graphNum = multiRunService
+                .getMultiRun()
+                .getGraphProperty()
+                .getMetricViewGroupNum(title);
+
         LOG.info("{}: Формирование графика {}", multiRunService.getName(), graphMetricGroup.getTitle());
 
         long xValueMin = 0L;
@@ -122,7 +128,7 @@ public class Graph {
         int xSize = Math.max(10000, metricsList.size() - 1);
         int ySize = (int) (xSize / 2.8);
         int xStart = xSize / 30;
-        int yStart = xSize / 20;
+        int yStart = xSize / 30;
         int xMax = xSize + xStart;
         int yMax = ySize + yStart;
         int xMarginRight = xSize / 300;
@@ -154,8 +160,26 @@ public class Graph {
             return "";
         }
 
-        StringBuilder sbResult = new StringBuilder("<!--" + graphMetricGroup.getTitle() + "-->\n" +
-                "\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
+        StringBuilder sbResult = new StringBuilder("<!--" + graphMetricGroup.getTitle() + "-->\n");
+
+        // описание графиков
+        sbResult.append("\t\t\t<table style=\"border:none; style=\"font-size: 12px;\">\n" +
+        "\t\t\t\t<tbody>\n" +
+        "\t\t\t\t\t<tr>\n");
+        for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
+            if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
+                sbResult.append("\t\t\t\t\t\t<td style=\"border:none; background: " + graphMetricGroup.getMetricView(i).getColor() + "\"> " +
+                        "<input onclick=\"GraphVisible(this,'Graph" + graphNum + "Line" + i + "')\" " +
+                        "type=\"checkbox\" value=\"1\" checked></td>\n")
+                        .append("\t\t\t\t\t\t<td style=\"border:none;\">" + graphMetricGroup.getMetricView(i).getTitle() + "</td>\n")
+                        .append("\t\t\t\t\t\t<td style=\"border:none;\">&nbsp &nbsp &nbsp</td>\n");
+            }
+        }
+        sbResult.append("\t\t\t\t\t</tr>\n" +
+                "\t\t\t\t</tbody>\n" +
+                "\t\t\t</table>\n");
+
+        sbResult.append("\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
                 "\t\t\t\t<text " +
                 "font-size=\"" + (fontSize * 2) + "\" " +
                 "x=\"" + (xSize / 2 - (graphMetricGroup.getTitle().length() * xText) / 2) + "\" " +
@@ -171,6 +195,7 @@ public class Graph {
                 "height=\"" + ySize + "\"/>\n" +
                 "<!-- Описание -->\n");
 
+/*
         // описание графиков
         double yCur = fontSize / 1.5;
         for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
@@ -181,6 +206,7 @@ public class Graph {
                 yCur = yCur + fontSize;
             }
         }
+*/
 
         // ось Y
         sbResult.append("<!-- Ось Y -->\n");
@@ -211,7 +237,7 @@ public class Graph {
         double yRatioValue = yValueRange / (yScale * 1.00);
         double yStep = ySize / (yScale * 1.00);
         double yValue = yValueMin;
-        yCur = yMax;
+        double yCur = yMax;
 //        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}; yCur:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep, yCur);
         while (yValue <= yValueMax) {
             sbResult.append("\t\t\t\t<polyline " +
@@ -313,7 +339,7 @@ public class Graph {
             String curColor = graphMetricGroup.getMetricView(m).getColor();
             sbGraph[m] = new StringBuilder();
             sbGraph[m].append("<!-- График" + (m + 1) + " -->\n" +
-                    "\t\t\t\t<polyline " +
+                    "\t\t\t\t<polyline class=\"Graph" + graphNum + "Line" + m + "\" " +
                     "fill=\"none\" " +
                     "stroke=\"" + curColor + "\" " +
                     "stroke-width=\"" + (lineSize * 2) + "\" " +
@@ -369,7 +395,7 @@ public class Graph {
                     }
                 }
                 // точка с всплывающим описанием
-                sbSignatureTitle.append("<g> " +
+                sbSignatureTitle.append("<g class=\"Graph" + graphNum + "Line" + m + "\"> " +
                         "<circle stroke=\"" + curColor + "\" cx=\"" + xCur + "\" cy=\"" + y + "\" r=\"" + (lineSize * 5) + "\"/> " +
                         "<title>");
                 if (!graphMetricGroup.getMetricView(m).getTitle().isEmpty()) {

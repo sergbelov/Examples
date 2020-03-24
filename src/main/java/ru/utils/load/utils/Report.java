@@ -111,6 +111,18 @@ public class Report {
         // параметры
         sbHtml.append(multiRunService.getParams());
 
+        sbHtml.append("<script>\n" +
+                "\tfunction GraphVisible(obj, x) {\n" +
+                "\t\tvar lines=document.getElementsByClassName(x)\n" +
+                "//\t\talert(lines.length)\n" +
+                "//\t\talert(lines[0].style.visible)\n" +
+                "//\t\tconsole.log(x, lines, lines[0])\n" +
+                "\t\tfor (var z = 0; z < lines.length; z++){\n" +
+                "\t\t\tif (obj.checked){lines[z].style.display = 'block'} else {lines[z].style.display = 'none'}\n" +
+                "\t\t}\n" +
+                "\t}\n" +
+                "</script>\n");
+
         // процессы выполняемые после снятия нагрузки
         if (multiRunService.getDataFromDB().getWaitCountStart() != null) {
             sbHtml.append("<br><table><tbody>\n" +
@@ -710,7 +722,7 @@ public class Report {
      * @return
      */
     private String getInfoFromCSM(String csmUrl) {
-        StringBuilder res = new StringBuilder("\n<h3>Версия модуля, активность хостов<h3>\n" +
+        StringBuilder res = new StringBuilder("\n<h3>Версия модуля, активность хостов</h3>\n" +
                 "<table><tbody>\n" +
                 "<tr><th>Host</th><th>Module</th><th>Version</th><th>Active</th></tr>\n");
         if (!csmUrl.isEmpty()) {

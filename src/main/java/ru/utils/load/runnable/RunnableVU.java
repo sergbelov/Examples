@@ -13,12 +13,11 @@ public class RunnableVU implements Runnable {
     private final String name;
     private MultiRunService multiRunService;
 
-    public RunnableVU(int thread, MultiRunService multiRunService) {
-        this.thread = thread;
+    public RunnableVU(MultiRunService multiRunService) {
+        this.thread = multiRunService.vuListActiiveFreeNum(); // свободный номер для потока
         this.name = multiRunService.getName() + " VU" + thread;
         LOG.debug("Инициализация потока {}", name);
         this.multiRunService = multiRunService;
-        multiRunService.vuListActiveAdd(thread);
     }
 
     @Override
@@ -51,9 +50,7 @@ public class RunnableVU implements Runnable {
             }
         }
         threadNum = multiRunService.stopThread();
-        multiRunService.stopVU();
-        multiRunService.vuListAdd();
-        multiRunService.vuListActiveDel(thread);
+        multiRunService.stopVU(thread);
         LOG.info("Остановка потока {}, Threads: {}", name, threadNum);
     }
 

@@ -73,6 +73,15 @@ public class GraphProperty {
         return graphMetricGroupList;
     }
 
+    public int getMetricViewGroupNum(String title) {
+        for (int i = 0; i < graphMetricGroupList.size(); i++){
+            if (graphMetricGroupList.get(i).getTitle().equalsIgnoreCase(title)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public GraphMetricGroup getMetricViewGroup(String title) {
         for (int i = 0; i < graphMetricGroupList.size(); i++){
             if (graphMetricGroupList.get(i).getTitle().equalsIgnoreCase(title)){

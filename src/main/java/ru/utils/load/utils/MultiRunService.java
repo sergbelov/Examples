@@ -84,9 +84,12 @@ public class MultiRunService {
     private boolean stopTestOnError = false; // прерывать тест при большом количестве ошибок
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
 
+    private String grafanaApiKey; // ключ доступа для получения графиков из Grafana
     private String grafanaHostsDetailUrl; // Графана - Хосты детализованно (URL)
     private String grafanaHostsDetailCpuUrl; // Графана - Хосты детализованно CPU (URL)
+    private String grafanaHostsDetailCpuPngUrl; // Графана - Хосты детализованно CPU PNG (URL)
     private String grafanaTransportThreadPoolsUrl; //Графана - TransportThreadPools (URL)
+    private String grafanaTransportThreadPoolsPngUrl; //Графана - TransportThreadPools PNG (URL)
     private String grafanaTsUrl; //Графана - ТС (URL)
     private String splunkUrl; // Спланк (URL)
     private String csmUrl; // CSM (URL)
@@ -119,9 +122,12 @@ public class MultiRunService {
             int warmDuration,
             boolean stopTestOnError,
             int countErrorForStopTest,
+            String grafanaApiKey,
             String grafanaHostsDetailUrl,
             String grafanaHostsDetailCpuUrl,
+            String grafanaHostsDetailCpuPngUrl,
             String grafanaTransportThreadPoolsUrl,
+            String grafanaTransportThreadPoolsPngUrl,
             String grafanaTsUrl,
             String splunkUrl,
             String csmUrl,
@@ -148,9 +154,12 @@ public class MultiRunService {
         this.warmDuration = warmDuration;
         this.stopTestOnError = stopTestOnError;
         this.countErrorForStopTest = countErrorForStopTest;
+        this.grafanaApiKey = grafanaApiKey;
         this.grafanaHostsDetailUrl = grafanaHostsDetailUrl;
         this.grafanaHostsDetailCpuUrl = grafanaHostsDetailCpuUrl;
+        this.grafanaHostsDetailCpuPngUrl = grafanaHostsDetailCpuPngUrl;
         this.grafanaTransportThreadPoolsUrl = grafanaTransportThreadPoolsUrl;
+        this.grafanaTransportThreadPoolsPngUrl = grafanaTransportThreadPoolsPngUrl;
         this.grafanaTsUrl = grafanaTsUrl;
         this.splunkUrl = splunkUrl;
         this.csmUrl = csmUrl;
@@ -277,6 +286,8 @@ public class MultiRunService {
         return pacingType;
     }
 
+    public String getGrafanaApiKey() { return grafanaApiKey;}
+
     public String getGrafanaHostsDetailUrl() {
         return grafanaHostsDetailUrl;
     }
@@ -285,8 +296,16 @@ public class MultiRunService {
         return grafanaHostsDetailCpuUrl;
     }
 
+    public String getGrafanaHostsDetailCpuPngUrl() {
+        return grafanaHostsDetailCpuPngUrl;
+    }
+
     public String getGrafanaTransportThreadPoolsUrl() {
         return grafanaTransportThreadPoolsUrl;
+    }
+
+    public String getGrafanaTransportThreadPoolsPngUrl() {
+        return grafanaTransportThreadPoolsPngUrl;
     }
 
     public String getGrafanaTsUrl() {
@@ -337,7 +356,7 @@ public class MultiRunService {
      */
     public String getParams() {
         StringBuilder res = new StringBuilder("\n<h3>Параметры</h3>\n" +
-                "<table border=\"1\"><tbody>\n");
+                "<table><tbody>\n");
         res.append("<tr><td>Синхронный вызов сервиса</td><td>")
                 .append(async ? "Нет" : "Да")
                 .append("</td></tr>\n")
@@ -562,7 +581,7 @@ public class MultiRunService {
                     int vu = getVuCount();
                     int step = (vu == 0 ? vuCountMin : Math.min(vuStepCount, vuCountMax - vu));
                     for (int u = 0; u < step; u++) {
-                        if (allowedAddVU.get() && getVuCount() < vuCountMax && System.currentTimeMillis() < testStopTime.get()) {
+                        if (isRunning() && allowedAddVU.get() && getVuCount() < vuCountMax && System.currentTimeMillis() < testStopTime.get()) {
                             executorService.submit(new RunnableVU(this)); // запускаем новый поток
                             if (vuStepTimeDelay > 0) {
                                 try {
@@ -864,7 +883,7 @@ public class MultiRunService {
             LOG.info("{}: Завершен сбор статистики", name);
 
             // сохраняем результаты в HTML - файл
-            report.saveReportHtml(this, pathReport);
+            report.createReportHtml(this, pathReport);
         }
     }
 

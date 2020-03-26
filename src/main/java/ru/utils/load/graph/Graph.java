@@ -163,7 +163,7 @@ public class Graph {
         StringBuilder sbResult = new StringBuilder("<!--" + graphMetricGroup.getTitle() + "-->\n");
 
         // описание графиков
-        sbResult.append("\t\t\t<table style=\"border:none; style=\"font-size: 12px;\">\n" +
+        sbResult.append("\t\t\t<table style=\"border:none; font-size:13px;\">\n" +
         "\t\t\t\t<tbody>\n" +
         "\t\t\t\t\t<tr>\n");
         for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
@@ -383,7 +383,7 @@ public class Graph {
                             }
                         }
                         if (print) {
-                            sbSignature.append("\t\t\t\t<text " +
+                            sbSignature.append("\t\t\t\t<text class=\"Graph" + graphNum + "Line" + m + "\" " +
                                     "font-size=\"" + fontSize + "\" " +
                                     "fill=\"#000000\" " +
 //                                    "font-weight=\"bold\" " +

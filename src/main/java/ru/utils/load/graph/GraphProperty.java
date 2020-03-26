@@ -27,29 +27,29 @@ public class GraphProperty {
         graphMetricGroupList.add(new GraphMetricGroup("Response time",
                 Arrays.asList(
                         new GraphMetric(Metric.DUR_MIN, "минимальная длительность (мс)", "#00009f"),
-                        new GraphMetric(Metric.DUR_AVG, "средняя длительность (мс)", "#9f9f00"),
-                        new GraphMetric(Metric.DUR_90, "90 перцентиль (мс)", "#009f00"),
+                        new GraphMetric(Metric.DUR_AVG, "средняя длительность (мс)", "#00bf00"),
+                        new GraphMetric(Metric.DUR_90, "90 перцентиль (мс)", "#005f00"),
                         new GraphMetric(Metric.DUR_MAX, "максимальная длительность (мс)", "#ff0000"))));
         // 2 - Длительность выполнения процесса (информация из БД)
         graphMetricGroupList.add(new GraphMetricGroup("Длительность выполнения процесса (информация из БД)",
                 Arrays.asList(
                         new GraphMetric(Metric.DB_DUR_MIN, "минимальная длительность (мс)", "#00009f"),
-                        new GraphMetric(Metric.DB_DUR_AVG, "средняя длительность (мс)", "#9f9f00"),
-                        new GraphMetric(Metric.DB_DUR_90, "90 перцентиль (мс)", "#009f00"),
+                        new GraphMetric(Metric.DB_DUR_AVG, "средняя длительность (мс)", "#00bf00"),
+                        new GraphMetric(Metric.DB_DUR_90, "90 перцентиль (мс)", "#005f00"),
                         new GraphMetric(Metric.DB_DUR_MAX, "максимальная длительность (мс)", "#ff0000"))));
         // 3 - TPS (в списке metricsList)
         graphMetricGroupList.add(new GraphMetricGroup("Количество запросов в секунду (tps)",
                 Arrays.asList(
                         new GraphMetric(Metric.TPS, "tps - отправлено", "#00009f"),
-                        new GraphMetric(Metric.TPS_RS, "tps - response", "#00af00"))));
+                        new GraphMetric(Metric.TPS_RS, "tps - response", "#005f00"))));
         // 4 - Статистика из БД БПМ (в списке metricsList)
         graphMetricGroupList.add(new GraphMetricGroup("Статистика из БД БПМ",
                 Arrays.asList(
                         new GraphMetric(Metric.COUNT_CALL, "отправлено запросов", "#00009f"),
-                        new GraphMetric(Metric.DB_COMPLETED, "COMPLETED", "#009f00"),
+                        new GraphMetric(Metric.DB_COMPLETED, "COMPLETED", "#005f00"),
                         new GraphMetric(Metric.DB_RUNNING, "RUNNING", "#ff9f00"),
-                        new GraphMetric(Metric.DB_FAILED, "FAILED", "#ff9f00"),
-                        new GraphMetric(Metric.DB_LOST, "потеряно", "#ff0000"))));
+                        new GraphMetric(Metric.DB_FAILED, "FAILED", "#ff9f9f"),
+                        new GraphMetric(Metric.DB_LOST, "потеряно", "#df0000"))));
         // 5 - Ошибки (в списке metricsList)
         graphMetricGroupList.add(new GraphMetricGroup("Ошибки",
                 Arrays.asList(new GraphMetric(Metric.ERRORS, "", "#ff0000"))));

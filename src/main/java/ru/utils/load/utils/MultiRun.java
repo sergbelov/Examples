@@ -52,12 +52,15 @@ public class MultiRun {
         put("InfluxDB.Batch.FlushDuration", "200");
         put("InfluxDB.Batch.JitterDuration", "0");
 
-        put("GRAFANA_HOSTS_DETAIL", "");
-        put("GRAFANA_HOSTS_DETAIL_CPU", "");
-        put("GRAFANA_TRANSPORT_THREAD_POOLS", "");
-        put("GRAFANA_TS", "");
-        put("SPLUNK", "");
-        put("CSM", "");
+        put("GRAFANA_API_KEY", "");
+        put("GRAFANA_HOSTS_DETAIL_URL", "");
+        put("GRAFANA_HOSTS_DETAIL_CPU_URL", "");
+        put("GRAFANA_HOSTS_DETAIL_CPU_PNG_URL", "");
+        put("GRAFANA_TRANSPORT_THREAD_POOLS_URL", "");
+        put("GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL", "");
+        put("GRAFANA_TS_URL", "");
+        put("SPLUNK_URL", "");
+        put("CSM_URL", "");
 
         put("FILE_TEST_PLAN", "TestPlans.json");
         put("PATH_REPORT", "Reports/");
@@ -70,10 +73,13 @@ public class MultiRun {
     private final boolean STOP_TEST_ON_ERROR;
     private final int COUNT_ERROR_FOR_STOP_TEST;
     private final int WARM_DURATION;
+    private final String GRAFANA_API_KEY;
     private final String GRAFANA_HOSTS_DETAIL_URL;
     private final String GRAFANA_HOSTS_DETAIL_CPU_URL;
-    private final String GRAFANA_TRANSPORT_THREAD_POOLS;
-    private final String GRAFANA_TS;
+    private final String GRAFANA_HOSTS_DETAIL_CPU_PNG_URL;
+    private final String GRAFANA_TRANSPORT_THREAD_POOLS_URL;
+    private final String GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL;
+    private final String GRAFANA_TS_URL;
     private final String SPLUNK_URL;
     private final String CSM_URL;
     private final String FILE_TEST_PLAN;
@@ -89,12 +95,15 @@ public class MultiRun {
         WARM_DURATION = propertiesService.getInt("WARM_DURATION");
         STOP_TEST_ON_ERROR = propertiesService.getBoolean("STOP_TEST_ON_ERROR");
         COUNT_ERROR_FOR_STOP_TEST = propertiesService.getInt("COUNT_ERROR_FOR_STOP_TEST");
-        GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL");
-        GRAFANA_HOSTS_DETAIL_CPU_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU");
-        GRAFANA_TRANSPORT_THREAD_POOLS = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS");
-        GRAFANA_TS = propertiesService.getString("GRAFANA_TS");
-        SPLUNK_URL = propertiesService.getString("SPLUNK");
-        CSM_URL = propertiesService.getString("CSM");
+        GRAFANA_API_KEY = propertiesService.getString("GRAFANA_API_KEY");
+        GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_URL");
+        GRAFANA_HOSTS_DETAIL_CPU_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU_URL");
+        GRAFANA_HOSTS_DETAIL_CPU_PNG_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU_PNG_URL");
+        GRAFANA_TRANSPORT_THREAD_POOLS_URL = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS_URL");
+        GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL");
+        GRAFANA_TS_URL = propertiesService.getString("GRAFANA_TS_URL");
+        SPLUNK_URL = propertiesService.getString("SPLUNK_URL");
+        CSM_URL = propertiesService.getString("CSM_URL");
         FILE_TEST_PLAN = propertiesService.getString("FILE_TEST_PLAN");
         PATH_REPORT = propertiesService.getString("PATH_REPORT");
 
@@ -163,10 +172,13 @@ public class MultiRun {
                                 WARM_DURATION,
                                 STOP_TEST_ON_ERROR,
                                 COUNT_ERROR_FOR_STOP_TEST,
+                                GRAFANA_API_KEY,
                                 GRAFANA_HOSTS_DETAIL_URL,
                                 GRAFANA_HOSTS_DETAIL_CPU_URL,
-                                GRAFANA_TRANSPORT_THREAD_POOLS,
-                                GRAFANA_TS,
+                                GRAFANA_HOSTS_DETAIL_CPU_PNG_URL,
+                                GRAFANA_TRANSPORT_THREAD_POOLS_URL,
+                                GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL,
+                                GRAFANA_TS_URL,
                                 SPLUNK_URL,
                                 CSM_URL,
                                 dbService,

@@ -39,6 +39,7 @@ public class Report {
     private int countActiveHost = 0;
     private double tpsMax = 0.00;
     private int vuCountMax = 0;
+    private GrafanaService grafanaService = new GrafanaService();
 
     /**
      * Сохраняем отчет в HTML - файл
@@ -435,51 +436,53 @@ public class Report {
         }
 
         // ссылка на Графану (Хосты детализировано)
-        sbHtml.append(getLinkUrl(
+        sbHtml.append(grafanaService.getLinkUrl(
                 "Grafana - ППРБ Хосты детализированно",
                 multiRunService.getGrafanaHostsDetailUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime()));
 
         // ссылка на Графану (Хосты детализировано CPU)
-        sbHtml.append(getLinkUrl(
+        sbHtml.append(grafanaService.getLinkUrl(
                 "Grafana - ППРБ Хосты детализированно CPU",
                 multiRunService.getGrafanaHostsDetailCpuUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime()));
 
         // PNG Хосты детализировано CPU
-        sbHtml.append(getPngFromGrafana(
+        sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
                 multiRunService.getGrafanaApiKey(),
                 multiRunService.getGrafanaHostsDetailCpuPngUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime(),
+                pathReport,
                 "GrafanaHostsDetailCPU"));
 
         // ссылка на Графану (TransportThreadPools)
-        sbHtml.append(getLinkUrl(
+        sbHtml.append(grafanaService.getLinkUrl(
                 "Grafana - ППРБ TransportThreadPools",
                 multiRunService.getGrafanaTransportThreadPoolsUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime()));
 
         // PNG TransportThreadPools
-        sbHtml.append(getPngFromGrafana(
+        sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
                 multiRunService.getGrafanaApiKey(),
                 multiRunService.getGrafanaTransportThreadPoolsPngUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime(),
+                pathReport,
                 "TransportThreadPools"));
 
         // ссылка на Графану (ТС)
-        sbHtml.append(getLinkUrl(
+        sbHtml.append(grafanaService.getLinkUrl(
                 "Grafana - ТС (БПМ модульный)",
                 multiRunService.getGrafanaTsUrl(),
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime()));
 
         // ссылка на Спланк
-        sbHtml.append(getLinkUrl(
+        sbHtml.append(grafanaService.getLinkUrl(
                 "Splunk - Метрики BPM",
                 multiRunService.getSplunkUrl(),
                 String.valueOf(multiRunService.getTestStartTime()).substring(0, 10),
@@ -725,51 +728,6 @@ public class Report {
         return res;
     }
 
-    /**
-     * Формирование URL по шаблону
-     *
-     * @param blank
-     * @param baseUrl
-     * @param startTime
-     * @param stopTime
-     * @return
-     */
-    private String getLinkUrl(
-            String blank,
-            String baseUrl,
-            long startTime,
-            long stopTime) {
-
-        return getLinkUrl(
-                blank,
-                baseUrl,
-                String.valueOf(startTime),
-                String.valueOf(stopTime));
-    }
-    /**
-     * Формирование URL по шаблону
-     *
-     * @param blank     - название ссылки
-     * @param baseUrl   - базовый URL
-     * @param startTime
-     * @param stopTime
-     * @return
-     */
-    private String getLinkUrl(
-            String blank,
-            String baseUrl,
-            String startTime,
-            String stopTime) {
-
-        StringBuilder res = new StringBuilder("\n<div><p><a href=\"");
-        res.append(baseUrl
-                .replace("{from}", startTime)
-                .replace("{to}", stopTime));
-        res.append("\" target=\"_blank\">" + blank + "</a></p></div>\n");
-
-        LOG.debug("Ссылка на {} {}", blank, res.toString());
-        return res.toString();
-    }
 
     /**
      * Информация о версии модуля и активности хостов
@@ -990,110 +948,4 @@ public class Report {
         return true;
     }
 
-
-    /**
-     * График в формате PNG из Grafana
-     * @param apiKey
-     * @param grafanaUrl
-     * @param startTime
-     * @param stopTime
-     * @param fileName
-     * @return
-     */
-    public String getPngFromGrafana(
-            String apiKey,
-            String grafanaUrl,
-            long startTime,
-            long stopTime,
-            String fileName){
-
-        return getPngFromGrafana(
-                apiKey,
-                grafanaUrl,
-                0,
-                0,
-                startTime,
-                stopTime,
-                1000,
-                500,
-                fileName);
-    }
-
-    /**
-     * График в формате PNG из Grafana
-     *
-     * @param apiKey
-     * @param grafanaUrl
-     * @param orgId
-     * @param panelId
-     * @param startTime
-     * @param stopTime
-     * @param width
-     * @param height
-     * @param fileName
-     * @return
-     */
-    public String getPngFromGrafana(
-            String apiKey,
-            String grafanaUrl,
-            int orgId,
-            int panelId,
-            long startTime,
-            long stopTime,
-            int width,
-            int height,
-            String fileName){
-
-        if (grafanaUrl != null && !grafanaUrl.isEmpty()) {
-            fileName = fileName.replace(".png", "").replace(".PNG", "");
-            fileName = fileName + "_" + sdf3.format(startTime) + "-" + sdf3.format(stopTime) + ".png";
-            LOG.info("График из Grafana: {}", fileName);
-            String fileFull = pathReport + fileName;
-
-            try {
-//            startTime = 1585059368000L; // отладка
-//            stopTime = 1585060349000L;
-
-                grafanaUrl = grafanaUrl
-                        .replace("{from}", String.valueOf(startTime))
-                        .replace("{to}", String.valueOf(stopTime))
-                        .replace("{orgId}", String.valueOf(orgId))
-                        .replace("{panelId}", String.valueOf(panelId))
-                        .replace("{width}", String.valueOf(width))
-                        .replace("{height}", String.valueOf(height));
-
-                LOG.debug("{}", grafanaUrl);
-
-                URL url = new URL(grafanaUrl);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setRequestProperty("Authorization", "Bearer " + apiKey);
-                connection.setDoOutput(true);
-
-                try (
-                        InputStream inputStream = connection.getInputStream();
-                        FileOutputStream fileOutPutStream = new FileOutputStream(fileFull);
-                ) {
-                    int bytesRead;
-                    byte[] buffer = new byte[1024];
-                    while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) >= 0) {
-                        fileOutPutStream.write(buffer, 0, bytesRead);
-                    }
-                } catch (IOException e) {
-                    LOG.error("Ошибка при записи файла {}\n", fileFull, e);
-                    fileName = null;
-                }
-
-            } catch (Exception e) {
-                LOG.error("Ошибка при получении данных из Grafana\n", e);
-                fileName = null;
-            }
-
-            if (fileName != null) {
-                return "\n<div class=\"graph\"><p><img style=\"width:95%\" src=\"" + fileName + "\" alt=\"PNG\"/></p></div>\n";
-            }
-        }
-
-        return "";
-    }
 }

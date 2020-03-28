@@ -207,6 +207,10 @@ public class MultiRun {
         if (propertiesService.getBoolean("InfluxDB.SAVE") && !propertiesService.getString("InfluxDB.URL").isEmpty()) {
             try {
                 // подключение к InfluxDB
+                LOG.info("Подключение к базе InfluxDB: {} {}",
+                        propertiesService.getString("InfluxDB.URL"),
+                        propertiesService.getString("InfluxDB.DB_NAME"));
+
                 influxDB = InfluxDBFactory.connect(
                         propertiesService.getString("InfluxDB.URL"),
                         propertiesService.getString("InfluxDB.USER_NAME"),

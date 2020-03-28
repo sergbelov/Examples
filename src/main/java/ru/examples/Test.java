@@ -5,6 +5,7 @@ import ru.utils.Utils;
 import ru.utils.files.FileUtils;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -13,6 +14,11 @@ import java.util.List;
 public class Test {
 
     public static void main(String[] args) {
+
+        String data = "admin";
+        System.out.println(Base64.getEncoder().encodeToString(data.getBytes()));
+        System.exit(0);
+
         FileUtils fu = new FileUtils();
         List<String> list = new ArrayList<>();
         fu.scanFiles("c:/Common/Prog/Java/GitHub/Examples/", list);

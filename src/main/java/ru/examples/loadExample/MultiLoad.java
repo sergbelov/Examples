@@ -103,7 +103,7 @@ public class MultiLoad implements ScriptRun {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        generateError(apiNum);
+        generateError(apiNum);
     }
 
 

@@ -62,7 +62,7 @@ public class RunnableSaveToInfluxDbCall implements Runnable {
                             .addField("i", 1)
                             .build();
                 }
-//                influxDB.write(point);
+//                influxDB.write(point); //ToDo:
 
                 BatchPoints batchPoints = BatchPoints
                         .database(multiRunService.getInfluxDbBaseName())

@@ -1,22 +1,21 @@
 package ru.examples.excelExample;
 
-import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
 public class ExcelExampleXlsx {
 
 
-    public static void main( String[] args )
-    {
+    public static void main(String[] args) {
 
         DateFormat dateTimeFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
 
@@ -92,17 +91,17 @@ public class ExcelExampleXlsx {
         sheet.setColumnWidth(3, 10000);
         sheet.setColumnWidth(4, 10000);
 
-        for (int r = 0; r < 5; r++){
+        for (int r = 0; r < 5; r++) {
             row.getCell(r).setCellStyle(styleHeader);
         }
 //        row.setRowStyle(styleNorm);
 
         // заполняем лист данными
-        for (int i = 0; i < 100; i++){
+        for (int i = 0; i < 100; i++) {
             row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue("f1"+i);
-            row.createCell(1).setCellValue("f2"+i);
-            row.createCell(2, CellType.NUMERIC).setCellValue((double) i/3);
+            row.createCell(0).setCellValue("f1" + i);
+            row.createCell(1).setCellValue("f2" + i);
+            row.createCell(2, CellType.NUMERIC).setCellValue((double) i / 3);
             row.createCell(3, CellType.STRING).setCellValue("40702810011234567890");
             row.createCell(4).setCellValue(dateTimeFormat.format(System.currentTimeMillis()));
 
@@ -111,7 +110,7 @@ public class ExcelExampleXlsx {
             row.getCell(2).setCellStyle(styleNumber);
             row.getCell(4).setCellStyle(styleDateTime);
 
-            if (i%2 == 0){
+            if (i % 2 == 0) {
                 row.getCell(3).setCellStyle(styleString2);
             } else {
                 row.getCell(3).setCellStyle(styleString);
@@ -121,8 +120,8 @@ public class ExcelExampleXlsx {
 
         row = sheet.createRow(rowNum++);
         row.createCell(0, CellType.STRING).setCellValue("12345678901234567890");
-        row.createCell(1, CellType.NUMERIC).setCellValue("=СУММ(C2:C"+(rowNum-1)+")");
-        row.createCell(2, CellType.NUMERIC).setCellFormula("SUM(C2:C"+(rowNum-1)+")");
+        row.createCell(1, CellType.NUMERIC).setCellValue("=СУММ(C2:C" + (rowNum - 1) + ")");
+        row.createCell(2, CellType.NUMERIC).setCellFormula("SUM(C2:C" + (rowNum - 1) + ")");
 
         CellRangeAddress region = new CellRangeAddress(1, 3, 0, 0);
         sheet.addMergedRegion(region);
@@ -142,6 +141,77 @@ public class ExcelExampleXlsx {
             e.printStackTrace();
         }
         System.out.println("Excel файл " + fileExcel + " успешно создан!");
+
+        addPicture(new File("picture/Disney_icons_48182.png"));
     }
 
+    /**
+     * Картинка в Excel
+     * @param file
+     */
+    private static void addPicture(File file) {
+
+        if (!file.exists()) {
+            System.out.println("Файл " + file.getName() + " не найден");
+            return;
+        }
+        BufferedImage img = null;
+        try {
+            img = ImageIO.read(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+/*
+        int newWidth = 1000;
+        int newHeight = 1000;
+        BufferedImage img = resize(img0, newWidth, newHeight);
+*/
+
+        int col = 1, row = 1;
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet testsheet = wb.createSheet("test");
+        System.out.println("The work book is created");
+        try {
+            FileOutputStream fos = new FileOutputStream("sample.xls");
+            System.out.println("File sample.xls is created");
+            HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, (short) col, row, (short) 6, 10);
+
+            ByteArrayOutputStream bas = new ByteArrayOutputStream();
+            ImageIO.getWriterFormatNames();
+            ImageIO.write(img, "png", bas);
+            byte[] data = bas.toByteArray();
+
+            int index = wb.addPicture(bas.toByteArray(), HSSFWorkbook.PICTURE_TYPE_JPEG);
+            HSSFSheet sheet = wb.getSheet("test");
+            HSSFPatriarch patriarch = sheet.createDrawingPatriarch();
+            patriarch.createPicture(anchor, index);
+            anchor.setAnchorType(2);
+            wb.write(fos);
+            System.out.println("Writing data to the xls file");
+            fos.close();
+            System.out.println("File closed");
+        } catch (IOException ioe) {
+            System.out.println("Hi ! You got an exception. " + ioe.getMessage());
+        }
+    }
+
+    /**
+     * Изменение размера картинки
+     * @param img
+     * @param newW
+     * @param newH
+     * @return
+     */
+    public static BufferedImage resize(BufferedImage img, int newW, int newH) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());
+        Graphics2D g = dimg.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);
+        g.dispose();
+        return dimg;
+    }
 }

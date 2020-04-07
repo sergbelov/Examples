@@ -1,5 +1,6 @@
 package ru.examples.excelExample;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -142,14 +143,19 @@ public class ExcelExampleXlsx {
         }
         System.out.println("Excel файл " + fileExcel + " успешно создан!");
 
-        addPicture(new File("picture/Disney_icons_48182.png"));
+        addPicture(new File("picture/Disney_icons_48182.png"), 20, 40);
+//        addPicture1("picture/Disney_icons_48182.png");
     }
 
     /**
      * Картинка в Excel
      * @param file
      */
-    private static void addPicture(File file) {
+    public static void addPicture(
+            File file,
+            int width,
+            int height
+    ) {
 
         if (!file.exists()) {
             System.out.println("Файл " + file.getName() + " не найден");
@@ -162,20 +168,12 @@ public class ExcelExampleXlsx {
             e.printStackTrace();
         }
 
-/*
-        int newWidth = 1000;
-        int newHeight = 1000;
-        BufferedImage img = resize(img0, newWidth, newHeight);
-*/
-
-        int col = 1, row = 1;
+        int col = 0, row = 0;
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet testsheet = wb.createSheet("test");
-        System.out.println("The work book is created");
         try {
             FileOutputStream fos = new FileOutputStream("sample.xls");
-            System.out.println("File sample.xls is created");
-            HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, (short) col, row, (short) 6, 10);
+            HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, (short) col, row, (short) width, height);
 
             ByteArrayOutputStream bas = new ByteArrayOutputStream();
             ImageIO.getWriterFormatNames();
@@ -188,13 +186,51 @@ public class ExcelExampleXlsx {
             patriarch.createPicture(anchor, index);
             anchor.setAnchorType(2);
             wb.write(fos);
-            System.out.println("Writing data to the xls file");
             fos.close();
-            System.out.println("File closed");
         } catch (IOException ioe) {
-            System.out.println("Hi ! You got an exception. " + ioe.getMessage());
+            ioe.printStackTrace();
         }
     }
+
+    public static void addPicture1(
+            String file
+    ){
+        try {
+
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("MYSheet");
+
+
+            InputStream inputStream = new FileInputStream(file);
+
+            byte[] imageBytes = IOUtils.toByteArray(inputStream);
+
+            int pictureureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_PNG);
+
+            inputStream.close();
+
+            CreationHelper helper = workbook.getCreationHelper();
+
+            Drawing drawing = sheet.createDrawingPatriarch();
+
+            ClientAnchor anchor = helper.createClientAnchor();
+
+            anchor.setCol1(1);
+            anchor.setRow1(2);
+
+            drawing.createPicture(anchor, pictureureIdx);
+
+
+            FileOutputStream fileOut = null;
+            fileOut = new FileOutputStream("output.xlsx");
+            workbook.write(fileOut);
+            fileOut.close();
+        }catch (Exception e) {
+            System.out.println(e);
+        }
+
+    }
+
 
     /**
      * Изменение размера картинки

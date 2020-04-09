@@ -1,4 +1,4 @@
-package ru.utils.load.utils;
+package ru.utils;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,6 +22,41 @@ public class GrafanaService {
     public GrafanaService() {
     }
 
+
+    /**
+     * url дашборда
+     *
+     * @param baseUrl
+     * @param startTime
+     * @param stopTime
+     * @return
+     */
+    public String getUrl(
+            String baseUrl,
+            long startTime,
+            long stopTime) {
+        return getUrl(
+                baseUrl,
+                String.valueOf(startTime),
+                String.valueOf(stopTime));
+    }
+
+    /**
+     * url дашборда
+     * 
+     * @param baseUrl
+     * @param startTime
+     * @param stopTime
+     * @return
+     */
+    public String getUrl(
+            String baseUrl,
+            String startTime,
+            String stopTime) {
+        return baseUrl
+                .replace("{from}", startTime)
+                .replace("{to}", stopTime);
+    }
 
     /**
      * Формирование URL по шаблону
@@ -69,6 +104,41 @@ public class GrafanaService {
         return res.toString();
     }
 
+
+    /**
+     * График в формате PNG из Grafana
+     * @param apiKey
+     * @param url
+     * @param startTime
+     * @param stopTime
+     * @param width
+     * @param height
+     * @param filePath
+     * @param fileName
+     * @return
+     */
+    public String getPngFromGrafana(
+            String apiKey,
+            String url,
+            long startTime,
+            long stopTime,
+            int width,
+            int height,
+            String filePath,
+            String fileName) {
+
+        return getPngFromGrafana(
+                apiKey,
+                url,
+                0,
+                0,
+                startTime,
+                stopTime,
+                width,
+                height,
+                filePath,
+                fileName);
+    }
 
     /**
      * График в формате PNG из Grafana

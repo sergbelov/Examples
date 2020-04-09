@@ -1,13 +1,12 @@
 package ru.examples.excelExample;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.text.DateFormat;
@@ -133,6 +132,32 @@ public class ExcelExampleXlsx {
         sheet.setVerticallyCenter(true);
         sheet.autoSizeColumn(0);
 
+        // добавляем гиперссылку
+        XSSFFont font = workbook.createFont();
+//        font.setColor(new XSSFColor(new java.awt.Color(80, 80, 80)));
+//        font.setFontHeight(8);
+        font.setUnderline(Font.U_SINGLE);
+        font.setColor(IndexedColors.BLUE.getIndex());
+        XSSFCellStyle styleHyperLink = workbook.createCellStyle();
+        styleHyperLink.setFont(font);
+
+        XSSFHyperlink hyperLink = new XSSFHyperlink(HyperlinkType.URL) {
+        };
+        hyperLink.setAddress("http://yandex.ru");
+        row = sheet.createRow(rowNum++);
+        row.createCell(0).setCellValue("yandex.ru");
+        row.getCell(0).setHyperlink(hyperLink);
+        row.getCell(0).setCellStyle(styleHyperLink);
+
+
+        // добавляем картинку
+        addPictureInExcel(
+                workbook,
+                sheet,
+                "picture/Disney_icons_48182.png",
+                5, 5,
+                20, 30);
+
         // записываем созданный в памяти Excel документ в файл
         try (FileOutputStream out = new FileOutputStream(new File(fileExcel))) {
             workbook.write(out);
@@ -143,19 +168,15 @@ public class ExcelExampleXlsx {
         }
         System.out.println("Excel файл " + fileExcel + " успешно создан!");
 
-        addPicture(new File("picture/Disney_icons_48182.png"), 20, 40);
-//        addPicture1("picture/Disney_icons_48182.png");
+        addPicture(new File("picture/Disney_icons_48182.png"));
     }
 
     /**
      * Картинка в Excel
+     *
      * @param file
      */
-    public static void addPicture(
-            File file,
-            int width,
-            int height
-    ) {
+    private static void addPicture(File file) {
 
         if (!file.exists()) {
             System.out.println("Файл " + file.getName() + " не найден");
@@ -168,12 +189,18 @@ public class ExcelExampleXlsx {
             e.printStackTrace();
         }
 
-        int col = 0, row = 0;
+/*
+        int newWidth = 1000;
+        int newHeight = 1000;
+        BufferedImage img = resize(img0, newWidth, newHeight);
+*/
+
+        int col = 1, row = 1;
         HSSFWorkbook wb = new HSSFWorkbook();
         HSSFSheet testsheet = wb.createSheet("test");
         try {
             FileOutputStream fos = new FileOutputStream("sample.xls");
-            HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, (short) col, row, (short) width, height);
+            HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, (short) col, row, (short) 23, 35);
 
             ByteArrayOutputStream bas = new ByteArrayOutputStream();
             ImageIO.getWriterFormatNames();
@@ -192,62 +219,44 @@ public class ExcelExampleXlsx {
         }
     }
 
-    public static void addPicture1(
-            String file
-    ){
-        try {
-
-            Workbook workbook = new XSSFWorkbook();
-            Sheet sheet = workbook.createSheet("MYSheet");
-
-
-            InputStream inputStream = new FileInputStream(file);
-
-            byte[] imageBytes = IOUtils.toByteArray(inputStream);
-
-            int pictureureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_PNG);
-
-            inputStream.close();
-
-            CreationHelper helper = workbook.getCreationHelper();
-
-            Drawing drawing = sheet.createDrawingPatriarch();
-
-            ClientAnchor anchor = helper.createClientAnchor();
-
-            anchor.setCol1(1);
-            anchor.setRow1(2);
-
-            drawing.createPicture(anchor, pictureureIdx);
-
-
-            FileOutputStream fileOut = null;
-            fileOut = new FileOutputStream("output.xlsx");
-            workbook.write(fileOut);
-            fileOut.close();
-        }catch (Exception e) {
-            System.out.println(e);
-        }
-
-    }
-
-
     /**
-     * Изменение размера картинки
-     * @param img
-     * @param newW
-     * @param newH
-     * @return
+     * Добавление картинки на лист Excel
+     *
+     * @param workbook
+     * @param sheet
+     * @param picturePath
+     * @param col
+     * @param row
+     * @param col2
+     * @param row2
      */
-    public static BufferedImage resize(BufferedImage img, int newW, int newH) {
-        int w = img.getWidth();
-        int h = img.getHeight();
-        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());
-        Graphics2D g = dimg.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);
-        g.dispose();
-        return dimg;
+    private static void addPictureInExcel(
+            XSSFWorkbook workbook,
+            XSSFSheet sheet,
+            String picturePath,
+            int col,
+            int row,
+            int col2,
+            int row2) {
+
+        try (InputStream pictureByte = new FileInputStream(picturePath)) {
+            byte[] bytes = org.apache.poi.util.IOUtils.toByteArray(pictureByte);
+            int pictureId = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG);
+
+            XSSFClientAnchor anchor = new XSSFClientAnchor();
+            anchor.setCol1(col);
+            anchor.setRow1(row);
+            anchor.setCol2(col2);
+            anchor.setRow2(row2);
+
+            XSSFDrawing drawing = sheet.createDrawingPatriarch();
+            XSSFPicture picture = drawing.createPicture(anchor, pictureId);
+//            picture.resize();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+
 }

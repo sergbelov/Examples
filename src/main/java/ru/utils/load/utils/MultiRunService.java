@@ -34,6 +34,7 @@ public class MultiRunService {
 
     private List<DateTimeValues> metricsList = new ArrayList<>();
     private List<DateTimeValues> bpmsJobEntityImplCountList = new CopyOnWriteArrayList<>();
+    private List<DateTimeValues> bpmsTimerJobEntityImplCountList = new CopyOnWriteArrayList<>();
     private List<DateTimeValues> retryPolicyJobEntityImplCountList = new CopyOnWriteArrayList<>();
 
     private List<ErrorRs> errorList = new CopyOnWriteArrayList<>(); // ошибки при выполнении API
@@ -68,6 +69,8 @@ public class MultiRunService {
     private boolean async; // асинхронный вызов сервиса
 
     private int warmDuration = 60;// длительность прогрева в секундах
+    private boolean jobsSaveToInfluxDB = false; // сохраняем метрики по количеству записей в Jobs в InfluxDB
+    private int jobsWaitingTimeMax = 5; // максимальное время ожидания выполнения Jobs (мин)
     private int testDuration = 1; // длительность теста в минутах
 
     private int vuCountMin = 10;     // начальное количество виртуальных пользователей (VU)
@@ -85,22 +88,22 @@ public class MultiRunService {
     private int countErrorForStopTest = 100; // количество ошибок для прерывания теста
 
     private String grafanaApiKey; // ключ доступа для получения графиков из Grafana
+    private List<GrafanaData> grafanaDataList; // список графиков из Grafana
     private String grafanaHostsDetailUrl; // Графана - Хосты детализованно (URL)
-    private String grafanaHostsDetailCpuUrl; // Графана - Хосты детализованно CPU (URL)
-    private String grafanaHostsDetailCpuPngUrl; // Графана - Хосты детализованно CPU PNG (URL)
-    private String grafanaTransportThreadPoolsUrl; //Графана - TransportThreadPools (URL)
-    private String grafanaTransportThreadPoolsPngUrl; //Графана - TransportThreadPools PNG (URL)
     private String grafanaTsUrl; //Графана - ТС (URL)
     private String splunkUrl; // Спланк (URL)
     private String csmUrl; // CSM (URL)
 
     private String processDefinitionKey;
+    private String processDefinitionName;
 
     private String pathReport;
 
     private String[] sqlSelect = null;
     private DataFromDB dataFromDB = new DataFromDB(); // получение данных из БД БПМ
     private Report report = new Report();
+    private SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
+
 
     /**
      * инициализация параметров
@@ -120,14 +123,13 @@ public class MultiRunService {
             int pacingType,
             long responseTimeMax_ms,
             int warmDuration,
+            boolean jobsSaveToInfluxDB,
+            int jobsWaitingTimeMax,
             boolean stopTestOnError,
             int countErrorForStopTest,
             String grafanaApiKey,
+            List<GrafanaData> grafanaDataList,
             String grafanaHostsDetailUrl,
-            String grafanaHostsDetailCpuUrl,
-            String grafanaHostsDetailCpuPngUrl,
-            String grafanaTransportThreadPoolsUrl,
-            String grafanaTransportThreadPoolsPngUrl,
             String grafanaTsUrl,
             String splunkUrl,
             String csmUrl,
@@ -152,14 +154,13 @@ public class MultiRunService {
         this.pacingType = pacingType;
         this.responseTimeMax_ms = responseTimeMax_ms;
         this.warmDuration = warmDuration;
+        this.jobsSaveToInfluxDB = jobsSaveToInfluxDB;
+        this.jobsWaitingTimeMax = jobsWaitingTimeMax;
         this.stopTestOnError = stopTestOnError;
         this.countErrorForStopTest = countErrorForStopTest;
         this.grafanaApiKey = grafanaApiKey;
+        this.grafanaDataList = grafanaDataList;
         this.grafanaHostsDetailUrl = grafanaHostsDetailUrl;
-        this.grafanaHostsDetailCpuUrl = grafanaHostsDetailCpuUrl;
-        this.grafanaHostsDetailCpuPngUrl = grafanaHostsDetailCpuPngUrl;
-        this.grafanaTransportThreadPoolsUrl = grafanaTransportThreadPoolsUrl;
-        this.grafanaTransportThreadPoolsPngUrl = grafanaTransportThreadPoolsPngUrl;
         this.grafanaTsUrl = grafanaTsUrl;
         this.splunkUrl = splunkUrl;
         this.csmUrl = csmUrl;
@@ -177,6 +178,8 @@ public class MultiRunService {
         this.influxDB = influxDB;
         this.influxDbBaseName = influxDbBaseName;
         this.influxDbMeasurement = influxDbMeasurement;
+
+        this.processDefinitionName = sqlSelectBuilder.getProcessDefinitionName(processDefinitionKey, dbService);
     }
 
     public void end() {
@@ -238,6 +241,10 @@ public class MultiRunService {
         return bpmsJobEntityImplCountList;
     }
 
+    public List<DateTimeValues> getBpmsTimerJobEntityImplCountList() {
+        return bpmsTimerJobEntityImplCountList;
+    }
+
     public List<DateTimeValues> getRetryPolicyJobEntityImplCountList() {
         return retryPolicyJobEntityImplCountList;
     }
@@ -248,6 +255,10 @@ public class MultiRunService {
 
     public String getProcessDefinitionKey() {
         return processDefinitionKey;
+    }
+
+    public String getProcessDefinitionName() {
+        return processDefinitionName;
     }
 
     public List<ErrorRs> getErrorList() {
@@ -286,26 +297,16 @@ public class MultiRunService {
         return pacingType;
     }
 
-    public String getGrafanaApiKey() { return grafanaApiKey;}
+    public String getGrafanaApiKey() {
+        return grafanaApiKey;
+    }
+
+    public List<GrafanaData> getGrafanaDataList() {
+        return grafanaDataList;
+    }
 
     public String getGrafanaHostsDetailUrl() {
         return grafanaHostsDetailUrl;
-    }
-
-    public String getGrafanaHostsDetailCpuUrl() {
-        return grafanaHostsDetailCpuUrl;
-    }
-
-    public String getGrafanaHostsDetailCpuPngUrl() {
-        return grafanaHostsDetailCpuPngUrl;
-    }
-
-    public String getGrafanaTransportThreadPoolsUrl() {
-        return grafanaTransportThreadPoolsUrl;
-    }
-
-    public String getGrafanaTransportThreadPoolsPngUrl() {
-        return grafanaTransportThreadPoolsPngUrl;
     }
 
     public String getGrafanaTsUrl() {
@@ -758,7 +759,6 @@ public class MultiRunService {
 //        ExecutorService executorService = Executors.newFixedThreadPool(maxCountVU + 1); // пул VU
         executorService = Executors.newCachedThreadPool(); // пул VU (расширяемый)
         ExecutorService executorServiceAwaitAndAddVU = Executors.newFixedThreadPool(1); // пул для задачи контроля выполнения
-        SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
 
         if (!warming) { // После прогрева нагрузка сервисов должна начаться одновременно
             if (!multiRun.isWarmingCompleted()) {
@@ -801,27 +801,47 @@ public class MultiRunService {
 
         if (!warming && dbService != null) {
 
+            InfluxDB influxDBJobs = null;
+            if (jobsSaveToInfluxDB) {
+                influxDBJobs = influxDB;
+            }
+
             // опрашиваем размерность таблицы BpmsJobEntityImpl (тротлинг)
             executorService.submit(new RunnableDbSelectCount(
                     name,
                     "BpmsJobEntityImpl",
-                    sqlSelectBuilder.getBpmsJobEntityImpl(processDefinitionKey),
+//                    sqlSelectBuilder.getBpmsJobEntityImpl(processDefinitionKey),
+                    sqlSelectBuilder.getCountJobEntityImpl("BpmsJobEntityImpl", processDefinitionKey),
                     5000,
                     this,
                     bpmsJobEntityImplCountList,
                     1000,
-                    influxDB));
+                    influxDBJobs));
+
+
+            // опрашиваем размерность таблицы BpmsTimerJobEntityImpl (таймеры)
+            executorService.submit(new RunnableDbSelectCount(
+                    name,
+                    "BpmsTimerJobEntityImpl",
+//                    sqlSelectBuilder.getBpmsTimerJobEntityImpl(processDefinitionKey),
+                    sqlSelectBuilder.getCountJobEntityImpl("BpmsTimerJobEntityImpl", processDefinitionKey),
+                    5000,
+                    this,
+                    bpmsTimerJobEntityImplCountList,
+                    10000,
+                    influxDBJobs));
 
             // опрашиваем размерность таблицы RetryPolicyJobEntityImpl (ретраи)
             executorService.submit(new RunnableDbSelectCount(
                     name,
                     "RetryPolicyJobEntityImpl",
-                    sqlSelectBuilder.getRetryPolicyJobEntityImpl(processDefinitionKey),
+//                    sqlSelectBuilder.getRetryPolicyJobEntityImpl(processDefinitionKey),
+                    sqlSelectBuilder.getCountJobEntityImpl("RetryPolicyJobEntityImpl", processDefinitionKey),
                     5000,
                     this,
                     retryPolicyJobEntityImplCountList,
                     100000,
-                    influxDB));
+                    influxDBJobs));
         }
 
         try {
@@ -852,12 +872,25 @@ public class MultiRunService {
             LOG.info("{}: Прогрев завершен...", name);
             this.warming.set(false);
         } else {
+/*
+            LOG.info("Ожидание времени pacing: {} ms", pacing);
+            // ожидание pacing
+            try {
+                TimeUnit.MILLISECONDS.sleep(pacing);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+*/
+
             // даем время завершиться начатым заданиям (кто не успел я не виноват)
             dataFromDB.waitCompleteProcess(
                     processDefinitionKey,
-                    testStartTime,
-                    testStopTime.get(),
-                    bpmsJobEntityImplCountList);
+//                    testStartTime,
+//                    testStopTime.get(),
+                    jobsWaitingTimeMax,
+                    bpmsJobEntityImplCountList,
+                    bpmsTimerJobEntityImplCountList,
+                    retryPolicyJobEntityImplCountList);
 
             LOG.info("{}: Сбор статистики...", name);
 
@@ -1032,17 +1065,17 @@ public class MultiRunService {
      *
      * @return
      */
-    public int vuListActiiveFreeNum(){
+    public int vuListActiiveFreeNum() {
         int num = -1;
         for (int i = 0; i < vuListActive.size(); i++) { // ищем свободный номер
-            if (vuListActive.get(i).isStopped()){
+            if (vuListActive.get(i).isStopped()) {
                 num = vuListActive.get(i).getNum();
                 vuListActive.get(i).activate();
                 break;
             }
         }
-        if (num == -1){ // нет свободных номеров, добавим новый
-            num = vuListActive.size()+1;
+        if (num == -1) { // нет свободных номеров, добавим новый
+            num = vuListActive.size() + 1;
             vuListActive.add(new VU(num));
         }
         vuListAdd();
@@ -1058,7 +1091,7 @@ public class MultiRunService {
      */
     public boolean isActiveVU(int thread) {
         int index = getVuListActiveIndex(thread);
-        if (index > -1){
+        if (index > -1) {
             return vuListActive.get(index).isActive();
         }
         return true; // если не найден, пусть работает
@@ -1070,9 +1103,9 @@ public class MultiRunService {
      * @param thread
      * @return
      */
-    public int getVuListActiveIndex(int thread){
+    public int getVuListActiveIndex(int thread) {
         for (int i = 0; i < vuListActive.size(); i++) {
-            if (vuListActive.get(i).getNum() == thread){
+            if (vuListActive.get(i).getNum() == thread) {
                 return i;
             }
         }
@@ -1081,9 +1114,10 @@ public class MultiRunService {
 
     /**
      * Количество активных потоков
+     *
      * @return
      */
-    public int getVUActiveCount(){
+    public int getVUActiveCount() {
         return (int) vuListActive
                 .stream()
                 .filter(x -> x.isActive())
@@ -1094,7 +1128,7 @@ public class MultiRunService {
      * Уменьшение количества VU (-1)
      * не уменьшаем до 0
      */
-    public void vuDec(){
+    public void vuDec() {
         if (!isWarming()) {
             allowedAddVU.set(false);
             if (isRunning() && System.currentTimeMillis() < testStopTime.get()) {
@@ -1134,6 +1168,7 @@ public class MultiRunService {
 
     /**
      * Уменьшение длительности теста на step ms
+     *
      * @param step
      */
     public void durationDec(int step) {
@@ -1145,6 +1180,7 @@ public class MultiRunService {
 
     /**
      * Увеличение длительности теста на step ms
+     *
      * @param step
      */
     public void durationInc(int step) {

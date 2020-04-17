@@ -2,24 +2,19 @@ package ru.utils.load.utils;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.appender.rewrite.MapRewritePolicy;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import ru.utils.GrafanaService;
 import ru.utils.files.FileUtils;
-import ru.utils.load.data.Call;
-import ru.utils.load.data.DateTimeValues;
-import ru.utils.load.data.StatData;
+import ru.utils.load.data.*;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
-import ru.utils.load.data.Metric;
 import ru.utils.load.graph.Graph;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Path;
 import java.text.*;
 import java.util.List;
 import java.util.Map;
@@ -117,8 +112,14 @@ public class Report {
                         "\t\t</style>\n" +
                         "\t</head>\n" +
                         "\t<body>\n" +
-                        "<h2>" + multiRunService.getName() + " (" + multiRunService.getProcessDefinitionKey() +
-                        ") период " + sdf1.format(multiRunService.getTestStartTimeReal()) +
+                        "<h2>" + multiRunService.getName() + " (" +
+                        multiRunService.getProcessDefinitionKey() +
+
+                        (multiRunService.getProcessDefinitionName() == null ||
+                         multiRunService.getProcessDefinitionKey().equalsIgnoreCase(multiRunService.getProcessDefinitionName()) ?
+                                "" : " : " + multiRunService.getProcessDefinitionName()) +
+
+                        ")<br>период " + sdf1.format(multiRunService.getTestStartTimeReal()) +
                         " - " + sdf1.format(multiRunService.getTestStopTimeReal()) + " (" +
                         timeMillisToString(multiRunService.getTestStartTimeReal(), multiRunService.getTestStopTimeReal()) +
                         ")</h2>\n");
@@ -156,6 +157,16 @@ public class Report {
         }
 
         // старт VU
+        graph.createFileSvgGraphLine("Running Vusers",
+                multiRunService,
+                multiRunService.getVuList(),
+                null,
+                yStartFrom0,
+                true,
+                printMetrics,
+                getFileGraphName(pathReport,"RunningVusers"),
+                true);
+
         sbHtml.append("\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine("Running Vusers",
                         multiRunService,
@@ -166,6 +177,16 @@ public class Report {
                 .append("\t\t</div>\n");
 
         // TPS
+        graph.createFileSvgGraphLine("Количество запросов в секунду (tps)",
+                multiRunService,
+                multiRunService.getMetricsList(),
+                null,
+                yStartFrom0,
+                false,
+                printMetrics,
+                getFileGraphName(pathReport,"TPS"),
+                true);
+
         sbHtml.append("\n\t\t<div class=\"graph\">\n")
                 .append(graph.getSvgGraphLine("Количество запросов в секунду (tps)",
                         multiRunService,
@@ -179,6 +200,18 @@ public class Report {
 
         // Response time
         if (multiRunService.getMetricsList().get(0).getIntValue(Metric.DUR_MAX) > 0) {
+
+            // формирование SVG и конвертация его в PNG
+            graph.createFileSvgGraphLine("Response time",
+                    multiRunService,
+                    multiRunService.getMetricsList(),
+                    new double[]{multiRunService.getResponseTimeMax_ms()},
+                    yStartFrom0,
+                    false,
+                    printMetrics,
+                    getFileGraphName(pathReport,"ResponseTime"),
+                    true);
+
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine("Response time",
                             multiRunService,
@@ -230,6 +263,16 @@ public class Report {
                 Metric.DB_FAILED}) > 0) {
 
             // длительность выполнения процесса (информация из БД)
+            graph.createFileSvgGraphLine("Длительность выполнения процесса (информация из БД)",
+                    multiRunService,
+                    multiRunService.getMetricsList(),
+                    null,
+                    yStartFrom0,
+                    false,
+                    printMetrics,
+                    getFileGraphName(pathReport,"ProcessDurationDB"),
+                    true);
+
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine("Длительность выполнения процесса (информация из БД)",
                             multiRunService,
@@ -285,6 +328,16 @@ public class Report {
                             multiRunService.getTestStopTime()));
 
             // Статистика из БД БПМ
+            graph.createFileSvgGraphLine("Статистика из БД БПМ",
+                    multiRunService,
+                    multiRunService.getMetricsList(),
+                    null,
+                    yStartFrom0,
+                    false,
+                    printMetrics,
+                    getFileGraphName(pathReport,"StatisticsFromDB"),
+                    true);
+
             sbHtml.append("\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine("Статистика из БД БПМ",
                             multiRunService,
@@ -362,6 +415,16 @@ public class Report {
                             multiRunService.getTestStopTime());
 
             if (multiRunService.getDataFromDB().getCountEndInSecList().size() > 0) {
+                graph.createFileSvgGraphLine("Количество шагов завершенных в секунду",
+                        multiRunService,
+                        multiRunService.getDataFromDB().getCountEndInSecList(),
+                        null,
+                        yStartFrom0,
+                        false,
+                        printMetrics,
+                        getFileGraphName(pathReport,"CountStepsEndInSec"),
+                        true);
+
                 sbHtml.append(countStepCompleteInSec.getResultStr());
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("Количество шагов завершенных в секунду",
@@ -373,8 +436,18 @@ public class Report {
                         .append("\t\t</div>\n");
             }
 
-            // Throttling
+            // BpmsJobEntityImpl (trottling)
             if (!isEmptyDateTimeValue(multiRunService.getBpmsJobEntityImplCountList())) {
+                graph.createFileSvgGraphLine("BpmsJobEntityImpl Count",
+                        multiRunService,
+                        multiRunService.getBpmsJobEntityImplCountList(),
+                        null,
+                        yStartFrom0,
+                        false,
+                        printMetrics,
+                        getFileGraphName(pathReport,"CountBpmsJobEntityImpl"),
+                        true);
+
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("BpmsJobEntityImpl Count",
                                 multiRunService,
@@ -385,8 +458,40 @@ public class Report {
                         .append("\t\t</div>\n");
             }
 
-            // Retry
+            // BpmsTimerJobEntityImpl
+            if (!isEmptyDateTimeValue(multiRunService.getBpmsTimerJobEntityImplCountList())) {
+                graph.createFileSvgGraphLine("BpmsTimerJobEntityImpl Count",
+                        multiRunService,
+                        multiRunService.getBpmsTimerJobEntityImplCountList(),
+                        null,
+                        yStartFrom0,
+                        false,
+                        printMetrics,
+                        getFileGraphName(pathReport,"CountBpmsTimerJobEntityImpl"),
+                        true);
+
+                sbHtml.append("\t\t<div class=\"graph\">\n")
+                        .append(graph.getSvgGraphLine("BpmsTimerJobEntityImpl Count",
+                                multiRunService,
+                                multiRunService.getBpmsTimerJobEntityImplCountList(),
+                                yStartFrom0,
+                                false,
+                                printMetrics))
+                        .append("\t\t</div>\n");
+            }
+
+            // RetryPolicyJobEntityImpl
             if (!isEmptyDateTimeValue(multiRunService.getRetryPolicyJobEntityImplCountList())) {
+                graph.createFileSvgGraphLine("RetryPolicyJobEntityImpl Count",
+                        multiRunService,
+                        multiRunService.getRetryPolicyJobEntityImplCountList(),
+                        null,
+                        yStartFrom0,
+                        false,
+                        printMetrics,
+                        getFileGraphName(pathReport,"CountRetryPolicyJobEntityImpl"),
+                        true);
+
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("RetryPolicyJobEntityImpl Count",
                                 multiRunService,
@@ -420,6 +525,16 @@ public class Report {
         // ошибки (при наличии)
         boolean printError = (multiRunService.getErrorList().size() > 0) ? true : false;
         if (printError) {
+            graph.createFileSvgGraphLine("Ошибки",
+                    multiRunService,
+                    multiRunService.getMetricsList(),
+                    null,
+                    yStartFrom0,
+                    false,
+                    printMetrics,
+                    getFileGraphName(pathReport,"Errors"),
+                    true);
+
             sbHtml.append("<!-- Ошибки -->\n\t\t<div class=\"graph\">\n")
                     .append(graph.getSvgGraphLine("Ошибки",
                             multiRunService,
@@ -443,37 +558,26 @@ public class Report {
                 multiRunService.getTestStartTime(),
                 multiRunService.getTestStopTime()));
 
-        // ссылка на Графану (Хосты детализировано CPU)
-        sbHtml.append(grafanaService.getLinkUrl(
-                "Grafana - ППРБ Хосты детализированно CPU",
-                multiRunService.getGrafanaHostsDetailCpuUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
+        for (GrafanaData grafanaData : multiRunService.getGrafanaDataList()){
+            LOG.info("График: {}", grafanaData.getName());
 
-        // PNG Хосты детализировано CPU
-        sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
-                multiRunService.getGrafanaApiKey(),
-                multiRunService.getGrafanaHostsDetailCpuPngUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime(),
-                pathReport,
-                "GrafanaHostsDetailCPU"));
+            // ссылка на Grafana
+            sbHtml.append(grafanaService.getLinkUrl(
+                    grafanaData.getName(),
+                    grafanaData.getUrlGraph(),
+                    multiRunService.getTestStartTime(),
+                    multiRunService.getTestStopTime() + (5 * 60000) // + 5 мин
+            ));
 
-        // ссылка на Графану (TransportThreadPools)
-        sbHtml.append(grafanaService.getLinkUrl(
-                "Grafana - ППРБ TransportThreadPools",
-                multiRunService.getGrafanaTransportThreadPoolsUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
-
-        // PNG TransportThreadPools
-        sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
-                multiRunService.getGrafanaApiKey(),
-                multiRunService.getGrafanaTransportThreadPoolsPngUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime(),
-                pathReport,
-                "TransportThreadPools"));
+            // PNG
+            sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
+                    multiRunService.getGrafanaApiKey(),
+                    grafanaData.getUrlPNG(),
+                    multiRunService.getTestStartTime(),
+                    multiRunService.getTestStopTime() + (5 * 60000), // + 5 мин
+                    pathReport,
+                    grafanaData.getFile()));
+        }
 
         // ссылка на Графану (ТС)
         sbHtml.append(grafanaService.getLinkUrl(
@@ -949,4 +1053,7 @@ public class Report {
         return true;
     }
 
+    private String getFileGraphName(String path, String name){
+        return path + name + "_" + sdf3.format(multiRunService.getTestStartTime()) + "-" + sdf3.format(multiRunService.getTestStopTime());
+    }
 }

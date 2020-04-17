@@ -147,51 +147,67 @@ public class DataFromDB {
     /**
      * Ожидания завершения начатых процессов (перед формированием отчета)
      * Если значение очереди остается без изменений последние 3 замера - ожидание прекращаем
-     * Не более maxDelay минут
+     * Общее ожидание не более jobsWaitingTimeMax минут
      *
      * @param key
-     * @param startTime
-     * @param stopTime
+     * @param jobsWaitingTimeMax
+     * @param bpmsJobEntityImplCountList
+     * @param bpmsTimerJobEntityImplCountList
+     * @param retryPolicyJobEntityImplCountList
      */
     public void waitCompleteProcess(
             String key,
-            long startTime,
-            long stopTime,
-            List<DateTimeValues> bpmsJobEntityImplCountList
+            int jobsWaitingTimeMax,
+            List<DateTimeValues> bpmsJobEntityImplCountList,
+            List<DateTimeValues> bpmsTimerJobEntityImplCountList,
+            List<DateTimeValues> retryPolicyJobEntityImplCountList
     ) {
         String title = "Ожидание выполнения начатых задач";
-        int maxDelay = 10; // ждем не более минут
         if (dbService != null) {
-            LOG.info("{}: {} (не более {} мин)...", key, title, maxDelay);
-//            String sql = sqlSelectBuilder.getRunningProcess(key, startTime, stopTime);
-            String sql = sqlSelectBuilder.getBpmsJobEntityImpl(key);
+            LOG.info("{}: {} (не более {} мин)...", key, title, jobsWaitingTimeMax);
+            String sql = sqlSelectBuilder.getCountJobEntityImplAll(key);
             try {
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
                 int replay = 0;
                 int prevCnt = 0;
                 waitStartTime = System.currentTimeMillis();
-                long stop = waitStartTime + (maxDelay * 60 * 1000);
+                long stop = waitStartTime + (jobsWaitingTimeMax * 60 * 1000);
                 while (System.currentTimeMillis() < stop && replay < 3) {
                     ResultSet resultSet = dbService.executeQuery(statement, sql);
                     if (resultSet.next()) { // есть задачи в статусе Running
-                        int cnt = resultSet.getInt("cnt");
+                        int jobCount = resultSet.getInt("JobCount");
+                        int timerJobCount = resultSet.getInt("TimerJobCount");
+                        int retryPolicyJobCount = resultSet.getInt("RetryPolicyJobCount");
+                        int cnt = jobCount + timerJobCount + retryPolicyJobCount;
+
                         bpmsJobEntityImplCountList.add(new DateTimeValues(
                                 System.currentTimeMillis(),
-                                cnt));
+                                jobCount));
+
+                        bpmsTimerJobEntityImplCountList.add(new DateTimeValues(
+                                System.currentTimeMillis(),
+                                timerJobCount));
+
+                        retryPolicyJobEntityImplCountList.add(new DateTimeValues(
+                                System.currentTimeMillis(),
+                                retryPolicyJobCount));
+
                         if (cnt > 0) {
                             if (waitCountStart == null) { // начальный размер очереди
                                 waitCountStart = cnt;
                             }
-                            if (prevCnt <= cnt) {
+                            if (prevCnt == cnt) {
                                 replay++;
                             } else {
                                 replay = 0; // значение изменилось сбрасываем счетчик
                             }
                             prevCnt = cnt;
-                            LOG.info("{}: {}... {} {}",
+                            LOG.info("{}: JobCount: {}, TimerJobCount: {},  RetryPolicyJobCount: {}, Итого: {} {}",
                                     key,
-                                    title,
+                                    jobCount,
+                                    timerJobCount,
+                                    retryPolicyJobCount,
                                     cnt,
                                     (replay > 0 ? "(" + replay + ")" : ""));
                         } else {

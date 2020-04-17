@@ -274,7 +274,7 @@ public class GrafanaService {
 //        startTime = 1585059368000L;
 //        stopTime = 1585060349000L;
 
-        stopTime = stopTime + 5 * 60000; // + 5 мин
+//        stopTime = stopTime + 5 * 60000; // + 5 мин
 
         if (url != null && !url.isEmpty()) {
             fileName = fileName.replace(".png", "").replace(".PNG", "");

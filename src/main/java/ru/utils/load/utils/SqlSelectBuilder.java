@@ -2,7 +2,12 @@ package ru.utils.load.utils;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.utils.db.DBService;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
@@ -14,46 +19,73 @@ public class SqlSelectBuilder {
     public SqlSelectBuilder() {
     }
 
-    /**
-     * Количество записей в BpmsJobEntityImpl (очередь, активные процессы)
-     *
-     * @return
-     */
-    public String getBpmsJobEntityImpl() {
-        return getBpmsJobEntityImpl("");
-    }
 
     /**
-     * Количество записей в BpmsJobEntityImpl (очередь, активные процессы)
+     * Общее количество записей в Jobs
+     * @return
+     */
+    public String getCountJobEntityImplAll() {
+        return getCountJobEntityImplAll("");
+    }
+    /**
+     * Общее количество записей в Jobs
      *
      * @param key
      * @return
      */
-    public String getBpmsJobEntityImpl(String key
-    ) {
-        String sql = "select count(1) as cnt " +
-                "from  j " +
-                (key != null && !key.isEmpty() ?
-                        "join  pdi on pdi.id = j.processdefinitionid " +
-                                "and pdi.key = '" + key + "'" :
-                        "");
-        LOG.debug("Количество записей в BpmsJobEntityImpl (очередь, активные процессы)...\n{}", sql);
+    public String getCountJobEntityImplAll(String key) {
+/*
+        String sql = "select \n " +
+                "count(j1.processdefinitionid) + count(j2.processdefinitionid) + count(j3.processdefinitionid) as cnt,\n " +
+                "count(j1.processdefinitionid) as JobCount,\n " +
+                "count(j2.processdefinitionid) as TimerJobCount,\n " +
+                "count(j3.processdefinitionid) as RetryPolicyJobCount\n " +
+                "from \n " +
+                "left join \n " +
+                "left join \n " +
+                "left join \n " +
+                (key != null && !key.isEmpty() ? "where pdi.key = '" + key + "'\n"  : "" );
+*/
+
+        String sql = "select \n" +
+                "(select count(1) from ) as JobCount,\n" +
+                "(select count(1) from ) as TimerJobCount,\n" +
+                "(select count(1) from ) as RetryPolicyJobCount \n" +
+                "from dual";
+        LOG.debug("Общее количество записей в Jobs...\n{}", sql);
         return sql;
     }
 
     /**
-     * Количество записей в RetryPolicyJobEntityImpl (ретраи)
+     * Количество записей в таблице
+     *      BpmsJobEntityImpl
+     *      BpmsTimerJobEntityImpl
+     *      RetryPolicyJobEntityImpl
      *
+     * @param table
+     * @return
+     */
+    public String getCountJobEntityImpl(String table) {
+        return getCountJobEntityImpl(table, "");
+    }
+    /**
+     * Количество записей в таблице
+     *      BpmsJobEntityImpl
+     *      BpmsTimerJobEntityImpl
+     *      RetryPolicyJobEntityImpl
+     *
+     * @param table
      * @param key
      * @return
      */
-    public String getRetryPolicyJobEntityImpl(String key
-    ) {
+    public String getCountJobEntityImpl(String table, String key) {
         String sql = "select count(1) as cnt " +
-                "from  r " +
-                "join  pdi on pdi.id = r.processdefinitionid " +
-                "and pdi.key = '" + key + "'";
-        LOG.debug("Количество записей в RetryPolicyJobEntityImpl (ретраи)...\n{}", sql);
+                "from BPMS." + table + " j " +
+                (key != null && !key.isEmpty() ?
+                        "join pdi on pdi.id = j.processdefinitionid " +
+                        "and pdi.key = '" + key + "'" :
+                        "");
+        LOG.debug("Количество записей в {}...\n{}", table, sql);
         return sql;
     }
 
@@ -63,12 +95,11 @@ public class SqlSelectBuilder {
      * @return
      */
     public String getClearRunningProcess() {
-        String sql = "-- очистка очереди (выполнять пока очередь не очиститься полностью)" +
-                "delete from ; \n" +
+        String sql = "-- Очистка очереди (выполнять пока очереди не станут пустыми)\n" +
                 "delete from ;\n" +
-                "--Не нужно чистить delete from ;\n" +
                 "delete from ;\n" +
-                "select count(1) from ;\n" +
+                "delete from ;\n" +
+                "-- Не нужно чистить delete from ;\n" +
                 "--update  set processstate = 'FAILED' where processstate = 'RUNNING'; \n" +
                 "--commit;";
         LOG.debug("Запросы для очистки очереди...\n{}", sql);
@@ -416,4 +447,34 @@ public class SqlSelectBuilder {
         return sql;
     }
 
+    /**
+     * Имя процесса по id
+     * @param key
+     * @param dbService
+     * @return
+     */
+    public String getProcessDefinitionName(String key, DBService dbService){
+        String res = null;
+        if (dbService != null) {
+            String sql = "select name " +
+                    "from  " +
+                    "where key = '" + key + "' " +
+                    "and rownum = 1 " +
+                    "order by version desc";
+            try {
+                Connection connection = dbService.getConnection();
+                Statement statement = dbService.createStatement(connection);
+                ResultSet resultSet = dbService.executeQuery(statement, sql);
+                if (resultSet.next()) {
+                    res = resultSet.getString("name");
+                }
+                resultSet.close();
+                statement.close();
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return res;
+    }
 }

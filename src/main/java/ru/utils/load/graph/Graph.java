@@ -1,5 +1,6 @@
 package ru.utils.load.graph;
 
+import ru.utils.files.FileUtils;
 import ru.utils.load.data.DateTimeValues;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,13 +22,15 @@ public class Graph {
     private final DateFormat sdf5 = new SimpleDateFormat("HH:mm:ss");
     private final DateFormat sdf6 = new SimpleDateFormat("yyyyMMdd");
 
+    private FileUtils fileUtils = new FileUtils();
+    private SvgToPng svgToPng = new SvgToPng();
+
     public Graph() {
     }
 
 
     /**
-     * Линейный график (несколько показателей)
-     * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
+     * Линейный график
      *
      * @param title
      * @param multiRunService
@@ -45,36 +48,49 @@ public class Graph {
                 null,
                 true,
                 false,
+                false,
                 false);
     }
 
+    /**
+     * Линейный график
+     *
+     * @param title
+     * @param multiRunService
+     * @param metricsList
+     * @param yStartFrom0
+     * @param showSteps
+     * @param showMetrics
+     * @return
+     */
     public String getSvgGraphLine(
             String title,
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
             boolean yStartFrom0,
-            boolean step,
-            boolean printMetrics) {
+            boolean showSteps,
+            boolean showMetrics) {
         return getSvgGraphLine(
                 title,
                 multiRunService,
                 metricsList,
                 null,
                 yStartFrom0,
-                step,
-                printMetrics);
+                showSteps,
+                showMetrics,
+                false);
     }
 
     /**
-     * Линейный график (несколько показателей)
-     * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
-     * @param title             наименование графика
-     * @param multiRunService   класс с информацией
-     * @param metricsList       список метрик
-     * @param norms             минимальное и максимальное значение (горизонтальные линии)
-     * @param yStartFrom0       минимальное значение по оси Y равно 0
-     * @param step
-     * @param printMetrics
+     * Линейный график
+     *
+     * @param title
+     * @param multiRunService
+     * @param metricsList
+     * @param norms
+     * @param yStartFrom0
+     * @param showSteps
+     * @param showMetrics
      * @return
      */
     public String getSvgGraphLine(
@@ -83,8 +99,42 @@ public class Graph {
             List<DateTimeValues> metricsList,
             double[] norms,
             boolean yStartFrom0,
-            boolean step,
-            boolean printMetrics) {
+            boolean showSteps,
+            boolean showMetrics) {
+        return getSvgGraphLine(
+                title,
+                multiRunService,
+                metricsList,
+                norms,
+                yStartFrom0,
+                showSteps,
+                showMetrics,
+                false);
+    }
+
+    /**
+     * Линейный график (несколько показателей)
+     * !!! нулевой элемент в metricsList игнорируем (он содержит информацию за весь период)
+     *
+     * @param title           наименование графика
+     * @param multiRunService класс с информацией
+     * @param metricsList     список метрик
+     * @param norms           минимальное и максимальное значение (горизонтальные линии)
+     * @param yStartFrom0     минимальное значение по оси Y равно 0
+     * @param showSteps       отображать переходы ступеньками (для Running Vusers)
+     * @param showMetrics     отображать метрики
+     * @param toFile          формат SVG для записи в файл
+     * @return
+     */
+    public String getSvgGraphLine(
+            String title,
+            MultiRunService multiRunService,
+            List<DateTimeValues> metricsList,
+            double[] norms,
+            boolean yStartFrom0,
+            boolean showSteps,
+            boolean showMetrics,
+            boolean toFile) {
 
 /*
         if (title.equals("Ошибки")){
@@ -156,31 +206,39 @@ public class Graph {
 //            xValueMax = Math.max(xValueMax, metricsList.get(i).getTime());
         }
 //        LOG.info("{}: {}, {}, {}", multiRunService.getName(), title, yValueMin, yValueMax);
-        if (yValueMax == 0 || xValueMax == 0){
+        if (yValueMax == 0 || xValueMax == 0) {
             return "";
         }
 
-        StringBuilder sbResult = new StringBuilder("<!--" + graphMetricGroup.getTitle() + "-->\n");
+        StringBuilder sbResult = new StringBuilder();
 
-        // описание графиков
-        sbResult.append("\t\t\t<table style=\"border:none; font-size:13px;\">\n" +
-        "\t\t\t\t<tbody>\n" +
-        "\t\t\t\t\t<tr>\n");
-        for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
-            if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
-                sbResult.append("\t\t\t\t\t\t<td style=\"border:none; background: " + graphMetricGroup.getMetricView(i).getColor() + "\"> " +
-                        "<input onclick=\"GraphVisible(this,'Graph" + graphNum + "Line" + i + "')\" " +
-                        "type=\"checkbox\" value=\"1\" checked></td>\n")
-                        .append("\t\t\t\t\t\t<td style=\"border:none;\">" + graphMetricGroup.getMetricView(i).getTitle() + "</td>\n")
-                        .append("\t\t\t\t\t\t<td style=\"border:none;\">&nbsp &nbsp &nbsp</td>\n");
+        if (toFile) { // формат для сохранения в файл SVG
+            sbResult.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+                    .append("<svg width=\"" + (xMax + xMarginRight + fontSize) + "\" height=\"" + (yMax + yMarginBottom) + "\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n")
+                    .append("\t\t\t\t<rect stroke=\"#0f0f0f\" fill=\"#fcfcfc\" x=\"0\" y=\"0\" width=\"" + (xMax + xMarginRight) + "\" height=\"" + (yMax + yMarginBottom) + "\"/>\n");
+        } else {
+            // описание графиков (легенда с возможностью выбора)
+            sbResult.append("<!--" + graphMetricGroup.getTitle() + "-->\n" +
+                    "\t\t\t<table style=\"border:none; font-size:13px;\">\n" +
+                    "\t\t\t\t<tbody>\n" +
+                    "\t\t\t\t\t<tr>\n");
+            for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
+                if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
+                    sbResult.append("\t\t\t\t\t\t<td style=\"border:none; background: " + graphMetricGroup.getMetricView(i).getColor() + "\"> " +
+                            "<input onclick=\"GraphVisible(this,'Graph" + graphNum + "Line" + i + "')\" " +
+                            "type=\"checkbox\" value=\"1\" checked></td>\n")
+                            .append("\t\t\t\t\t\t<td style=\"border:none;\">" + graphMetricGroup.getMetricView(i).getTitle() + "</td>\n")
+                            .append("\t\t\t\t\t\t<td style=\"border:none;\">&nbsp &nbsp &nbsp</td>\n");
+                }
             }
+            sbResult.append("\t\t\t\t\t</tr>\n" +
+                    "\t\t\t\t</tbody>\n" +
+                    "\t\t\t</table>\n")
+                    .append("\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n");
         }
-        sbResult.append("\t\t\t\t\t</tr>\n" +
-                "\t\t\t\t</tbody>\n" +
-                "\t\t\t</table>\n");
 
-        sbResult.append("\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
-                "\t\t\t\t<text " +
+//        sbResult.append("\t\t\t<svg viewBox=\"0 0 " + (xMax + xMarginRight) + " " + (yMax + yMarginBottom) + "\" class=\"chart\">\n" +
+        sbResult.append("\t\t\t\t<text " +
                 "font-size=\"" + (fontSize * 2) + "\" " +
                 "x=\"" + (xSize / 2 - (graphMetricGroup.getTitle().length() * xText) / 2) + "\" " +
                 "y=\"" + (yStart - fontSize * 2) + "\">" +
@@ -195,22 +253,24 @@ public class Graph {
                 "height=\"" + ySize + "\"/>\n" +
                 "<!-- Описание -->\n");
 
-/*
         // описание графиков
         double yCur = fontSize / 1.5;
-        for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
-            if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
-                sbResult.append(
-                        "\t\t\t\t<polyline fill=\"none\" stroke=\"" + graphMetricGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize * 4) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
-                        "\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + graphMetricGroup.getMetricView(i).getTitle() + "</text>\n");
-                yCur = yCur + fontSize;
+        if (toFile) {
+            for (int i = 0; i < graphMetricGroup.getMetricsCount(); i++) {
+                if (!graphMetricGroup.getMetricView(i).getTitle().isEmpty()) {
+                    sbResult.append(
+                            "\t\t\t\t<polyline fill=\"none\" stroke=\"" + graphMetricGroup.getMetricView(i).getColor() + "\" stroke-width=\"" + (lineSize * 4) + "\" points=\"" + xStart + "," + yCur + " " + xStart * 3 + "," + yCur + "\"/>\n" +
+                                    "\t\t\t\t<text font-size=\"" + fontSize + "\" font-weight=\"bold\" x=\"" + ((xStart * 3) + 10) + "\" y=\"" + yCur + "\">" + graphMetricGroup.getMetricView(i).getTitle() + "</text>\n");
+                    yCur = yCur + fontSize;
+                }
             }
         }
-*/
 
         // ось Y
         sbResult.append("<!-- Ось Y -->\n");
-        if (yStartFrom0) { yValueMin = 0L; } // начальное значение по оси Y = 0 или минимальному значению из списка
+        if (yStartFrom0) {
+            yValueMin = 0L;
+        } // начальное значение по оси Y = 0 или минимальному значению из списка
         yValueMin = (int) yValueMin;
         if (yValueMax > 1) {
             yValueMax = (int) (Math.ceil(yValueMax / 1.00) * 1);
@@ -224,7 +284,7 @@ public class Graph {
                 while (yScale > 1 && yValueRange % yScale != 0) {
                     yScale--;
                 }
-                if (yScale == yValueRange || yScale > 10){
+                if (yScale == yValueRange || yScale > 10) {
                     break;
                 } else {
                     yValueMax++;
@@ -237,7 +297,7 @@ public class Graph {
         double yRatioValue = yValueRange / (yScale * 1.00);
         double yStep = ySize / (yScale * 1.00);
         double yValue = yValueMin;
-        double yCur = yMax;
+        yCur = yMax;
 //        LOG.info("ySize:{}; yStart: {}; yScale:{}; yRatio:{}; yRatioValue:{}; yStep:{}; yCur:{}", ySize, yStart, yScale, yRatio, yRatioValue, yStep, yCur);
         while (yValue <= yValueMax) {
             sbResult.append("\t\t\t\t<polyline " +
@@ -256,9 +316,9 @@ public class Graph {
         }
 
         // Граница допустимых значений
-        if (norms != null && norms.length > 0){
+        if (norms != null && norms.length > 0) {
             sbResult.append("<!-- Граница допустимых значений -->\n");
-            for (double d: norms) {
+            for (double d : norms) {
                 double y = yMax - Math.round((d - yValueMin) * yRatio);
                 sbResult.append("\t\t\t\t<polyline " +
                         "fill=\"none\" " +
@@ -279,7 +339,7 @@ public class Graph {
             while (xScale > 1 && (xValueRange / xScale) % 1000 != 0) {
                 xScale--;
             }
-            if (xScale == xValueRange/1000 || xScale > 20){
+            if (xScale == xValueRange / 1000 || xScale > 20) {
                 break;
             } else {
                 xValueMax = xValueMax + 1000;
@@ -350,13 +410,13 @@ public class Graph {
         for (int i = 1; i < metricsList.size(); i++) {
             xCur = (metricsList.get(i).getTime() - xValueMin) * xRatio + xStart;
             // ступеньки
-            if (step && i > 0) {
+            if (showSteps && i > 0) {
                 for (int m = 0; m < graphMetricGroup.getMetricsCount(); m++) { // перебираем метрики для отображения
                     sbGraph[m].append(xCur + "," + (yMax - Math.round((metricsList.get(i - 1).getDoubleValue(
                             graphMetricGroup
-                                .getGraphMetricList()
-                                .get(m)
-                                .getMetric()) - yValueMin) * yRatio)) + " \n");
+                                    .getGraphMetricList()
+                                    .get(m)
+                                    .getMetric()) - yValueMin) * yRatio)) + " \n");
                 }
             }
 
@@ -373,7 +433,7 @@ public class Graph {
                 // значение отличается от предыдущего
                 if (i == 1 || metricsList.get(i - 1).getDoubleValue(metric) != metricsList.get(i).getDoubleValue(metric)) {
                     // значение метрики
-                    if (printMetrics) {
+                    if (showMetrics) {
                         // надписи не пересекаются
                         boolean print = true;
                         for (int p = 0; p < yPrevList.size(); p++) {
@@ -418,4 +478,86 @@ public class Graph {
         return sbResult.toString();
     }
 
+
+    /**
+     * Формирование SVG - файла
+     *
+     * @param title
+     * @param multiRunService
+     * @param metricsList
+     * @param norms
+     * @param yStartFrom0
+     * @param showSteps
+     * @param showMetrics
+     * @param fileName
+     * @return
+     */
+    public String createFileSvgGraphLine(
+            String title,
+            MultiRunService multiRunService,
+            List<DateTimeValues> metricsList,
+            double[] norms,
+            boolean yStartFrom0,
+            boolean showSteps,
+            boolean showMetrics,
+            String fileName
+    ) {
+        return createFileSvgGraphLine(
+                title,
+                multiRunService,
+                metricsList,
+                norms,
+                yStartFrom0,
+                showSteps,
+                showMetrics,
+                fileName,
+                false
+        );
+    }
+
+    /**
+     * Формирование SVG - файла
+     * Конвертация полученного SVG в PNG
+     *
+     * @param title
+     * @param multiRunService
+     * @param metricsList
+     * @param norms
+     * @param yStartFrom0
+     * @param showSteps
+     * @param showMetrics
+     * @return
+     */
+    public String createFileSvgGraphLine(
+            String title,
+            MultiRunService multiRunService,
+            List<DateTimeValues> metricsList,
+            double[] norms,
+            boolean yStartFrom0,
+            boolean showSteps,
+            boolean showMetrics,
+            String fileName,
+            boolean convertToPNG
+    ) {
+        String svg = getSvgGraphLine(
+                title,
+                multiRunService,
+                metricsList,
+                norms,
+                yStartFrom0,
+                showSteps,
+                showMetrics,
+                true);
+
+        if (!fileName.toLowerCase().endsWith(".svg")) {
+            fileName = fileName + ".svg";
+        }
+        LOG.info("Сохранение графика {} в файл {}", title, fileName);
+        fileUtils.writeFile(fileName, svg, "UTF-8");
+
+        if (convertToPNG) {
+            svgToPng.convert(fileName);
+        }
+        return fileName;
+    }
 }

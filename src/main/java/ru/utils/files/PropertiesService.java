@@ -270,6 +270,28 @@ public class PropertiesService {
     }
 
     /**
+     * Значение паметра в формате String в заданной кодировке
+     *
+     * @param key
+     * @param encoding
+     * @return
+     */
+    public String get(String key, boolean encoding) {
+        if (encoding) {
+            try {
+                return new String(get(key)
+                        .getBytes("ISO8859-1"),
+                        "cp1251");
+            } catch (UnsupportedEncodingException e) {
+                LOG.error("", e);
+                return null;
+            }
+        } else {
+            return get(key);
+        }
+    }
+
+    /**
      * Значение параметра в формате String
      *
      * @param key
@@ -533,7 +555,7 @@ public class PropertiesService {
      */
     public <T> List<T> getJsonList(String key, TypeToken typeToken) {
         Gson gson = new GsonBuilder().create();
-        return gson.fromJson(get(key), typeToken.getType());
+        return gson.fromJson(get(key, true), typeToken.getType());
     }
 
 /*
@@ -543,6 +565,7 @@ public class PropertiesService {
         return gson.fromJson(jsonString, new TypeToken<List<?>>(){}.getType());
     }
 */
+
 
     /**
      * Значение параметра в формате List<T>
@@ -586,7 +609,7 @@ public class PropertiesService {
                 List.class,
                 classs);
         try {
-            list = mapper.readValue(get(key), javaType);
+            list = mapper.readValue(get(key, true), javaType);
         } catch (Exception e) {
             LOG.error("Ошибка при чтении параметра {} из файла {}", key, fileName);
         }
@@ -603,7 +626,7 @@ public class PropertiesService {
     public <T> List<T> getJsonList(String key, TypeReference typeReference) {
         List<T> list = null;
         try {
-            list = mapper.readValue(get(key), typeReference);
+            list = mapper.readValue(get(key, true), typeReference);
         } catch (Exception e) {
             LOG.error("Ошибка при чтении параметра {} из файла {}", key, fileName);
         }
@@ -620,20 +643,53 @@ public class PropertiesService {
     public <T> T[] getJsonArray(String key, TypeReference typeReference) {
         T[] array = null;
         try {
-            array = mapper.readValue(get(key), typeReference);
+            array = mapper.readValue(get(key, true), typeReference);
         } catch (Exception e) {
             LOG.error("Ошибка при чтении параметра {} из файла {}", key, fileName);
         }
         return array;
     }
 
+
+    /**
+     * Значение параметра в формате List<T>
+     * @param key
+     * @param <T>
+     * @return
+     */
+    public <T> List<T> getJsonList(String key) {
+        List<T> list = null;
+        try {
+            list = mapper.readValue(get(key, true), new TypeReference<List<T>>() {});
+        } catch (Exception e) {
+            LOG.error("Ошибка при чтении параметра {} из файла {}", key, fileName);
+        }
+//            testPlansList = mapper.readValue(new File(FILE_TEST_PLAN), new TypeReference<List<TestPlans>>() {});
+//            testPlansArray = mapper.readValue(new File(FILE_TEST_PLAN), TestPlans[].class);
+        return list;
+    }
+
+    public <T> T[] getJsonArray(String key) {
+        T[] array = null;
+        try {
+            array = mapper.readValue(get(key, true), new TypeReference<T[]>() {});
+        } catch (Exception e) {
+            LOG.error("Ошибка при чтении параметра {} из файла {}", key, fileName);
+        }
+//            testPlansList = mapper.readValue(new File(FILE_TEST_PLAN), new TypeReference<List<TestPlans>>() {});
+//            testPlansArray = mapper.readValue(new File(FILE_TEST_PLAN), TestPlans[].class);
+        return array;
+    }
+
+
+
     /**
      * Шифрование строки
-     *
+
      * @param data
      * @return
      */
-    private String getStringEncrypt(String data) {
+    public String getStringEncrypt(String data) {
         return Base64.getEncoder().encodeToString(data.getBytes());
     }
 

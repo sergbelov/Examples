@@ -66,6 +66,10 @@ public class GraphProperty {
         graphMetricGroupList.add(new GraphMetricGroup("RetryPolicyJobEntityImpl Count",
                 Arrays.asList(new GraphMetric(Metric.KEY, "", "#00009f"))));
 
+        // 9 - BpmsTimerJobEntityImpl Count (отдельный список)
+        graphMetricGroupList.add(new GraphMetricGroup("BpmsTimerJobEntityImpl Count",
+                Arrays.asList(new GraphMetric(Metric.KEY, "", "#00009f"))));
+
 //        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }
 

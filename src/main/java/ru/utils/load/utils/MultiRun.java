@@ -1,6 +1,7 @@
 package ru.utils.load.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.reflect.TypeToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.influxdb.BatchOptions;
@@ -11,6 +12,7 @@ import org.influxdb.dto.Point;
 import ru.utils.db.DBService;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
+import ru.utils.load.data.GrafanaData;
 import ru.utils.load.graph.GraphProperty;
 import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
@@ -36,6 +38,8 @@ public class MultiRun {
         put("STOP_TEST_ON_ERROR", "true");
         put("COUNT_ERROR_FOR_STOP_TEST", "100");
         put("WARM_DURATION", "60");
+        put("JOBS_SAVE_TO_INFLUXDB", "false");
+        put("JOBS_WAITING_TIME_MAX", "10");
 
         put("DB_URL", "");
         put("DB_USER_NAME", "");
@@ -53,11 +57,8 @@ public class MultiRun {
         put("InfluxDB.Batch.JitterDuration", "0");
 
         put("GRAFANA_API_KEY", "");
+        put("Grafana.Graphs", "[]");
         put("GRAFANA_HOSTS_DETAIL_URL", "");
-        put("GRAFANA_HOSTS_DETAIL_CPU_URL", "");
-        put("GRAFANA_HOSTS_DETAIL_CPU_PNG_URL", "");
-        put("GRAFANA_TRANSPORT_THREAD_POOLS_URL", "");
-        put("GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL", "");
         put("GRAFANA_TS_URL", "");
         put("SPLUNK_URL", "");
         put("CSM_URL", "");
@@ -73,12 +74,11 @@ public class MultiRun {
     private final boolean STOP_TEST_ON_ERROR;
     private final int COUNT_ERROR_FOR_STOP_TEST;
     private final int WARM_DURATION;
+    private final boolean JOBS_SAVE_TO_INFLUXDB;
+    private final int JOBS_WAITING_TIME_MAX;
     private final String GRAFANA_API_KEY;
+    private final List<GrafanaData> grafanaDataList;
     private final String GRAFANA_HOSTS_DETAIL_URL;
-    private final String GRAFANA_HOSTS_DETAIL_CPU_URL;
-    private final String GRAFANA_HOSTS_DETAIL_CPU_PNG_URL;
-    private final String GRAFANA_TRANSPORT_THREAD_POOLS_URL;
-    private final String GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL;
     private final String GRAFANA_TS_URL;
     private final String SPLUNK_URL;
     private final String CSM_URL;
@@ -93,14 +93,13 @@ public class MultiRun {
         propertiesService.readProperties(PROPERTIES_FILE);
 
         WARM_DURATION = propertiesService.getInt("WARM_DURATION");
+        JOBS_SAVE_TO_INFLUXDB = propertiesService.getBoolean("JOBS_SAVE_TO_INFLUXDB");
+        JOBS_WAITING_TIME_MAX = propertiesService.getInt("JOBS_WAITING_TIME_MAX");
         STOP_TEST_ON_ERROR = propertiesService.getBoolean("STOP_TEST_ON_ERROR");
         COUNT_ERROR_FOR_STOP_TEST = propertiesService.getInt("COUNT_ERROR_FOR_STOP_TEST");
         GRAFANA_API_KEY = propertiesService.getString("GRAFANA_API_KEY");
+        grafanaDataList = propertiesService.getJsonList("Grafana.Graphs", new TypeToken<List<GrafanaData>>() {});
         GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_URL");
-        GRAFANA_HOSTS_DETAIL_CPU_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU_URL");
-        GRAFANA_HOSTS_DETAIL_CPU_PNG_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_CPU_PNG_URL");
-        GRAFANA_TRANSPORT_THREAD_POOLS_URL = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS_URL");
-        GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL = propertiesService.getString("GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL");
         GRAFANA_TS_URL = propertiesService.getString("GRAFANA_TS_URL");
         SPLUNK_URL = propertiesService.getString("SPLUNK_URL");
         CSM_URL = propertiesService.getString("CSM_URL");
@@ -170,14 +169,13 @@ public class MultiRun {
                                 testPlan.getPacingType(),
                                 testPlan.getResponseTimeMax_ms(),
                                 WARM_DURATION,
+                                JOBS_SAVE_TO_INFLUXDB,
+                                JOBS_WAITING_TIME_MAX,
                                 STOP_TEST_ON_ERROR,
                                 COUNT_ERROR_FOR_STOP_TEST,
                                 GRAFANA_API_KEY,
+                                grafanaDataList,
                                 GRAFANA_HOSTS_DETAIL_URL,
-                                GRAFANA_HOSTS_DETAIL_CPU_URL,
-                                GRAFANA_HOSTS_DETAIL_CPU_PNG_URL,
-                                GRAFANA_TRANSPORT_THREAD_POOLS_URL,
-                                GRAFANA_TRANSPORT_THREAD_POOLS_PNG_URL,
                                 GRAFANA_TS_URL,
                                 SPLUNK_URL,
                                 CSM_URL,
@@ -207,10 +205,6 @@ public class MultiRun {
         if (propertiesService.getBoolean("InfluxDB.SAVE") && !propertiesService.getString("InfluxDB.URL").isEmpty()) {
             try {
                 // подключение к InfluxDB
-                LOG.info("Подключение к базе InfluxDB: {} {}",
-                        propertiesService.getString("InfluxDB.URL"),
-                        propertiesService.getString("InfluxDB.DB_NAME"));
-
                 influxDB = InfluxDBFactory.connect(
                         propertiesService.getString("InfluxDB.URL"),
                         propertiesService.getString("InfluxDB.USER_NAME"),
@@ -387,20 +381,31 @@ public class MultiRun {
             SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();
 //            if (1==1){return true;}
             // проверка занятости БПМ
-            String sql = sqlSelectBuilder.getBpmsJobEntityImpl();
+//            String sql = sqlSelectBuilder.getCountJobEntityImpl("BpmsJobEntityImpl");
+            String sql = sqlSelectBuilder.getCountJobEntityImplAll();
             try {
                 boolean res = true;
                 Connection connection = dbService.getConnection();
                 Statement statement = dbService.createStatement(connection);
                 ResultSet resultSet = dbService.executeQuery(statement, sql);
                 if (resultSet.next()) { // есть задачи в статусе Running
-                    int cnt = resultSet.getInt("cnt");
+                    int jobCount = resultSet.getInt("JobCount");
+                    int timerJobCount = resultSet.getInt("TimerJobCount");
+                    int retryPolicyJobCount = resultSet.getInt("RetryPolicyJobCount");
+                    int cnt = jobCount + timerJobCount + retryPolicyJobCount;
                     if (cnt > 0) {
                         LOG.error("####\n" +
-                                "Подача нагрузки не имеет смысла, в очереди есть не завершенные процессы\n" +
-                                "{}: {}\n" +
+                                "Подача нагрузки не имеет смысла, в очереди имеются незавершенные процессы\n" +
+                                "{}\n" +
+                                "JobCount:      {}\n" +
+                                "TimerJobCount: {}\n" +
+                                "RetryPolicyJobCount: {}\n" +
+                                "CountAll:      {}\n\n" +
                                 "Дождитесь завершения обработки, либо выполните:\n {}",
                                 sql,
+                                jobCount,
+                                timerJobCount,
+                                retryPolicyJobCount,
                                 cnt,
                                 sqlSelectBuilder.getClearRunningProcess());
                         res = false;

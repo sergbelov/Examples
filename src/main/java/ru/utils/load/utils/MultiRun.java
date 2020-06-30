@@ -371,11 +371,9 @@ public class MultiRun {
                 .build();
 
         if (dbService.connectPooled(
-                200,
-                210,
-                3,
+                10,
                 120,
-                3,
+                200,
                 0)) {
 
             SqlSelectBuilder sqlSelectBuilder = new SqlSelectBuilder();

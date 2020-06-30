@@ -20,6 +20,7 @@
         <mssql-jdbc.version>6.2.0.jre8</mssql-jdbc.version>
         <eclipse.jetty.version>9.3.0.M0</eclipse.jetty.version>
         <org.hibernate.hibernate-core.version>4.3.10.Final</org.hibernate.hibernate-core.version>
+        <hikari.version>3.4.5</hikari.version>
     </properties>
 
     <build>
@@ -245,13 +246,19 @@
             <version>${h2database.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.mchange/c3p0 -->
+        <!-- https://mvnrepository.com/artifact/com.mchange/c3p0  com.mchange.v2.c3p0.ComboPooledDataSource -->
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
             <version>0.9.5.5</version>
         </dependency>
 
+        <!-- HikariCP Connection Pooling-->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
+        </dependency>
 
         <!--
                 <dependency>

@@ -3,20 +3,26 @@ package ru.utils.db;
 //import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.logging.log4j.Level;
+
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.beans.PropertyVetoException;
+//import java.beans.PropertyVetoException;
+//import java.util.Properties;
 import java.sql.*;
-import java.util.Properties;
 
 /**
  * Класс для работы с базой данных
  */
 public class DBService {
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(DBService.class);
 
 //    private ComboPooledDataSource pooledDataSource = null; //new ComboPooledDataSource();
     private HikariDataSource pooledDataSource = null;
@@ -474,6 +480,7 @@ public class DBService {
      * @param loggerLevel
      */
     public void setLoggerLevel(Level loggerLevel) {
+//        Configurator.setRootLevel(loggerLevel);
         Configurator.setLevel(LOG.getName(), loggerLevel);
     }
 

@@ -1,14 +1,17 @@
 package ru.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+//import org.apache.logging.log4j.LogManager;
+//import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.OptionalInt;
 
 public class Utils {
 
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(Utils.class);
 
     /**
      * Генерация последовательности с заданной пропорциональностью

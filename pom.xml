@@ -13,13 +13,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <java.version>1.8</java.version>
-        <log4j.version>2.8.2</log4j.version>
+        <log4j.version>2.13.2</log4j.version>
+        <slf4j.version>1.7.30</slf4j.version>
         <h2database.version>1.4.187</h2database.version>
         <hsqldb.version>2.4.0</hsqldb.version>
         <ojdbc6.version>11.2.0.3</ojdbc6.version>
         <mssql-jdbc.version>6.2.0.jre8</mssql-jdbc.version>
         <eclipse.jetty.version>9.3.0.M0</eclipse.jetty.version>
         <org.hibernate.hibernate-core.version>4.3.10.Final</org.hibernate.hibernate-core.version>
+        <c3p0.version>0.9.5.5</c3p0.version>
         <hikari.version>3.4.5</hikari.version>
     </properties>
 
@@ -103,10 +105,10 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- LoggerExample -->
+        <!-- Logger log4j slf4j-->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
+            <artifactId>log4j-api</artifactId>
             <version>${log4j.version}</version>
         </dependency>
         <dependency>
@@ -114,6 +116,45 @@
             <artifactId>log4j-core</artifactId>
             <version>${log4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+
+<!--
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.1.7</version>
+        </dependency>
+-->
+
+        <!-- Logger slf4j-->
+<!--
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+-->
+<!--
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.14</version>
+        </dependency>
+-->
 
         <!-- ExcelExample -->
         <dependency>
@@ -250,7 +291,7 @@
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
-            <version>0.9.5.5</version>
+            <version>${c3p0.version}</version>
         </dependency>
 
         <!-- HikariCP Connection Pooling-->

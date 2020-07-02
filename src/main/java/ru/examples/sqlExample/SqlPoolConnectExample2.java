@@ -1,9 +1,14 @@
 package ru.examples.sqlExample;
 
-import org.apache.logging.log4j.Level;
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ru.utils.db.DBService;
 
 import java.sql.Connection;
@@ -24,10 +29,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  ORDER BY 4 ASC;
  */
 public class SqlPoolConnectExample2 {
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(SqlPoolConnectExample2.class);
 
     public static void main(String[] args) throws SQLException {
-        Configurator.setRootLevel(Level.INFO);
+//        Configurator.setRootLevel(Level.INFO);
+//        System.setProperty(org.slf4j.spi.LocationAwareLogger, "TRACE");
 
         AtomicInteger count = new AtomicInteger(0);
 
@@ -42,6 +49,7 @@ public class SqlPoolConnectExample2 {
 */
 
         DBService dbService = new DBService.Builder()
+//                .loggerLevel(Level.DEBUG)
                 .dbUrl(dbUrl)
                 .dbUserName(dbUserName)
                 .dbPassword(dbPassword)
@@ -49,13 +57,13 @@ public class SqlPoolConnectExample2 {
 
         if (dbService.connectPooled(
                 5,
-                60,
+                30,
                 100,
                 0
         )) {
 
 
-            int threadCount = 100;
+            int threadCount = 50;
             CountDownLatch countDownLatch = new CountDownLatch(threadCount);
             ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
             for (int i = 0; i < threadCount; i++) {
@@ -76,7 +84,7 @@ public class SqlPoolConnectExample2 {
             LOG.info("Работа всех потоков завершена");
         }
         try {
-            Thread.sleep(1000*10);
+            Thread.sleep(1000*5);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

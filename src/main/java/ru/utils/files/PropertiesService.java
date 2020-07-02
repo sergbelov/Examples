@@ -9,10 +9,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import org.apache.logging.log4j.Level;
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,7 +38,8 @@ import java.util.*;
  * Сервис для работы с файлом properties
  */
 public class PropertiesService {
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(PropertiesService.class);
     private String fileName;                    // properties - файл
     private boolean addKey;                     // добавлять или нет новый параметр из файла
     private Map<String, String> propertyMap;    // список параметров со значениями
@@ -173,13 +179,13 @@ public class PropertiesService {
                                 entry.getValue().toString());
                     }
                 }
-                LOG.trace(reportTrace);
+                LOG.trace("{}", reportTrace);
 //                for (Map.Entry<String, String> entry : propertyMap.entrySet()) {
 //                    propertyMap.put(entry.getKey(), pr.getProperty(entry.getKey(), entry.getValue()));
 //                }
                 fileExists = true;
             } catch (Exception e) {
-                LOG.error(e);
+                LOG.error("", e);
             }
         }
 
@@ -197,9 +203,9 @@ public class PropertiesService {
                 });
 
         if (fileExists) {
-            LOG.info(report);
+            LOG.info("{}", report);
         } else {
-            LOG.warn(report);
+            LOG.warn("{}", report);
         }
     }
 
@@ -220,7 +226,7 @@ public class PropertiesService {
             properties.load(inputStream);
             r = true;
         } catch (IOException e) {
-            LOG.error(e);
+            LOG.error("", e);
         }
 
         if (r) {
@@ -229,7 +235,7 @@ public class PropertiesService {
                 properties.store(outputStream, null);
             } catch (IOException e) {
                 r = false;
-                LOG.error(e);
+                LOG.error("", e);
             }
         }
         return r;
@@ -520,7 +526,7 @@ public class PropertiesService {
             try {
                 jsonObject = new JSONObject(value);
             } catch (JSONException e) {
-                LOG.error(e);
+                LOG.error("", e);
             }
         }
         return jsonObject;
@@ -539,7 +545,7 @@ public class PropertiesService {
             try {
                 jsonArray = new JSONArray(value);
             } catch (JSONException e) {
-                LOG.error(e);
+                LOG.error("", e);
             }
         }
         return jsonArray;

@@ -1,8 +1,13 @@
 package ru.examples.sqlExample;
 
-import org.apache.logging.log4j.Level;
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Level;
 
 import ru.utils.db.DBService;
 import ru.utils.db.DBType;
@@ -14,7 +19,8 @@ import java.sql.Statement;
 
 public class SQLExample2 {
 
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(SQLExample2.class);
 
     public static void main(String[] args) throws SQLException {
 

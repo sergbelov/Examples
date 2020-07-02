@@ -1,25 +1,43 @@
 package ru.examples;
 
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
-
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LoggerExample
 {
+//    log4j
+/*
     static final Logger rootLogger = LogManager.getRootLogger();
     static final Logger userLogger = LogManager.getLogger();
+*/
 //    static final Logger userLogger = LogManager.getLogger(ru.examples.LoggerExample.class);
+
+//    slf4j
+    static final Logger rootLogger = LoggerFactory.getLogger(LoggerExample.class);
+    static final Logger userLogger = LoggerFactory.getLogger(LoggerExample.class);
+    static final Logger LOG = LoggerFactory.getLogger(LoggerExample.class);
 
     public static void main( String[] args )
     {
+//        Configurator.setLevel(userLogger.getName(), Level.DEBUG);
+
 //        App.class.getResource("../resources/log4j2.xml");
 //        System.setProperties("log4j.configurationFile", "../resource/log4j2.xml");
+
+//        Logger root = (Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+//        root.setLevel(Level.INFO);
+//        root.debug("hello world");
+
+        for (int i = 0; i < 10; i++) {
+            LOG.debug("slf4j: {}", i);
+            LOG.info("slf4j: {}", i);
+        }
 
         Integer x,y,z;
         String function = null;
@@ -78,6 +96,7 @@ public class LoggerExample
         userLogger.info("Информирование 3");
         userLogger.warn("Предупреждение 3");
         userLogger.error("Ошибка 3");
+
 
 
         userLogger.error("Сообщение параметр1 = {}, параметр2 = {}", 11, 22);

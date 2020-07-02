@@ -1,8 +1,13 @@
 package ru.examples.sqlExample;
 
-import org.apache.logging.log4j.Level;
+/*
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+*/
+import org.apache.logging.log4j.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ru.utils.authorization.UserAuthorizationService;
 import ru.utils.db.DBService;
 import ru.utils.db.DBType;
@@ -16,7 +21,8 @@ import java.util.Locale;
 
 public class SQLExample3 {
 
-    private static final Logger LOG = LogManager.getLogger();
+//    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(SQLExample3.class);
 
     public static void main(String[] args) throws SQLException {
         DateFormat dateFormatTime = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");

@@ -1,7 +1,7 @@
 package ru.utils.load.runnable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.db.DBService;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.utils.SqlSelectBuilder;
@@ -19,7 +19,7 @@ import java.util.concurrent.CountDownLatch;
  * Поток для получения данных из БД БПМ
  */
 public class RunnableDbSelectData implements Runnable {
-    private static final Logger LOG = LogManager.getLogger(RunnableDbSelectData.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RunnableDbSelectData.class);
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
 
     private final String name;

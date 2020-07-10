@@ -1,9 +1,9 @@
 package ru.utils.load.graph;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.files.FileUtils;
 import ru.utils.load.data.DateTimeValues;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import ru.utils.load.data.Metric;
 import ru.utils.load.utils.MultiRunService;
 
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Graph {
-    private static final Logger LOG = LogManager.getLogger(Graph.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Graph.class);
     private final NumberFormat decimalFormat = NumberFormat.getInstance();
     private final DateFormat datetimeFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
@@ -46,6 +46,7 @@ public class Graph {
                 multiRunService,
                 metricsList,
                 null,
+                0,
                 true,
                 false,
                 false,
@@ -67,6 +68,7 @@ public class Graph {
             String title,
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
+            long stopTime,
             boolean yStartFrom0,
             boolean showSteps,
             boolean showMetrics) {
@@ -75,6 +77,7 @@ public class Graph {
                 multiRunService,
                 metricsList,
                 null,
+                stopTime,
                 yStartFrom0,
                 showSteps,
                 showMetrics,
@@ -98,6 +101,7 @@ public class Graph {
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
             double[] norms,
+            long stopTime,
             boolean yStartFrom0,
             boolean showSteps,
             boolean showMetrics) {
@@ -106,6 +110,7 @@ public class Graph {
                 multiRunService,
                 metricsList,
                 norms,
+                stopTime,
                 yStartFrom0,
                 showSteps,
                 showMetrics,
@@ -120,6 +125,7 @@ public class Graph {
      * @param multiRunService класс с информацией
      * @param metricsList     список метрик
      * @param norms           минимальное и максимальное значение (горизонтальные линии)
+     * @param stopTime        заданное время конца периода
      * @param yStartFrom0     минимальное значение по оси Y равно 0
      * @param showSteps       отображать переходы ступеньками (для Running Vusers)
      * @param showMetrics     отображать метрики
@@ -131,6 +137,7 @@ public class Graph {
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
             double[] norms,
+            long stopTime,
             boolean yStartFrom0,
             boolean showSteps,
             boolean showMetrics,
@@ -167,7 +174,7 @@ public class Graph {
         } catch (ParseException e) {
             LOG.error("Ошибка в формате даты", e);
         }
-        long xValueMax = (long) (Math.ceil(multiRunService.getTestStopTime() / 1000.00) * 1000);
+        long xValueMax = (long) (Math.ceil(Math.max(stopTime, multiRunService.getTestStopTime()) / 1000.00) * 1000);
         LOG.debug("{}: xValueMin: {} {}, xValueMax: {} {}",
                 multiRunService.getName(),
                 sdf1.format(multiRunService.getTestStartTime()),
@@ -486,6 +493,7 @@ public class Graph {
      * @param multiRunService
      * @param metricsList
      * @param norms
+     * @param stopTime
      * @param yStartFrom0
      * @param showSteps
      * @param showMetrics
@@ -497,6 +505,7 @@ public class Graph {
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
             double[] norms,
+            long stopTime,
             boolean yStartFrom0,
             boolean showSteps,
             boolean showMetrics,
@@ -507,6 +516,7 @@ public class Graph {
                 multiRunService,
                 metricsList,
                 norms,
+                stopTime,
                 yStartFrom0,
                 showSteps,
                 showMetrics,
@@ -523,9 +533,12 @@ public class Graph {
      * @param multiRunService
      * @param metricsList
      * @param norms
+     * @param stopTime
      * @param yStartFrom0
      * @param showSteps
      * @param showMetrics
+     * @param fileName
+     * @param convertToPNG
      * @return
      */
     public String createFileSvgGraphLine(
@@ -533,6 +546,7 @@ public class Graph {
             MultiRunService multiRunService,
             List<DateTimeValues> metricsList,
             double[] norms,
+            long stopTime,
             boolean yStartFrom0,
             boolean showSteps,
             boolean showMetrics,
@@ -544,6 +558,7 @@ public class Graph {
                 multiRunService,
                 metricsList,
                 norms,
+                stopTime,
                 yStartFrom0,
                 showSteps,
                 showMetrics,
@@ -555,8 +570,10 @@ public class Graph {
         LOG.info("Сохранение графика {} в файл {}", title, fileName);
         fileUtils.writeFile(fileName, svg, "UTF-8");
 
-        if (convertToPNG) {
-            svgToPng.convert(fileName);
+        if (metricsList.size() > 0) {
+            if (convertToPNG) {
+                svgToPng.convert(fileName);
+            }
         }
         return fileName;
     }

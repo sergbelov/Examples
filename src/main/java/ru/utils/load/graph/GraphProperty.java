@@ -1,7 +1,7 @@
 package ru.utils.load.graph;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.data.Metric;
 
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ import java.util.List;
  * Параметры графиков
  */
 public class GraphProperty {
-    private static final Logger LOG = LogManager.getLogger(GraphProperty.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GraphProperty.class);
     private List<GraphMetricGroup> graphMetricGroupList = new ArrayList<>();
 
     public GraphProperty() {
@@ -56,7 +56,8 @@ public class GraphProperty {
 
         // 6 - Количество шагов завершенных в секунду
         graphMetricGroupList.add(new GraphMetricGroup("Количество шагов завершенных в секунду",
-                Arrays.asList(new GraphMetric(Metric.TPS, "", "#004f00"))));
+                Arrays.asList(new GraphMetric(Metric.KEY, "", "#004f00"))));
+//                Arrays.asList(new GraphMetric(Metric.TPS, "", "#004f00"))));
 
         // 7 - BpmsJobEntityImpl Count (отдельный список)
         graphMetricGroupList.add(new GraphMetricGroup("BpmsJobEntityImpl Count",
@@ -70,7 +71,11 @@ public class GraphProperty {
         graphMetricGroupList.add(new GraphMetricGroup("BpmsTimerJobEntityImpl Count",
                 Arrays.asList(new GraphMetric(Metric.KEY, "", "#00009f"))));
 
-//        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
+        // 10 - Failed Count (отдельный список)
+        graphMetricGroupList.add(new GraphMetricGroup("Failed Count",
+                Arrays.asList(new GraphMetric(Metric.KEY, "", "#9f0000"))));
+
+        //        String[] colors = {"#00009f", "#00af00", "#afaf00", "#ff0000", "#00afaf", "#af00af"};
     }
 
     public List<GraphMetricGroup> getGraphMetricGroupList() {

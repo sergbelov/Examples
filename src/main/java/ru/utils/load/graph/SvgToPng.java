@@ -5,8 +5,8 @@ package ru.utils.load.graph;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileOutputStream;
 //import java.io.IOException;
@@ -15,7 +15,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Paths;
 
 public class SvgToPng {
-    private static final Logger LOG = LogManager.getLogger(Graph.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SvgToPng.class);
 
     public boolean convert(String svgFile) {
         return convert(svgFile,

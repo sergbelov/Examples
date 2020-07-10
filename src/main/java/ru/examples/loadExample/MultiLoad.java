@@ -1,11 +1,10 @@
 package ru.examples.loadExample;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.gui.GuiControl;
 import ru.utils.load.utils.MultiRun;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -21,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * @author Belov Sergey
  */
 public class MultiLoad implements ScriptRun {
-    private static final Logger LOG = LogManager.getLogger(MultiLoad.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MultiLoad.class);
     private MultiRun multiRun = new MultiRun();
 
     /**

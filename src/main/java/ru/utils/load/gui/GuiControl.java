@@ -1,7 +1,7 @@
 package ru.utils.load.gui;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.utils.MultiRun;
 import ru.utils.load.utils.MultiRunService;
 
@@ -11,7 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class GuiControl extends JFrame {
-    private static final Logger LOG = LogManager.getLogger(GuiControl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GuiControl.class);
 
     private MultiRun multiRun;
     private JButton bVUDec;

@@ -1,9 +1,9 @@
 package ru.utils.load.runnable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.TimeUnit;
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Belov Sergey
  */
 public class RunnableSaveToInfluxDbCall implements Runnable {
-    private static final Logger LOG = LogManager.getLogger(RunnableSaveToInfluxDbCall.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RunnableSaveToInfluxDbCall.class);
     private long start;
     private Long dur = null;
     private MultiRunService multiRunService;

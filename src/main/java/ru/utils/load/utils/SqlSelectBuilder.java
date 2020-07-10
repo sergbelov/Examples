@@ -1,7 +1,7 @@
 package ru.utils.load.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.db.DBService;
 
 import java.sql.Connection;
@@ -13,8 +13,15 @@ import java.text.SimpleDateFormat;
 
 public class SqlSelectBuilder {
 
-    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(SqlSelectBuilder.class);
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
+
+    private final String deletereasonsIgnored = "'process instance deleted'" +
+            ",'terminate end event'" +
+            ",'boundary event'" +
+            ",'event subprocess'" +
+            ",'event based gateway cancel'" +
+            ",'transaction canceled'";
 
     public SqlSelectBuilder() {
     }
@@ -22,30 +29,20 @@ public class SqlSelectBuilder {
 
     /**
      * Общее количество записей в Jobs
+     *
      * @return
      */
-    public String getCountJobEntityImplAll() {
-        return getCountJobEntityImplAll("");
+    public String getCountJobsAll() {
+        return getCountJobsAll("");
     }
+
     /**
      * Общее количество записей в Jobs
      *
      * @param key
      * @return
      */
-    public String getCountJobEntityImplAll(String key) {
-/*
-        String sql = "select \n " +
-                "count(j1.processdefinitionid) + count(j2.processdefinitionid) + count(j3.processdefinitionid) as cnt,\n " +
-                "count(j1.processdefinitionid) as JobCount,\n " +
-                "count(j2.processdefinitionid) as TimerJobCount,\n " +
-                "count(j3.processdefinitionid) as RetryPolicyJobCount\n " +
-                "from \n " +
-                "left join \n " +
-                "left join \n " +
-                "left join \n " +
-                (key != null && !key.isEmpty() ? "where pdi.key = '" + key + "'\n"  : "" );
-*/
+    public String getCountJobsAll(String key) {
 
         String sql = "select \n" +
                 "(select count(1) from ) as JobCount,\n" +
@@ -58,34 +55,68 @@ public class SqlSelectBuilder {
 
     /**
      * Количество записей в таблице
-     *      BpmsJobEntityImpl
-     *      BpmsTimerJobEntityImpl
-     *      RetryPolicyJobEntityImpl
+     * BpmsJobEntityImpl
+     * BpmsTimerJobEntityImpl
+     * RetryPolicyJobEntityImpl
      *
      * @param table
      * @return
      */
-    public String getCountJobEntityImpl(String table) {
-        return getCountJobEntityImpl(table, "");
+    public String getCountJobs(String table) {
+        return getCountJobs(table, "");
     }
+
     /**
      * Количество записей в таблице
-     *      BpmsJobEntityImpl
-     *      BpmsTimerJobEntityImpl
-     *      RetryPolicyJobEntityImpl
+     * BpmsJobEntityImpl
+     * BpmsTimerJobEntityImpl
+     * RetryPolicyJobEntityImpl
      *
      * @param table
      * @param key
      * @return
      */
-    public String getCountJobEntityImpl(String table, String key) {
-        String sql = "select count(1) as cnt " +
-                "from BPMS." + table + " j " +
+    public String getCountJobs(String table, String key) {
+        String lockowner;
+        if (table.equalsIgnoreCase("BpmsJobEntityImpl")) {
+            lockowner = "LOCKOWNER";
+        } else {
+            lockowner = "BPMSLOCKOWNER";
+        }
+        String sql = "select count(1) as cnt, " +
+                "NVL(JobType, 'none') as JobType, " +
+                "NVL(" + lockowner + ",'none') as host " +
+                "from " + table + " j " +
                 (key != null && !key.isEmpty() ?
-                        "join pdi on pdi.id = j.processdefinitionid " +
-                        "and pdi.key = '" + key + "'" :
-                        "");
+                        "join  pdi on pdi.id = j.processdefinitionid and pdi.key = '" + key + "'" :
+                        "") +
+                " group by JobType, " + lockowner;
+
         LOG.debug("Количество записей в {}...\n{}", table, sql);
+        return sql;
+    }
+
+
+    /**
+     * Количество процессов с ошибками
+     *
+     * @param key
+     * @return
+     */
+    public String getCountFailed(String key) {
+
+        String sql = "select count(pi.id) as cnt\n" +
+                "from  pi \n" +
+                "join  pd on pd.id = pi.processdefinitionid \n" +
+                "where pi.starttime > to_timestamp('{startTimeBegin}','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                "and pi.endtime between to_timestamp('{startTime}','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                "and to_timestamp('{stopTime}','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                "and pi.processdefinitionkey = '" + key + "'\n" +
+                "and pi.PROCESSSTATE = 'FAILED'";
+//                "and pi.deleteReason is not null \n" +
+//                "and NVL(pi.deletereason, ' ') not in (" + deletereasonsIgnored + ")";
+
+        LOG.debug("Количество процессов с ошибками...\n{}", sql);
         return sql;
     }
 
@@ -205,23 +236,6 @@ public class SqlSelectBuilder {
             long startTime,
             long stopTime
     ) {
-/*
-        String sql = "select \n" +
-                "pd.name as MAIN_PROCESS,\n" +
-                "pi.ID as MAIN_ID,\n" +
-                "pi.DURATIONINMILLIS as MAIN_DUR, \n" +
-                "NVL(pa.ACTIVITYNAME,' ') as ACTIVITYNAME, \n" +
-                "pa.DURATIONINMILLIS as DUR \n" +
-                "from  pi " +
-                "join  pa on pa.PROCESSINSTANCEID = pi.id \n" +
-                "join  pd on pd.id = pi.processdefinitionid \n" +
-                "where pi.processdefinitionkey = '" + key + "' " +
-                "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-//                "and pi.endtime < to_timestamp('" + sdf1.format(stopTime + 60000) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and pi.PROCESSSTATE = 'COMPLETED'\n" +
-                "order by pd.name, pi.id, pa.ACTIVITYNAME";
-*/
 // все подзадачи процесса (рекурсия)
         String sql = "with process as (\n" +
                 "    select\n" +
@@ -291,59 +305,45 @@ public class SqlSelectBuilder {
             long startTime,
             long stopTime
     ) {
-/*
-        String sql = "select\n" +
-                "pd.name as MAIN_PROCESS,\n" +
-//                "count(pi.ID) as MAIN_COUNT,\n" +
-                "min(pi.DURATIONINMILLIS) AS MAIN_MIN,\n" +
-                "max(pi.DURATIONINMILLIS) AS MAIN_MAX,\n" +
-                "ROUND(AVG(pi.DURATIONINMILLIS)) AS MAIN_AVG,\n" +
-                "pi.PROCESSSTATE,\n" +
-                "NVL(pa.ACTIVITYNAME,' ') as ACTIVITYNAME,\n" +
-                "count(pa.ID) as COUNT,\n" +
-                "min(pa.DURATIONINMILLIS) AS MIN,\n" +
-                "max(pa.DURATIONINMILLIS) AS MAX,\n" +
-                "ROUND(AVG(pa.DURATIONINMILLIS)) AS AVG\n" +
-                "from  pi\n" +
-                "join  pa on pa.PROCESSINSTANCEID = pi.id\n" +
-                "join  pd on pd.id = pi.processdefinitionid\n" +
-                "where pi.processdefinitionkey = '" + key + "'\n" +
-                "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "group by pi.PROCESSSTATE, pd.name, pa.ACTIVITYNAME\n" +
-                "order by PROCESSSTATE, MAIN_PROCESS, ACTIVITYNAME";
-*/
-        String sql = "with process as (\n" +
-                "select\n" +
-                "   level as lvl,\n" +
-                "   CONNECT_BY_ROOT (pi.processinstanceid) as root_process_id,\n" +
-                "   CONNECT_BY_ROOT (pd.name) as root_process_name,\n" +
-                "   CONNECT_BY_ROOT (pi.durationinmillis) as root_process_duration,\n" +
-                "   pi.processstate,\n" +
-                "   pi.processinstanceid\n" +
+
+        String sql = "with process as (select\n" +
+                "level as lvl,\n" +
+                "connect_by_root (pi.processinstanceid) as root_process_id,\n" +
+                "connect_by_root (pd.name) as root_process_name,\n" +
+                "connect_by_root (pi.durationinmillis) as root_process_duration,\n" +
+                "pd.name as process_name,\n" +
+                "pi.durationinmillis as process_duration,\n" +
+                "pi.processstate,\n" +
+                "pi.processinstanceid\n" +
                 "from  pi \n" +
                 "join  pd on pd.id = pi.processdefinitionid \n" +
-                "\n" +
                 "start with pi.superprocessinstanceid is null\n" +
-                (key.isEmpty() ? "" : "   and pi.processdefinitionkey = '" + key + "'\n") +
-                "   and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "   and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
-                "\n" +
+                "and pi.starttime between to_timestamp('" + sdf1.format(startTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                "and to_timestamp('" + sdf1.format(stopTime) + "','DD/MM/YYYY HH24:MI:SS.FF')\n" +
+                (key.isEmpty() ? "" : "and pi.processdefinitionkey = '" + key + "'\n") + // задан processdefinitionkey
                 "connect by prior pi.id = pi.superprocessinstanceid\n" +
                 ") \n" +
-                "select\n" +
-                "   p.root_process_name as main_process,\n" +
-                "   p.PROCESSSTATE,\n" +
-                "   NVL(pa.ACTIVITYNAME, ' ') as activityname,\n" +
-                "   count(pa.ID) as count,\n" +
-                "   min(pa.DURATIONINMILLIS) as min,\n" +
-                "   max(pa.DURATIONINMILLIS) as max,\n" +
-                "   round(avg(pa.DURATIONINMILLIS),3) as avg\n" +
+                "select distinct\n" +
+                "p.processstate,\n" +
+                "p.root_process_name,\n" +
+                "min(p.root_process_duration) as root_process_min,\n" +
+                "max(p.root_process_duration) as root_process_max,\n" +
+                "round(avg(p.root_process_duration),3) as root_process_avg,\n" +
+                "p.process_name,\n" +
+                "NVL(pa.activityname, ' ') as activityname,\n" +
+                "count(pa.ID) as count,\n" +
+                "min(pa.durationinmillis) as min,\n" +
+                "max(pa.durationinmillis) as max,\n" +
+                "round(avg(pa.durationinmillis),3) as avg,\n" +
+                "count(ret.id) as RetryCount \n" +
                 "from process p\n" +
-                "join  pa on pa.PROCESSINSTANCEID = p.processinstanceid\n" +
-                "where pa.CALLEDPROCESSINSTANCEID is null\n" +
-                "group by p.PROCESSSTATE, p.root_process_name, pa.ACTIVITYNAME\n" +
-                "order by PROCESSSTATE, root_process_name, ACTIVITYNAME";
+                "join pa on pa.processinstanceid = p.processinstanceid\n" +
+                "left join ret on ret.EXECUTIONID = pa.EXECUTIONID\n" +
+                "and ret.MMTTASKID = pa.ACTIVITYID\n" +
+                "and ret.FACTSTARTDATE is not null\n" +
+                "where pa.calledprocessinstanceid is null\n" +
+                "group by p.processstate, p.root_process_name, p.process_name, pa.activityname\n" +
+                "order by processstate, root_process_name, process_name, activityname";
 
         LOG.debug("Длительность выполнения задач {} - {}...\n",
                 sdf1.format(startTime),
@@ -449,11 +449,12 @@ public class SqlSelectBuilder {
 
     /**
      * Имя процесса по id
+     *
      * @param key
      * @param dbService
      * @return
      */
-    public String getProcessDefinitionName(String key, DBService dbService){
+    public String getProcessDefinitionName(String key, DBService dbService) {
         String res = null;
         if (dbService != null) {
             String sql = "select name " +

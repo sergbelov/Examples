@@ -1,6 +1,8 @@
 package ru.utils.load.utils;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.db.DBService;
 import ru.utils.load.data.DateTimeValues;
 import ru.utils.load.data.StatData;
@@ -8,14 +10,11 @@ import ru.utils.load.data.Metric;
 import ru.utils.load.data.sql.DBData;
 import ru.utils.load.data.sql.DBMetric;
 import ru.utils.load.data.sql.DBResponse;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import ru.utils.load.runnable.RunnableDbSelectData;
 import ru.utils.load.runnable.RunnableDbSelectTransitionsTime;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -32,7 +31,7 @@ import com.google.common.util.concurrent.AtomicDouble;
  * Сбор информации из БД БПМ
  */
 public class DataFromDB {
-    private static final Logger LOG = LogManager.getLogger(DataFromDB.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DataFromDB.class);
 
     private final NumberFormat decimalFormat = NumberFormat.getInstance();
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
@@ -145,95 +144,6 @@ public class DataFromDB {
 
 
     /**
-     * Ожидания завершения начатых процессов (перед формированием отчета)
-     * Если значение очереди остается без изменений последние 3 замера - ожидание прекращаем
-     * Общее ожидание не более jobsWaitingTimeMax минут
-     *
-     * @param key
-     * @param jobsWaitingTimeMax
-     * @param bpmsJobEntityImplCountList
-     * @param bpmsTimerJobEntityImplCountList
-     * @param retryPolicyJobEntityImplCountList
-     */
-    public void waitCompleteProcess(
-            String key,
-            int jobsWaitingTimeMax,
-            List<DateTimeValues> bpmsJobEntityImplCountList,
-            List<DateTimeValues> bpmsTimerJobEntityImplCountList,
-            List<DateTimeValues> retryPolicyJobEntityImplCountList
-    ) {
-        String title = "Ожидание выполнения начатых задач";
-        if (dbService != null) {
-            LOG.info("{}: {} (не более {} мин)...", key, title, jobsWaitingTimeMax);
-            String sql = sqlSelectBuilder.getCountJobEntityImplAll(key);
-            try {
-                Connection connection = dbService.getConnection();
-                Statement statement = dbService.createStatement(connection);
-                int replay = 0;
-                int prevCnt = 0;
-                waitStartTime = System.currentTimeMillis();
-                long stop = waitStartTime + (jobsWaitingTimeMax * 60 * 1000);
-                while (System.currentTimeMillis() < stop && replay < 3) {
-                    ResultSet resultSet = dbService.executeQuery(statement, sql);
-                    if (resultSet.next()) { // есть задачи в статусе Running
-                        int jobCount = resultSet.getInt("JobCount");
-                        int timerJobCount = resultSet.getInt("TimerJobCount");
-                        int retryPolicyJobCount = resultSet.getInt("RetryPolicyJobCount");
-                        int cnt = jobCount + timerJobCount + retryPolicyJobCount;
-
-                        bpmsJobEntityImplCountList.add(new DateTimeValues(
-                                System.currentTimeMillis(),
-                                jobCount));
-
-                        bpmsTimerJobEntityImplCountList.add(new DateTimeValues(
-                                System.currentTimeMillis(),
-                                timerJobCount));
-
-                        retryPolicyJobEntityImplCountList.add(new DateTimeValues(
-                                System.currentTimeMillis(),
-                                retryPolicyJobCount));
-
-                        if (cnt > 0) {
-                            if (waitCountStart == null) { // начальный размер очереди
-                                waitCountStart = cnt;
-                            }
-                            if (prevCnt == cnt) {
-                                replay++;
-                            } else {
-                                replay = 0; // значение изменилось сбрасываем счетчик
-                            }
-                            prevCnt = cnt;
-                            LOG.info("{}: JobCount: {}, TimerJobCount: {},  RetryPolicyJobCount: {}, Итого: {} {}",
-                                    key,
-                                    jobCount,
-                                    timerJobCount,
-                                    retryPolicyJobCount,
-                                    cnt,
-                                    (replay > 0 ? "(" + replay + ")" : ""));
-                        } else {
-                            replay = 3;
-                        }
-                    } else {
-                        replay = 3;
-                    }
-                    resultSet.close();
-                    if (replay < 3) {
-                        TimeUnit.MILLISECONDS.sleep(20000);
-                    }
-                }
-                statement.close();
-                connection.close();
-                waitStopTime = System.currentTimeMillis();
-                waitCountStop = prevCnt; // конечный размер очереди
-                waitTime = waitStopTime - waitStartTime;
-            } catch (Exception e) {
-                LOG.error("", e);
-            }
-            LOG.info("{}: Ожидание выполнения начатых задач завершено", key);
-        }
-    }
-
-    /**
      * Сбор статистики по выполнению процессов в БПМ
      * Для формирования результата используется предварительная подготовленные данные - dbDataList
      *
@@ -334,6 +244,7 @@ public class DataFromDB {
         int count90 = 0;
         double countAvg = 0.00;
         int row = 0;
+        countEndInSecList.clear();
 
         try {
             LOG.debug("Обработка данных SQL ({})...\n{}", title, sql);
@@ -660,10 +571,10 @@ public class DataFromDB {
     public String getTaskDuration(String key, long startTime, long stopTime) {
         String title = "Длительность выполнения задач (информация из БД)";
         String sql = sqlSelectBuilder.getTaskDuration(key, startTime, stopTime);
+        LOG.info("Обработка данных SQL БПМ ({})...\n{}", title, sql);
         int row = 0;
         StringBuilder res = new StringBuilder();
         try {
-            LOG.debug("Обработка данных SQL ({})...\n{}", title, sql);
             Connection connection = dbService.getConnection();
             Statement statement = dbService.createStatement(connection);
             ResultSet resultSet = dbService.executeQuery(statement, sql);
@@ -675,7 +586,19 @@ public class DataFromDB {
                 res.append(row)
                         .append("</td>");
                 res.append("<td>");
-                res.append(resultSet.getString("MAIN_PROCESS"))
+                res.append(resultSet.getString("root_process_name"))
+                        .append("</td>");
+                res.append("<td>");
+                res.append(resultSet.getString("process_name"))
+                        .append("</td>");
+                res.append("<td>");
+                res.append(decimalFormat.format(resultSet.getDouble("root_process_min")))
+                        .append("</td>");
+                res.append("<td>");
+                res.append(decimalFormat.format(resultSet.getDouble("root_process_max")))
+                        .append("</td>");
+                res.append("<td>");
+                res.append(decimalFormat.format(resultSet.getDouble("root_process_avg")))
                         .append("</td>");
                 res.append("<td>");
                 res.append(resultSet.getString("PROCESSSTATE"))
@@ -683,45 +606,53 @@ public class DataFromDB {
                 res.append("<td>");
                 res.append(resultSet.getString("ACTIVITYNAME"))
                         .append("</td>");
-                res.append("<td>");
-                res.append(resultSet.getString("COUNT"))
+                res.append("<td align=\"right\">");
+                res.append(decimalFormat.format(resultSet.getInt("COUNT")))
                         .append("</td>");
-                res.append("<td>");
-                res.append(resultSet.getString("MIN"))
+                res.append("<td align=\"right\">");
+                res.append(decimalFormat.format(resultSet.getInt("MIN")))
                         .append("</td>");
-                res.append("<td>");
-                res.append(resultSet.getString("MAX"))
+                res.append("<td align=\"right\">");
+                res.append(decimalFormat.format(resultSet.getInt("MAX")))
                         .append("</td>");
-                res.append("<td>");
-                res.append(resultSet.getString("AVG"))
+                res.append("<td align=\"right\">");
+                res.append(decimalFormat.format(resultSet.getDouble("AVG")))
+                        .append("</td>");
+                res.append("<td align=\"right\">");
+                res.append(decimalFormat.format(resultSet.getInt("RetryCount")))
                         .append("</td></tr>\n");
             }
             resultSet.close();
             statement.close();
             connection.close();
-            LOG.debug("Обработка данных SQL ({}) завершена.", title);
+            LOG.info("Обработка данных SQL БПМ ({}) завершена.", title);
         } catch (Exception e) {
             LOG.error("", e);
         }
 
         if (row > 0) {
-            return "\n<br><table style=\"width: 95%;\"" + (row > 10 ? " class=\"scroll\"" : "") + ">\n" +
-                    "<thead>\n" +
-                    "<tr><th colspan=\"8\">" + title + "</th></tr>\n" +
-                    "<tr><td colspan=\"8\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
+            return  "\n<br><br>\n<table style=\"width: 95%;\"" + (row > 50 ? " class=\"scroll\"" : "") + ">" +
+                    "\n<thead>\n" +
+                    "<tr><th colspan=\"13\">" + title + "</th></tr>\n" +
+                    "<tr><td colspan=\"13\" align=\"Center\" style=\"font-size: 10px;\">" + sql + "</td></tr>\n" +
                     "</thead>\n" +
                     "<tbody>\n" +
                     "<tr style=\"font-size: 10px;\">" +
                     "<th></th>" +
-                    "<th>MAIN_PROCESS</th>" +
+                    "<th>root_process_name</th>" +
+                    "<th>process_name</th>" +
+                    "<th>root_process_min (ms)</th>" +
+                    "<th>root_process_max (ms)</th>" +
+                    "<th>root_process_avg (ms)</th>" +
                     "<th>PROCESSSTATE</th>" +
                     "<th>ACTIVITYNAME</th>" +
                     "<th>COUNT</th>" +
-                    "<th>MIN</th>" +
-                    "<th>MAX</th>" +
-                    "<th>AVG</th></tr>\n" +
+                    "<th>MIN (ms)</th>" +
+                    "<th>MAX (ms)</th>" +
+                    "<th>AVG (ms)</th>" +
+                    "<th>Retry</th></tr>\n" +
                     res.toString() +
-                    "\n</tbody>\n</table>\n";
+                    "</tbody></table>\n";
         } else {
             return "";
         }

@@ -1,23 +1,51 @@
 package ru.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
+//import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.cert.CertificateException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.TimeUnit;
 
+/**
+ "urlPNG": "http://grafana/render/d-solo/jtiKjshWk/pprb-khosty-detalizirovanno?from={from}&to={to}&orgId=25&panelId=198&var-DS=Izanagi37API&var-GROUP=%D0%A2%D0%A1%20%D0%9F%D0%9F%D0%A0%D0%91%20%D0%B2%D1%81%D1%82%D1%80%D0%BE%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9%20BPM%20%D0%A6%D0%90%20(LT)&var-HOST=vck-s057-gri001&var-HOST=vck-s057-gri002&var-HOST=vck-s057-gri003&var-HOST=vck-s057-gri004&var-APPS=All&theme=light&width=1500&height=750&tz=Europe%2FMoscow", *
+            https://ts.grafana.ca.sbrf.ru/render/d-solo/jtiKjshWk/pprb-khosty-detalizirovanno?panelId=12&from=1594098905000&orgId=25&to=1594099277000&var-APPS=All&var-DS=Izanagi37API&var-GROUP=%D0%A2%D0%A1%20%D0%9F%D0%9F%D0%A0%D0%91%20%D0%B2%D1%81%D1%82%D1%80%D0%BE%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9%20BPM%20%D0%A6%D0%90%20(LT)&var-HOST=vck-s057-gri001&var-HOST=vck-s057-gri002&var-HOST=vck-s057-gri003&var-HOST=vck-s057-gri004&theme=light&width=1000&height=500&tz=Europe%2FMoscow
+ */
 public class GrafanaService {
-    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = LoggerFactory.getLogger(GrafanaService.class);
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
     private final DateFormat sdf3 = new SimpleDateFormat("yyyyMMddHHmmss");
     private final DateFormat sdf4 = new SimpleDateFormat("yyyyMMdd");
+
+    private static final TrustManager[] trustAllCerts = new TrustManager[]{
+            new X509TrustManager() {
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return new java.security.cert.X509Certificate[]{};
+//                    return null;
+                }
+
+                public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {
+                }
+
+                public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) throws CertificateException {
+                }
+            }
+    };
 
     public GrafanaService() {
     }
@@ -43,7 +71,7 @@ public class GrafanaService {
 
     /**
      * url дашборда
-     * 
+     *
      * @param baseUrl
      * @param startTime
      * @param stopTime
@@ -79,6 +107,7 @@ public class GrafanaService {
                 String.valueOf(startTime),
                 String.valueOf(stopTime));
     }
+
     /**
      * Формирование URL по шаблону
      *
@@ -107,6 +136,7 @@ public class GrafanaService {
 
     /**
      * График в формате PNG из Grafana
+     *
      * @param apiKey
      * @param url
      * @param startTime
@@ -142,6 +172,7 @@ public class GrafanaService {
 
     /**
      * График в формате PNG из Grafana
+     *
      * @param apiKey
      * @param url
      * @param startTime
@@ -156,7 +187,7 @@ public class GrafanaService {
             long startTime,
             long stopTime,
             String filePath,
-            String fileName){
+            String fileName) {
 
         return getPngFromGrafana(
                 apiKey,
@@ -173,6 +204,7 @@ public class GrafanaService {
 
     /**
      * График в формате PNG из Grafana
+     *
      * @param apiKey
      * @param url
      * @param panelId
@@ -206,6 +238,7 @@ public class GrafanaService {
 
     /**
      * График в формате PNG из Grafana
+     *
      * @param apiKey
      * @param url
      * @param orgId
@@ -291,17 +324,41 @@ public class GrafanaService {
                         .replace("{height}", String.valueOf(height));
 
                 LOG.debug("{}", url);
-
+/*
                 URL urlGrafana = new URL(url);
                 HttpURLConnection connection = (HttpURLConnection) urlGrafana.openConnection();
                 connection.setRequestMethod("GET");
-//                connection.setRequestProperty("Content-Type", "application/json");
-//                connection.setRequestProperty("Encoding", currEncoding);
                 connection.setRequestProperty("Authorization", "Bearer " + apiKey);
                 connection.setDoOutput(true);
+*/
+                SSLContext sslContext = SSLContext.getInstance("SSL");
+                sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+                SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
+                OkHttpClient client = new OkHttpClient()
+                        .newBuilder()
+                        .sslSocketFactory(sslSocketFactory)
+
+//                        .hostnameVerifier(new NoopHostnameVerifier())
+                        .hostnameVerifier(new BrowserCompatHostnameVerifier())
+
+                        .readTimeout(10, TimeUnit.MINUTES)
+                        .build();
+
+                okhttp3.Headers headers = new okhttp3.Headers.Builder()
+                        .add("Authorization", "Bearer " + apiKey)
+                        .build();
+
+                Request request = new Request.Builder()
+                        .url(url)
+                        .headers(headers)
+                        .addHeader("content-type", "text/csv")
+                        .build();
+
+                Response response = client.newCall(request).execute();
                 try (
-                        InputStream inputStream = connection.getInputStream();
+//                        InputStream inputStream = connection.getInputStream();
+                        InputStream inputStream = response.body().byteStream();
                         FileOutputStream fileOutPutStream = new FileOutputStream(fileFull);
                 ) {
                     int bytesRead;
@@ -409,6 +466,7 @@ public class GrafanaService {
      * Создание каталога для сохранения отчетных данных
      * каталог для  отчета в формате:
      * базовый каталог / YYYYMMDD / YYYYMMDDHHMMSS(startime)
+     *
      * @param pathReport
      * @param startTime
      * @return путь к созданному каталогу

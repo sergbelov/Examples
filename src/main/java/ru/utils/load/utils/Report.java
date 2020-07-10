@@ -1,26 +1,23 @@
 package ru.utils.load.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.GrafanaService;
 import ru.utils.files.FileUtils;
 import ru.utils.load.data.*;
 import ru.utils.load.data.errors.ErrorRsGroup;
 import ru.utils.load.data.errors.ErrorRs;
 import ru.utils.load.data.errors.ErrorsGroup;
+import ru.utils.load.data.errors.RegExpService;
 import ru.utils.load.graph.Graph;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.*;
 import java.util.List;
 import java.util.Map;
 
 public class Report {
-    private static final Logger LOG = LogManager.getLogger(Report.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Report.class);
     private final NumberFormat decimalFormat = NumberFormat.getInstance();
     private final DateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss.SSS");
     private final DateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
@@ -85,6 +82,9 @@ public class Report {
             6 - Количество шагов завершенных в секунду
             7 - BpmsJobEntityImpl Count
             8 - RetryPolicyJobEntityImpl Count
+            9 - BpmsTimerJobEntityImpl Count
+            10 - Failed Count
+
         */
 
         LOG.info("{}: Формирование отчета...", multiRunService.getName());
@@ -161,6 +161,7 @@ public class Report {
                 multiRunService,
                 multiRunService.getVuList(),
                 null,
+                0,
                 yStartFrom0,
                 true,
                 printMetrics,
@@ -171,6 +172,7 @@ public class Report {
                 .append(graph.getSvgGraphLine("Running Vusers",
                         multiRunService,
                         multiRunService.getVuList(),
+                        0,
                         true,
                         true,
                         printMetrics))
@@ -181,6 +183,7 @@ public class Report {
                 multiRunService,
                 multiRunService.getMetricsList(),
                 null,
+                0,
                 yStartFrom0,
                 false,
                 printMetrics,
@@ -191,6 +194,7 @@ public class Report {
                 .append(graph.getSvgGraphLine("Количество запросов в секунду (tps)",
                         multiRunService,
                         multiRunService.getMetricsList(),
+                        0,
                         yStartFrom0,
                         false,
                         printMetrics))
@@ -205,7 +209,8 @@ public class Report {
             graph.createFileSvgGraphLine("Response time",
                     multiRunService,
                     multiRunService.getMetricsList(),
-                    new double[]{multiRunService.getResponseTimeMax_ms()},
+                    new double[]{multiRunService.getResponseTimeMax()},
+                    0,
                     yStartFrom0,
                     false,
                     printMetrics,
@@ -216,7 +221,8 @@ public class Report {
                     .append(graph.getSvgGraphLine("Response time",
                             multiRunService,
                             multiRunService.getMetricsList(),
-                            new double[]{multiRunService.getResponseTimeMax_ms()},
+                            new double[]{multiRunService.getResponseTimeMax()},
+                            0,
                             yStartFrom0,
                             false,
                             printMetrics))
@@ -257,6 +263,7 @@ public class Report {
         // группа метрик из БД БПМ (выводим при наличии)
         StatData countStepCompleteInSec = null;
         StatData transitionsTime = null;
+
         if (multiRunService.getMetricsList().get(0).getIntValue(new Metric[]{
                 Metric.DB_COMPLETED,
                 Metric.DB_RUNNING,
@@ -267,6 +274,7 @@ public class Report {
                     multiRunService,
                     multiRunService.getMetricsList(),
                     null,
+                    0,
                     yStartFrom0,
                     false,
                     printMetrics,
@@ -277,6 +285,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Длительность выполнения процесса (информация из БД)",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            0,
                             yStartFrom0,
                             false,
                             printMetrics))
@@ -332,6 +341,7 @@ public class Report {
                     multiRunService,
                     multiRunService.getMetricsList(),
                     null,
+                    0,
                     yStartFrom0,
                     false,
                     printMetrics,
@@ -342,6 +352,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Статистика из БД БПМ",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            0,
                             yStartFrom0,
                             false,
                             printMetrics))
@@ -419,29 +430,32 @@ public class Report {
                         multiRunService,
                         multiRunService.getDataFromDB().getCountEndInSecList(),
                         null,
+                        0,
                         yStartFrom0,
                         false,
                         printMetrics,
                         getFileGraphName(pathReport,"CountStepsEndInSec"),
                         true);
 
-                sbHtml.append(countStepCompleteInSec.getResultStr());
                 sbHtml.append("\t\t<div class=\"graph\">\n")
                         .append(graph.getSvgGraphLine("Количество шагов завершенных в секунду",
                                 multiRunService,
                                 multiRunService.getDataFromDB().getCountEndInSecList(),
+                                0,
                                 yStartFrom0,
                                 false,
                                 printMetrics))
                         .append("\t\t</div>\n");
+                sbHtml.append(countStepCompleteInSec.getResultStr());
             }
 
-            // BpmsJobEntityImpl (trottling)
+            // BpmsJobEntityImpl
             if (!isEmptyDateTimeValue(multiRunService.getBpmsJobEntityImplCountList())) {
                 graph.createFileSvgGraphLine("BpmsJobEntityImpl Count",
                         multiRunService,
                         multiRunService.getBpmsJobEntityImplCountList(),
                         null,
+                        multiRunService.getTestStopTimeJobs(),
                         yStartFrom0,
                         false,
                         printMetrics,
@@ -452,6 +466,7 @@ public class Report {
                         .append(graph.getSvgGraphLine("BpmsJobEntityImpl Count",
                                 multiRunService,
                                 multiRunService.getBpmsJobEntityImplCountList(),
+                                multiRunService.getTestStopTimeJobs(),
                                 yStartFrom0,
                                 false,
                                 printMetrics))
@@ -464,6 +479,7 @@ public class Report {
                         multiRunService,
                         multiRunService.getBpmsTimerJobEntityImplCountList(),
                         null,
+                        multiRunService.getTestStopTimeJobs(),
                         yStartFrom0,
                         false,
                         printMetrics,
@@ -474,6 +490,7 @@ public class Report {
                         .append(graph.getSvgGraphLine("BpmsTimerJobEntityImpl Count",
                                 multiRunService,
                                 multiRunService.getBpmsTimerJobEntityImplCountList(),
+                                multiRunService.getTestStopTimeJobs(),
                                 yStartFrom0,
                                 false,
                                 printMetrics))
@@ -486,6 +503,7 @@ public class Report {
                         multiRunService,
                         multiRunService.getRetryPolicyJobEntityImplCountList(),
                         null,
+                        multiRunService.getTestStopTimeJobs(),
                         yStartFrom0,
                         false,
                         printMetrics,
@@ -496,6 +514,7 @@ public class Report {
                         .append(graph.getSvgGraphLine("RetryPolicyJobEntityImpl Count",
                                 multiRunService,
                                 multiRunService.getRetryPolicyJobEntityImplCountList(),
+                                multiRunService.getTestStopTimeJobs(),
                                 yStartFrom0,
                                 false,
                                 printMetrics))
@@ -503,12 +522,14 @@ public class Report {
             }
 
             // длительность переходов между процессами
+/*
             transitionsTime = multiRunService
                     .getDataFromDB()
                     .getTransitionsTime(
                             multiRunService.getProcessDefinitionKey(),
                             multiRunService.getTestStartTime(),
                             multiRunService.getTestStopTime());
+*/
             if (transitionsTime != null) {
                 sbHtml.append(transitionsTime.getResultStr());
             }
@@ -529,6 +550,7 @@ public class Report {
                     multiRunService,
                     multiRunService.getMetricsList(),
                     null,
+                    0,
                     yStartFrom0,
                     false,
                     printMetrics,
@@ -539,6 +561,7 @@ public class Report {
                     .append(graph.getSvgGraphLine("Ошибки",
                             multiRunService,
                             multiRunService.getMetricsList(),
+                            0,
                             yStartFrom0,
                             false,
                             printMetrics))
@@ -551,13 +574,32 @@ public class Report {
                     multiRunService.getErrorRsGroupList()));
         }
 
-        // ссылка на Графану (Хосты детализировано)
-        sbHtml.append(grafanaService.getLinkUrl(
-                "Grafana - ППРБ Хосты детализированно",
-                multiRunService.getGrafanaHostsDetailUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
+        // Failed Count
+        if (!isEmptyDateTimeValue(multiRunService.getFailedCountList())) {
+            graph.createFileSvgGraphLine("Failed Count",
+                    multiRunService,
+                    multiRunService.getFailedCountList(),
+                    null,
+                    0,
+                    yStartFrom0,
+                    false,
+                    printMetrics,
+                    getFileGraphName(pathReport,"CountFailed"),
+                    true);
 
+            sbHtml.append("\t\t<div class=\"graph\">\n")
+                    .append(graph.getSvgGraphLine("Failed Count",
+                            multiRunService,
+                            multiRunService.getFailedCountList(),
+                            0,
+                            yStartFrom0,
+                            false,
+                            printMetrics))
+                    .append("\t\t</div>\n");
+        }
+
+
+        // Графики из Grafana
         for (GrafanaData grafanaData : multiRunService.getGrafanaDataList()){
             LOG.info("График: {}", grafanaData.getName());
 
@@ -570,30 +612,16 @@ public class Report {
             ));
 
             // PNG
-            sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
-                    multiRunService.getGrafanaApiKey(),
-                    grafanaData.getUrlPNG(),
-                    multiRunService.getTestStartTime(),
-                    multiRunService.getTestStopTime() + (5 * 60000), // + 5 мин
-                    pathReport,
-                    grafanaData.getFile()));
+            if (!grafanaData.getFile().isEmpty() && !grafanaData.getUrlPNG().isEmpty()) {
+                sbHtml.append(grafanaService.getPngFromGrafanaHtmlImg(
+                        grafanaData.getApiKey(),
+                        grafanaData.getUrlPNG(),
+                        multiRunService.getTestStartTime(),
+                        multiRunService.getTestStopTime() + (5 * 60000), // + 5 мин
+                        pathReport,
+                        grafanaData.getFile()));
+            }
         }
-
-        // ссылка на Графану (ТС)
-        sbHtml.append(grafanaService.getLinkUrl(
-                "Grafana - ТС (БПМ модульный)",
-                multiRunService.getGrafanaTsUrl(),
-                multiRunService.getTestStartTime(),
-                multiRunService.getTestStopTime()));
-
-        // ссылка на Спланк
-        sbHtml.append(grafanaService.getLinkUrl(
-                "Splunk - Метрики BPM",
-                multiRunService.getSplunkUrl(),
-                String.valueOf(multiRunService.getTestStartTime()).substring(0, 10),
-                String.valueOf(multiRunService.getTestStopTime()).substring(0, 10)));
-
-
 
 
         // сравнительная таблица для Confluence
@@ -745,13 +773,13 @@ public class Report {
                 "<tr><th>Группа ошибок</th>" +
                 "<th>Количество</th>" +
                 "<th>Первая ошибка из группы</th></tr>\n");
-
         try {
+            RegExpService regExpService = new RegExpService();
             for (int i = 0; i < errorList.size(); i++) {
                 int find1;
                 String text = errorList.get(i).getText();
-                String comment = text;
-                if ((find1 = findErrorGroup(text)) > -1) {
+                String comment = regExpService.getText(text);
+                if ((find1 = findErrorGroup(comment)) > -1) {
                     comment = errorsGroup.getComment(find1);
                 }
                 int find2;
@@ -841,60 +869,36 @@ public class Report {
      * @return
      */
     private String getInfoFromCSM(String csmUrl) {
+        countActiveHost = 0;
         StringBuilder res = new StringBuilder("\n<h3>Версия модуля, активность хостов</h3>\n" +
                 "<table><tbody>\n" +
                 "<tr><th>Host</th><th>Module</th><th>Version</th><th>Active</th></tr>\n");
+
         if (!csmUrl.isEmpty()) {
-            try {
-                URL url = new URL(csmUrl);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setDoOutput(true);
-                InputStream content = connection.getInputStream();
-                BufferedReader in = new BufferedReader(new InputStreamReader(content));
-                String line;
-                StringBuilder data = new StringBuilder();
-                while ((line = in.readLine()) != null) {
-                    data.append(line);
+            CSMStatus csmStatus = new CSMStatus();
+            List<CSMStatus.ModuleStatus> moduleStatusList = csmStatus.getInfo(csmUrl);
+            moduleStatusList.forEach(x -> {
+                res.append("<tr>")
+                        .append("<td>")
+                        .append(x.getHost())
+                        .append("</td>")
+                        .append("<td>")
+                        .append(x.getModule())
+                        .append("</td>")
+                        .append("<td>")
+                        .append(x.getVersion())
+                        .append("</td>");
+
+                if (x.getEnabled()) {
+                    countActiveHost++;
+                    res.append("<td class=\"td_green\">Да</td>");
+                } else {
+                    res.append("<td class=\"td_red\">Нет</td>");
                 }
 
-                LOG.debug("CSM Response: {}", data.toString());
-                JSONArray jsonArray = new JSONArray(data.toString());
-                for (int h = 0; h < jsonArray.length(); h++) {
-                    JSONObject jsonObjectHost = jsonArray.getJSONObject(h);
-                    LOG.debug("CSM Response[{}]: {}", h, jsonObjectHost.toString());
+                res.append("</tr>\n");
+            });
 
-                    String host = jsonObjectHost.getString("host");
-                    String module = jsonObjectHost.getJSONObject("module").getString("normalName");
-                    String version = jsonObjectHost.getJSONObject("module").getString("version");
-                    boolean enabled = jsonObjectHost.getJSONObject("module").getBoolean("enabled");
-
-                    res.append("<tr>")
-                            .append("<td>")
-                            .append(host)
-                            .append("</td>")
-                            .append("<td>")
-                            .append(module)
-                            .append("</td>")
-                            .append("<td>")
-                            .append(version)
-                            .append("</td>");
-
-                    if (enabled) {
-                        countActiveHost++;
-                        res.append("<td class=\"td_green\">Да</td>");
-                    } else {
-                        res.append("<td class=\"td_red\">Нет</td>");
-                    }
-
-                    res.append("</tr>\n");
-
-                    LOG.debug("{} {} {} {}", host, module, version, enabled);
-                }
-
-            } catch (Exception e) {
-                LOG.error("Ошибка при получении данных из CSM\n", e);
-            }
         }
         res.append("</tbody></table>\n");
         return res.toString();

@@ -1,7 +1,7 @@
 package ru.utils.load.runnable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.ScriptRun;
 import ru.utils.load.utils.MultiRunService;
 
@@ -12,7 +12,7 @@ import java.util.concurrent.CountDownLatch;
  */
 public class RunnableLoadAPI implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableLoadAPI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RunnableLoadAPI.class);
 
     private final String name;
     private ScriptRun baseScript;

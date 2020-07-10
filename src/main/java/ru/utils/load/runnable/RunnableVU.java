@@ -1,14 +1,14 @@
 package ru.utils.load.runnable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class RunnableVU implements Runnable {
-    private static final Logger LOG = LogManager.getLogger(RunnableVU.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RunnableVU.class);
     private final int thread;
     private final String name;
     private MultiRunService multiRunService;
@@ -25,7 +25,7 @@ public class RunnableVU implements Runnable {
         int threadNum = multiRunService.startThread(); // счетчик активных потоков
         LOG.info("Старт потока {}, Threads: {}", name, threadNum);
         ExecutorService executorService = multiRunService.getExecutorService();
-        while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
+        while (System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             long start = System.currentTimeMillis();
             if (multiRunService.isActiveVU(thread)) { // разрешена активность данного VU
                 if (multiRunService.getPacingType() == 0) { // не ждем завершения выполнения

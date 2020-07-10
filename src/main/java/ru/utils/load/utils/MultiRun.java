@@ -1,18 +1,16 @@
 package ru.utils.load.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.reflect.TypeToken;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.influxdb.BatchOptions;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.db.DBService;
 import ru.utils.files.PropertiesService;
 import ru.utils.load.ScriptRun;
-import ru.utils.load.data.GrafanaData;
 import ru.utils.load.graph.GraphProperty;
 import ru.utils.load.data.testplan.TestPlans;
 import ru.utils.load.data.testplan.TestPlan;
@@ -32,14 +30,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MultiRun {
-    private static final Logger LOG = LogManager.getLogger(MultiRunService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MultiRun.class);
     private static final String PROPERTIES_FILE = "load.properties";
     private static PropertiesService propertiesService = new PropertiesService(new LinkedHashMap<String, String>() {{
         put("STOP_TEST_ON_ERROR", "true");
         put("COUNT_ERROR_FOR_STOP_TEST", "100");
         put("WARM_DURATION", "60");
+
         put("JOBS_SAVE_TO_INFLUXDB", "false");
         put("JOBS_WAITING_TIME_MAX", "10");
+        put("CountForBreak.BpmsJobEntityImpl", "1500");
+        put("CountForBreak.BpmsTimerJobEntityImpl", "10000");
+        put("CountForBreak.RetryPolicyJobEntityImpl", "100000");
 
         put("DB_URL", "");
         put("DB_USER_NAME", "");
@@ -56,14 +58,10 @@ public class MultiRun {
         put("InfluxDB.Batch.FlushDuration", "200");
         put("InfluxDB.Batch.JitterDuration", "0");
 
-        put("GRAFANA_API_KEY", "");
-        put("Grafana.Graphs", "[]");
-        put("GRAFANA_HOSTS_DETAIL_URL", "");
-        put("GRAFANA_TS_URL", "");
-        put("SPLUNK_URL", "");
         put("CSM_URL", "");
 
         put("FILE_TEST_PLAN", "TestPlans.json");
+        put("FILE_GRAFANA_GRAPHS", "GrafanaGraphs.json");
         put("PATH_REPORT", "Reports/");
     }});
 
@@ -71,19 +69,6 @@ public class MultiRun {
     private TestPlans[] testPlansArray;
     private List<MultiRunService> multiRunServiceList = new ArrayList<>();
     private GraphProperty graphProperty = new GraphProperty();
-    private final boolean STOP_TEST_ON_ERROR;
-    private final int COUNT_ERROR_FOR_STOP_TEST;
-    private final int WARM_DURATION;
-    private final boolean JOBS_SAVE_TO_INFLUXDB;
-    private final int JOBS_WAITING_TIME_MAX;
-    private final String GRAFANA_API_KEY;
-    private final List<GrafanaData> grafanaDataList;
-    private final String GRAFANA_HOSTS_DETAIL_URL;
-    private final String GRAFANA_TS_URL;
-    private final String SPLUNK_URL;
-    private final String CSM_URL;
-    private final String FILE_TEST_PLAN;
-    private final String PATH_REPORT;
     private int apiMax = -1;
 
     private DBService dbService = null;
@@ -91,27 +76,13 @@ public class MultiRun {
 
     public MultiRun() {
         propertiesService.readProperties(PROPERTIES_FILE);
-
-        WARM_DURATION = propertiesService.getInt("WARM_DURATION");
-        JOBS_SAVE_TO_INFLUXDB = propertiesService.getBoolean("JOBS_SAVE_TO_INFLUXDB");
-        JOBS_WAITING_TIME_MAX = propertiesService.getInt("JOBS_WAITING_TIME_MAX");
-        STOP_TEST_ON_ERROR = propertiesService.getBoolean("STOP_TEST_ON_ERROR");
-        COUNT_ERROR_FOR_STOP_TEST = propertiesService.getInt("COUNT_ERROR_FOR_STOP_TEST");
-        GRAFANA_API_KEY = propertiesService.getString("GRAFANA_API_KEY");
-        grafanaDataList = propertiesService.getJsonList("Grafana.Graphs", new TypeToken<List<GrafanaData>>() {});
-        GRAFANA_HOSTS_DETAIL_URL = propertiesService.getString("GRAFANA_HOSTS_DETAIL_URL");
-        GRAFANA_TS_URL = propertiesService.getString("GRAFANA_TS_URL");
-        SPLUNK_URL = propertiesService.getString("SPLUNK_URL");
-        CSM_URL = propertiesService.getString("CSM_URL");
-        FILE_TEST_PLAN = propertiesService.getString("FILE_TEST_PLAN");
-        PATH_REPORT = propertiesService.getString("PATH_REPORT");
-
+        String fileTestPlan = propertiesService.getString("FILE_TEST_PLAN");
         ObjectMapper mapper = new ObjectMapper();
         try {
 //            testPlansList = mapper.readValue(new File(FILE_TEST_PLAN), new TypeReference<List<TestPlans>>() {});
-            testPlansArray = mapper.readValue(new File(FILE_TEST_PLAN), TestPlans[].class);
+            testPlansArray = mapper.readValue(new File(fileTestPlan), TestPlans[].class);
         } catch (Exception e) {
-            LOG.error("Ошибка при чтении данных из файла {}\n", FILE_TEST_PLAN, e);
+            LOG.error("Ошибка при чтении данных из файла {}\n", fileTestPlan, e);
         }
     }
 
@@ -142,13 +113,6 @@ public class MultiRun {
 
             connectToInfluxDB(); // подключение к InfluxDB
 
-/*
-    testDuration    - сек
-    vuStepTime      - сек
-    vuStepTimeDelay - мс
-    pacing          - мс
-*/
-
             for (TestPlans testPlans : testPlansArray) {
                 if (testPlans.getClassName().equals(className)) {
                     for (TestPlan testPlan : testPlans.getTestPlanList()) {
@@ -156,35 +120,10 @@ public class MultiRun {
                         multiRunServiceList.add(new MultiRunService());
                         multiRunServiceList.get(apiMax).init(
                                 this,
-                                testPlan.getApiNum(),
-                                testPlan.getName(),
-                                testPlan.isAsync(),
-                                testPlan.getTestDuration_min(),
-                                testPlan.getVuCountMin(),
-                                testPlan.getVuCountMax(),
-                                testPlan.getVuStepTime_sec(),
-                                testPlan.getVuStepTimeDelay_ms(),
-                                testPlan.getVuStepCount(),
-                                testPlan.getPacing_ms(),
-                                testPlan.getPacingType(),
-                                testPlan.getResponseTimeMax_ms(),
-                                WARM_DURATION,
-                                JOBS_SAVE_TO_INFLUXDB,
-                                JOBS_WAITING_TIME_MAX,
-                                STOP_TEST_ON_ERROR,
-                                COUNT_ERROR_FOR_STOP_TEST,
-                                GRAFANA_API_KEY,
-                                grafanaDataList,
-                                GRAFANA_HOSTS_DETAIL_URL,
-                                GRAFANA_TS_URL,
-                                SPLUNK_URL,
-                                CSM_URL,
+                                propertiesService,
+                                testPlan,
                                 dbService,
-                                testPlan.getProcessDefinitionKey(),
-                                PATH_REPORT,
-                                influxDB,
-                                propertiesService.getString("InfluxDB.DB_NAME"),
-                                propertiesService.getString("InfluxDB.MEASUREMENT"));
+                                influxDB);
                     }
                     return true;
                 }
@@ -371,8 +310,8 @@ public class MultiRun {
                 .build();
 
         if (dbService.connectPooled(
-                10,
-                120,
+                50,
+                300,
                 200,
                 0)) {
 
@@ -380,7 +319,7 @@ public class MultiRun {
 //            if (1==1){return true;}
             // проверка занятости БПМ
 //            String sql = sqlSelectBuilder.getCountJobEntityImpl("BpmsJobEntityImpl");
-            String sql = sqlSelectBuilder.getCountJobEntityImplAll();
+            String sql = sqlSelectBuilder.getCountJobsAll();
             try {
                 boolean res = true;
                 Connection connection = dbService.getConnection();

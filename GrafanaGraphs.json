@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Grafana метрики OS (База данных) (CPU)",
+    "file": "HostsDetailCPU_DB",
+    "urlGraph": "",
+    "urlPNG": "",
+    "apiKey": ""
+  }
+]

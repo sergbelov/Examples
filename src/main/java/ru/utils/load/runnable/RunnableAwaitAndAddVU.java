@@ -1,7 +1,7 @@
 package ru.utils.load.runnable;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.utils.load.utils.MultiRunService;
 
 import java.util.concurrent.CountDownLatch;
@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RunnableAwaitAndAddVU implements Runnable {
 
-    private static final Logger LOG = LogManager.getLogger(RunnableAwaitAndAddVU.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RunnableAwaitAndAddVU.class);
 
     private final String name;
     private CountDownLatch countDownLatch;
@@ -34,7 +34,8 @@ public class RunnableAwaitAndAddVU implements Runnable {
     @Override
     public void run() {
         LOG.info("Старт потока {}", name);
-        while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
+//        while (multiRunService.isRunning() && System.currentTimeMillis() < multiRunService.getTestStopTime()) {
+        while (System.currentTimeMillis() < multiRunService.getTestStopTime()) {
             multiRunService.startGroupVU(); // старт новой группы VU (если нужно)
             try {
                 TimeUnit.MILLISECONDS.sleep(10);

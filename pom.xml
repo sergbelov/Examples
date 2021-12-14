@@ -13,7 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <java.version>1.8</java.version>
-        <log4j.version>2.13.2</log4j.version>
+        <log4j.version>2.16.0</log4j.version>
         <slf4j.version>1.7.30</slf4j.version>
         <httpclient.version>4.5.3</httpclient.version>
         <h2database.version>1.4.187</h2database.version>

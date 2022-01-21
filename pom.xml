@@ -16,7 +16,7 @@
         <log4j.version>2.13.2</log4j.version>
         <slf4j.version>1.7.30</slf4j.version>
         <httpclient.version>4.5.3</httpclient.version>
-        <h2database.version>1.4.187</h2database.version>
+        <h2database.version>2.1.210</h2database.version>
         <hsqldb.version>2.4.0</hsqldb.version>
         <ojdbc6.version>11.2.0.3</ojdbc6.version>
         <ojdbc8.version>19.7.0.0</ojdbc8.version>
